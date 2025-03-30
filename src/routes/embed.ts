@@ -1,0 +1,65 @@
+import { Router } from "express";
+import { pinecone } from "../utils/pinecone";
+import { z } from "zod";
+import { openai } from "../utils/openai";
+import { config } from "dotenv";
+config();
+export const embedRouter = Router();
+import User from "../utils/db";
+import mongoose from "mongoose";
+
+const embedSchema = z.object({
+    text: z.string(),
+    schema: z.record(z.unknown()), // or z.any()
+  });
+
+embedRouter.post("/", async (req: any, res: any) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const body = req.body;
+    const result = embedSchema.safeParse(body);
+    if (!result.success) {
+      return res.status(400).json({
+        error: result.error.format(),
+      });
+    }
+    const { text, schema } = result.data;
+
+    const embeddingresponce = await openai.embeddings.create({
+      model: "text-embedding-3-large",
+      input: text,
+    });
+    const embedding = embeddingresponce.data[0].embedding;
+    const uniqueId = new mongoose.Types.ObjectId();
+
+    const index = pinecone.Index("remotestar");
+
+    await User.create([{ _id: uniqueId, ...schema }], { session });
+
+    await index.namespace("talent-pool").upsert([
+      {
+        id: uniqueId.toString(),
+        values: embedding,
+        metadata: {
+          text: text,
+        },
+      },
+    ]);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json({
+      message: "Embedding created successfully",
+      data: {
+        id: uniqueId.toString(),
+      },
+    });
+  } catch (error) {
+    console.error("Error during embedding:", error);
+    res.status(500).json({
+      error: "Internal server error",
+    });
+  }
+});
