@@ -33,6 +33,7 @@ extractRouter.post("/", async (req:any, res:any) => {
     let validJson = extractJsonFromMarkdown(extractedText).replace(/(\r\n|\n|\r)/gm, "");
     let parsedJson = JSON.parse(validJson);
     console.log("\n Parsed JSON received✅\n");
+    console.log(parsedJson);
     // Validate against resume schema
     let validation = resumeSchema.safeParse(parsedJson);
     if (!validation.success) {
@@ -51,7 +52,10 @@ extractRouter.post("/", async (req:any, res:any) => {
       validation = resumeSchema.safeParse(parsedJson);
 
       if (!validation.success) {
-        return res.status(400).json({ error: "Failed to format response into the required schema." });
+        console.log("Reformatted response still does not match schema.");
+        console.log(validation.error.format());
+        res.status(400).json({ error: "Failed to format response into the required schema." });
+        return;
       }
     }
 
