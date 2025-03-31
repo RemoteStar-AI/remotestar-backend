@@ -6,7 +6,6 @@ import dotenv from 'dotenv';
 import {extractRouter} from './routes/extract';
 import {embedRouter} from './routes/embed';
 import {searchRouter} from './routes/search';
-import User from "./utils/db";
 
 dotenv.config();
 

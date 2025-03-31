@@ -70,9 +70,9 @@ const experienceSchema = z.object({
 export const resumeSchema = z.object({
   name: z.string(),
   email: z.string().email(),
-  phone: z.string(),
-  address: z.string(),
-  current_location: z.string(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  current_location: z.string().optional(),
   summary: z.string(),
   profile_completeness: z.number(),
   experience: z.array(experienceSchema),

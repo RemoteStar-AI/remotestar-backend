@@ -10,7 +10,7 @@ export function extractPrompt(scrapedText: string): string {
      - AI interview \`score\`
      - Soft skill ratings (communication, teamwork, problem-solving, leadership)
   3. **Extract relevant details** from the provided text and organize them under the appropriate schema fields.
-  4. **Make sure to add relevant descriptions of all the experiences and projects from the scraped text only
+  4. **Make sure to add relevant descriptions of all the experiences and projects from the scraped text exactly without any shortening
   5. **If a field is missing from the text**, leave it as an empty string (\`""\`) or an empty array (\`[]\`) where applicable.
   6. **Ensure JSON validity**—output must be correctly formatted without syntax errors.
   
