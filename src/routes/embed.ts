@@ -42,7 +42,7 @@ embedRouter.post("/", async (req: any, res: any) => {
         id: uniqueId.toString(),
         values: embedding,
         metadata: {
-          text: text,
+          text:JSON.stringify(schema),
         },
       },
     ]);
