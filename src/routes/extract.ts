@@ -1,56 +1,63 @@
 import { Router } from "express";
 export const extractRouter = Router();
 import { z } from "zod";
-import { extractPrompt } from "../utils/prompts";
+import { extractPrompt, reformatPrompt } from "../utils/prompts";
 import { openai } from "../utils/openai";
 import { config } from "dotenv";
+import { resumeSchema } from "../utils/schema";
+import { extractJsonFromMarkdown } from "../utils/helper-functions";
 config();
 
-const extractSchema = z.object({
-    text: z.string(),
-});
 
-extractRouter.post("/", async (req: any, res: any) => {
-    try{
-    const body = req.body;
-    const result = extractSchema.safeParse(body);
-    if (!result.success) {
-        return res.status(400).json({
-            error: result.error.format(),
-        });
+extractRouter.post("/", async (req:any, res:any) => {
+  try {
+    // Validate input text
+    const inputValidation = z.object({ text: z.string() }).safeParse(req.body);
+    if (!inputValidation.success) {
+      return res.status(400).json({ error: inputValidation.error.format() });
     }
-    const { text } = result.data;
+    const { text } = req.body;
     const extractPromptext = extractPrompt(text);
 
-    // Simulate OpenAI API call
-    console.log("sending request to openai")
-    const responce = await openai.chat.completions.create({
-        model:"gpt-3.5-turbo",
-        messages:[{role:"user", content:extractPromptext}],
-    })   
-    // Simulate text extraction
-    console.log("received responce from chatgpt")
-    const extractedText = responce.choices[0].message.content!;
-    const validJson = extractedText.replace(/(\r\n|\n|\r)/gm, "");
-    const parsedJson = JSON.parse(validJson);
-    console.log("Parsed JSON: ", parsedJson);
-
-    // Check if the parsed JSON is valid
-    if (typeof parsedJson !== "object" || parsedJson === null) {
-        return res.status(400).json({
-            error: "Invalid JSON response from OpenAI",
-        });
-    }
-    console.log("Extract Prompt: ", parsedJson);
-
-  res.status(200).json({
-    responce: parsedJson
-  });
-}
-catch (error) {
-    console.error("Error during extraction:", error);
-    res.status(500).json({
-        error: "Internal server error",
+    console.log("Sending request to OpenAI...");
+    let response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: extractPromptext }],
     });
-}
+
+    console.log("Received response from OpenAI");
+    let extractedText = response.choices[0].message.content?.trim();
+    if (!extractedText) throw new Error("Empty response from OpenAI");
+
+    // Remove potential newlines before parsing
+    let validJson = extractJsonFromMarkdown(extractedText).replace(/(\r\n|\n|\r)/gm, "");
+    let parsedJson = JSON.parse(validJson);
+    console.log("Parsed JSON:✅", parsedJson);
+    // Validate against resume schema
+    let validation = resumeSchema.safeParse(parsedJson);
+    if (!validation.success) {
+      console.log("Response does not match schema. Requesting reformatting...");
+      const reformatText = reformatPrompt(extractedText);
+      response = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: reformatText }],
+      });
+
+      console.log("Received reformatted response from OpenAI");
+      extractedText = response.choices[0].message.content?.trim();
+      if (!extractedText) throw new Error("Empty reformatted response from OpenAI");
+      validJson = extractJsonFromMarkdown(extractedText).replace(/(\r\n|\n|\r)/gm, "");
+      parsedJson = JSON.parse(validJson);
+      validation = resumeSchema.safeParse(parsedJson);
+
+      if (!validation.success) {
+        return res.status(400).json({ error: "Failed to format response into the required schema." });
+      }
+    }
+
+    res.status(200).json({ response: parsedJson });
+  } catch (error) {
+    console.error("Error during extraction:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });

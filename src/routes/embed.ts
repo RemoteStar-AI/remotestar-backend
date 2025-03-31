@@ -7,13 +7,14 @@ config();
 export const embedRouter = Router();
 import User from "../utils/db";
 import mongoose from "mongoose";
+import { authenticate } from "../middleware/firebase-auth";
 
 const embedSchema = z.object({
     text: z.string(),
     schema: z.record(z.unknown()), // or z.any()
   });
 
-embedRouter.post("/", async (req: any, res: any) => {
+embedRouter.post("/", authenticate ,async (req: any, res: any) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -25,6 +26,8 @@ embedRouter.post("/", async (req: any, res: any) => {
       });
     }
     const { text, schema } = result.data;
+    const firebaseId = req.user.firebase_id;
+    const userEmail = req.user.email;
 
     const embeddingresponce = await openai.embeddings.create({
       model: "text-embedding-3-large",
@@ -35,7 +38,7 @@ embedRouter.post("/", async (req: any, res: any) => {
 
     const index = pinecone.Index("remotestar");
 
-    await User.create([{ _id: uniqueId, ...schema }], { session });
+    await User.create([{ _id: uniqueId,firebase_id:firebaseId,firebase_email:userEmail, ...schema }], { session });
 
     await index.namespace("talent-pool").upsert([
       {
