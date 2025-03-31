@@ -3,16 +3,17 @@ export function extractPrompt(scrapedText: string): string {
   You are an advanced AI assistant. Your task is to process the following scraped text and structure it into a predefined JSON schema.
   
   ### **Instructions:**
-  1. **Strictly follow the schema** provided below while formatting the data.
-  2. **Ensure numerical scores are initialized to zero** for:
+  1. **Strictly follow the schema** provided below while formatting the data and to include everything which is given in schema and is present in scraped text.
+  2. **If something is not present then send empty string or empty array** for that field.
+  3. **Ensure numerical scores are initialized to zero** for:
      - \`profile_completeness\`
      - Skill \`score\`
      - AI interview \`score\`
      - Soft skill ratings (communication, teamwork, problem-solving, leadership)
-  3. **Extract relevant details** from the provided text and organize them under the appropriate schema fields.
-  4. **Make sure to add relevant descriptions of all the experiences and projects from the scraped text exactly without any shortening
-  5. **If a field is missing from the text**, leave it as an empty string (\`""\`) or an empty array (\`[]\`) where applicable.
-  6. **Ensure JSON validity**—output must be correctly formatted without syntax errors.
+  4. **Extract relevant details** from the provided text and organize them under the appropriate schema fields.
+  5. **Make sure to add relevant descriptions of all the experiences and projects from the scraped text exactly without any shortening
+  6. **If a field is missing from the text**, leave it as an empty string (\`""\`) or an empty array (\`[]\`) where applicable.
+  7. **Ensure JSON validity**—output must be correctly formatted without syntax errors.
   
   ---
   
