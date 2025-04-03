@@ -75,11 +75,11 @@ const userSchema = new Schema({
   },
 
   job_preferences: {
-    preferred_roles: [{ type: String }],
+    current_location: { type: String },
     preferred_locations: [{ type: String }],
-    salary_expectation: { type: String },
+    salary_expectation: { type: Number },
     employment_type: [{ type: String }],
-    notice_period: { type: String },
+    notice_period: { type: Number },
     reason_for_switch: { type: String },
     work_type: [{ type: String }]
   }
