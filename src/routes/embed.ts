@@ -14,7 +14,7 @@ const embedSchema = z.object({
     schema: z.record(z.unknown()), // or z.any()
   });
 
-embedRouter.post("/", authenticate ,async (req: any, res: any) => {
+embedRouter.post("/" ,async (req: any, res: any) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
