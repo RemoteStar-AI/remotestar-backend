@@ -102,6 +102,7 @@ export function extractPrompt(scrapedText: string): string {
 
 ### **Important Notes:**
 - Certification and Participation are of the same type. If any section or field in the provided JSON output could be interpreted as either certification or participation, treat them equivalently and format them accordingly.
+- Ensure that embedded link references such as '• Video' or '• Link' are removed from the text.
   
   ### **Scraped Text:**  
   [${scrapedText}]

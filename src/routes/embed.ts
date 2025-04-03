@@ -10,11 +10,11 @@ import mongoose from "mongoose";
 import { authenticate } from "../middleware/firebase-auth";
 
 const embedSchema = z.object({
-    text: z.string(),
-    schema: z.record(z.unknown()), // or z.any()
-  });
+  text: z.string(),
+  schema: z.record(z.unknown()), // or z.any()
+});
 
-embedRouter.post("/" ,async (req: any, res: any) => {
+embedRouter.post("/", async (req: any, res: any) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -38,14 +38,24 @@ embedRouter.post("/" ,async (req: any, res: any) => {
 
     const index = pinecone.Index("remotestar");
 
-    await User.create([{ _id: uniqueId,firebase_id:firebaseId,firebase_email:userEmail, ...schema }], { session });
+    await User.create(
+      [
+        {
+          _id: uniqueId,
+          firebase_id: firebaseId,
+          firebase_email: userEmail,
+          ...schema,
+        },
+      ],
+      { session }
+    );
 
     await index.namespace("talent-pool").upsert([
       {
         id: uniqueId.toString(),
         values: embedding,
         metadata: {
-          text:JSON.stringify(schema),
+          text: JSON.stringify(schema),
         },
       },
     ]);
@@ -60,6 +70,8 @@ embedRouter.post("/" ,async (req: any, res: any) => {
       },
     });
   } catch (error) {
+    await session.abortTransaction(); // Rollback transaction
+    session.endSession();
     console.error("Error during embedding:", error);
     res.status(500).json({
       error: "Internal server error",
