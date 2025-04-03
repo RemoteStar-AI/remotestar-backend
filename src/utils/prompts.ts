@@ -99,11 +99,12 @@ export function extractPrompt(scrapedText: string): string {
   \`\`\`
   
   ---
+
+### **Important Notes:**
+- Certification and Participation are of the same type. If any section or field in the provided JSON output could be interpreted as either certification or participation, treat them equivalently and format them accordingly.
   
   ### **Scraped Text:**  
   [${scrapedText}]
-  
-  ---
   
   ### **Expected Output Format:**
   - The output must be valid JSON.
@@ -115,7 +116,7 @@ export function extractPrompt(scrapedText: string): string {
 }  
 
 
-export function reformatPrompt(responseText: string,errorDetails: string): string {
+export function reformatPrompt(responseText: string, errorDetails: string): string {
   return `
 You are an advanced AI assistant. The JSON output you provided earlier does not strictly follow the required schema. Your task is to reformat the provided JSON output to exactly match the JSON schema below.
 
@@ -211,12 +212,17 @@ You are an advanced AI assistant. The JSON output you provided earlier does not 
   }
 }
 \`\`\`
+
+
 ---
 
 ### **Validation Errors Identified:**
 ${errorDetails}
 
 ---
+
+### **Important Notes:**
+- Certification and Participation are of the same type. If any section or field in the provided JSON output could be interpreted as either certification or participation, treat them equivalently and format them accordingly.
 
 ---
 
