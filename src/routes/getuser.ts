@@ -3,11 +3,14 @@ export const getUserRouter = Router();
 import { authenticate } from "../middleware/firebase-auth";
 import User from "../utils/db";
 
-getUserRouter.get('/', authenticate, async (req, res) => {
+getUserRouter.get("/", authenticate, async (req, res) => {
   try {
     const email = req.user?.email;
-    const user =await User.findOne({ firebase_email: email });
+    console.log("User email:", email);
+    const user = await User.findOne({ firebase_email: email });
+    console.log("User found:", user);
     if (!user) {
+      console.log("User not found");
       res.status(404).json({
         error: "User not found",
       });
