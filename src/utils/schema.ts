@@ -18,7 +18,7 @@ const experienceSchema = z.object({
   const skillSchema = z.object({
     name: z.string(),
     category: z.string(),
-    years_experience: z.number(),
+    years_experience: z.string(),
     proficiency: z.string(),
     score: z.number()
   });
