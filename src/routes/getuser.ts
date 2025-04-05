@@ -19,10 +19,12 @@ getUserRouter.get("/", authenticate, async (req, res) => {
     res.status(200).json({
       user,
     });
+    return;
   } catch (e) {
     console.error(e);
     res.status(500).json({
       error: "Internal Server Error",
     });
+    return;
   }
 });
