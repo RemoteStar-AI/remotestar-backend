@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import {extractRouter} from './routes/extract';
 import {embedRouter} from './routes/embed';
 import {searchRouter} from './routes/search';
+import { getUserRouter } from './routes/getuser';
 
 dotenv.config();
 
@@ -17,12 +18,13 @@ app.use(cors());
 
 // Test route
 app.get('/', (req: Request, res: Response) => {
-    res.send('Hello World!');
+    res.send('Health Check: Server is running');
 });
 
 app.use("/api/v1/extract", extractRouter);
 app.use("/api/v1/embed", embedRouter);
 app.use("/api/v1/search", searchRouter);
+app.use("/api/v1/getuser",getUserRouter)
 
 async function main(){
     try {
