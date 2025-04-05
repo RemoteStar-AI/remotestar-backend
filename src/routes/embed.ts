@@ -19,11 +19,15 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
   session.startTransaction();
   try {
     const body = req.body;
+    console.log("Request body Received:\n");
     const result = embedSchema.safeParse(body);
+    console.log("Parsed Result:\n", result);
     if (!result.success) {
-      return res.status(400).json({
+     res.status(400).json({
         error: result.error.format(),
       });
+      console.log('Error:', result.error.format());
+      return;
     }
     const { text, schema } = result.data;
     const firebaseId = req.user.firebase_id;
