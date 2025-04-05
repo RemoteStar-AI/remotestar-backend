@@ -69,7 +69,7 @@ const experienceSchema = z.object({
   // Define the main resume schema that wraps the expected response in a "responce" key.
 export const resumeSchema = z.object({
   name: z.string(),
-  email: z.string().email(),
+  email: z.string(),
   phone: z.string().optional(),
   address: z.string().optional(),
   current_location: z.string().optional(),
