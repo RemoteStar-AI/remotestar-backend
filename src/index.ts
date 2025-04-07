@@ -7,6 +7,7 @@ import {extractRouter} from './routes/extract';
 import {embedRouter} from './routes/embed';
 import {searchRouter} from './routes/search';
 import { getUserRouter } from './routes/getuser';
+import { userRouter } from './routes/user';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use("/api/v1/extract", extractRouter);
 app.use("/api/v1/embed", embedRouter);
 app.use("/api/v1/search", searchRouter);
 app.use("/api/v1/getuser",getUserRouter)
+app.use("/api/v1/user", userRouter);
 
 async function main(){
     try {
