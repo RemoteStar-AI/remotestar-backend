@@ -54,13 +54,20 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
       { session }
     );
 
+    // Convert schema to a valid metadata format for Pinecone
+    const metadata = Object.entries(schema).reduce((acc, [key, value]) => {
+      // Convert values to string, number, or boolean to match RecordMetadataValue
+      if (value !== null && value !== undefined) {
+        acc[key] = String(value);
+      }
+      return acc;
+    }, {} as Record<string, string>);
+
     await index.namespace("talent-pool").upsert([
       {
         id: uniqueId.toString(),
         values: embedding,
-        metadata: {
-          text: JSON.stringify(schema),
-        },
+        metadata,
       },
     ]);
 
