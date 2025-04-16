@@ -1,8 +1,8 @@
 import { Router } from "express";
 export const searchRouter = Router();
 import { z } from "zod";
-import { openai } from "../utils/openai";
-import { pinecone } from "../utils/pinecone";
+import { openai } from "../../utils/openai";
+import { pinecone } from "../../utils/pinecone";
 
 const schema = z.object({
   query: z.string(),

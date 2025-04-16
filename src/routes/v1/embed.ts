@@ -1,13 +1,13 @@
 import { Router } from "express";
-import { pinecone } from "../utils/pinecone";
+import { pinecone } from "../../utils/pinecone";
 import { z } from "zod";
-import { openai } from "../utils/openai";
+import { openai } from "../../utils/openai";
 import { config } from "dotenv";
 config();
 export const embedRouter = Router();
-import User from "../utils/db";
+import User from "../../utils/db";
 import mongoose from "mongoose";
-import { authenticate } from "../middleware/firebase-auth";
+import { authenticate } from "../../middleware/firebase-auth";
 
 const embedSchema = z.object({
   text: z.string(),

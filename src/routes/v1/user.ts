@@ -1,8 +1,8 @@
 import { Router } from "express";
 export const userRouter = Router();
-import { authenticate } from "../middleware/firebase-auth";
-import User from "../utils/db";
-import admin from "../utils/firebase";
+import { authenticate } from "../../middleware/firebase-auth";
+import User from "../../utils/db";
+import admin from "../../utils/firebase";
 
 userRouter.get("/", authenticate, async (req, res) => {
   try {

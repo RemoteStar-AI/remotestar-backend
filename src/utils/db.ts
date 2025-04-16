@@ -85,5 +85,36 @@ const userSchema = new Schema({
   }
 }, { timestamps: true });
 
+const companySchema = new Schema({
+  name: { type: String, required: true },
+  website: { type: String, required: true },
+});
+
+const jobSchema = new mongoose.Schema({
+  companyId: { type: Number, required: true },
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  location: { type: String, required: true },
+  jobType: { type: String, enum: ['full-time', 'part-time', 'contract', 'internship'], required: true },
+  salaryFrequency: { type: String, enum: ['yearly', 'monthly', 'hourly'], required: true },
+  salary: { type: String, default: "" },
+  useRanges: { type: Boolean, default: false },
+  minSalary: { type: String, default: "" },
+  maxSalary: { type: String, default: "" },
+  applicationProcess: { type: String, enum: ['interview', 'assessment', 'direct'], required: true },
+  formLink: { type: String, default: "" },
+  automatedCommunications: { type: Boolean, default: false },
+  autoDirectToApply: { type: Boolean, default: false },
+  yearsOfExperience: {
+    min: { type: String, default: "0" },
+    max: { type: String, default: "0" }
+  },
+  additionalRequirements: { type: String, default: "" },
+  createdAt: { type: Date, default: Date.now }
+});
+
+export const Job = mongoose.model("Job", jobSchema);
+export const Company = mongoose.model("Company", companySchema);
+
 const User = mongoose.model("User", userSchema);
 export default User;

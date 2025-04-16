@@ -1,11 +1,11 @@
 import { Router } from "express";
 export const extractRouter = Router();
 import { z } from "zod";
-import { extractPrompt, reformatPrompt } from "../utils/prompts";
-import { openai } from "../utils/openai";
+import { extractPrompt, reformatPrompt } from "../../utils/prompts";
+import { openai } from "../../utils/openai";
 import { config } from "dotenv";
-import { resumeSchema } from "../utils/schema";
-import { extractJsonFromMarkdown } from "../utils/helper-functions";
+import { resumeSchema } from "../../utils/schema";
+import { extractJsonFromMarkdown } from "../../utils/helper-functions";
 config();
 
 extractRouter.post("/", async (req: any, res: any) => {
