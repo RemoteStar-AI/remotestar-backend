@@ -9,6 +9,7 @@ import {searchRouter} from './routes/v1/search';
 import { getUserRouter } from './routes/v1/getuser';
 import { userRouter } from './routes/v1/user';
 import { companyRouter } from './routes/v1/company';
+import { jobRouter } from './routes/v1/job';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use("/api/v1/search", searchRouter);
 app.use("/api/v1/getuser",getUserRouter)
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/company", companyRouter);
+app.use("/api/v1/job", jobRouter);
 
 async function main(){
     try {

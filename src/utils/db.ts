@@ -91,7 +91,7 @@ const companySchema = new Schema({
 });
 
 const jobSchema = new mongoose.Schema({
-  companyId: { type: Number, required: true },
+  companyId: { type: String, required: true },
   title: { type: String, required: true },
   description: { type: String, required: true },
   location: { type: String, required: true },
