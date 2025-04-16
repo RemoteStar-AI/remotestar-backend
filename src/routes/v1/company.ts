@@ -113,7 +113,7 @@ companyRouter.delete("/", async (req, res) => {
       data: _id,
     });
   } catch (error) {
-    // If any error occurs during the transaction, it will be rolled back on track
+    // If any error occurs during the transaction, it will be rolled back.
     res.status(500).json({
       error: error || "Internal Server Error",
     });
