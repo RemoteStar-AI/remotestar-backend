@@ -102,16 +102,13 @@ const jobSchema = new mongoose.Schema({
   minSalary: { type: String, default: "" },
   maxSalary: { type: String, default: "" },
   applicationProcess: { type: String, enum: ['interview', 'assessment', 'direct'], required: true },
-  formLink: { type: String, default: "" },
-  automatedCommunications: { type: Boolean, default: false },
-  autoDirectToApply: { type: Boolean, default: false },
   yearsOfExperience: {
     min: { type: String, default: "0" },
     max: { type: String, default: "0" }
   },
   additionalRequirements: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now }
-});
+}, { timestamps: true });
 
 export const Job = mongoose.model("Job", jobSchema);
 export const Company = mongoose.model("Company", companySchema);

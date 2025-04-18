@@ -16,15 +16,11 @@ export const jobSchema = z.object({
   minSalary: z.string().optional(),
   maxSalary: z.string().optional(),
   applicationProcess: z.enum(["interview", "assessment", "direct"]),
-  formLink: z.string().optional(),
-  automatedCommunications: z.boolean(),
-  autoDirectToApply: z.boolean(),
   yearsOfExperience: z.object({
     min: z.string(),
     max: z.string(),
   }),
   additionalRequirements: z.string().optional(),
-  createdAt: z.string().or(z.date()).optional(),
 });
 
 const deleteJobSchema = z.object({
