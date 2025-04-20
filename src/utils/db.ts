@@ -16,7 +16,7 @@ const userSchema = new Schema({
     role: { type: String },
     start_date: { type: String },
     end_date: { type: String },
-    description: { type: String }
+    description: [{ type: String }]
   }],
 
   education: [{
@@ -36,7 +36,7 @@ const userSchema = new Schema({
 
   projects: [{
     name: { type: String },
-    description: { type: String },
+    description: [{ type: String }],
     repository: { type: String },
     technologies_used: [{ type: String }],
     features: [{ type: String }]

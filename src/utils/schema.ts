@@ -5,7 +5,7 @@ const experienceSchema = z.object({
     role: z.string(),
     start_date: z.string(),
     end_date: z.string(),
-    description: z.string()
+    description: z.array(z.string())
   });
   
   const educationSchema = z.object({
@@ -25,7 +25,7 @@ const experienceSchema = z.object({
   
   const projectSchema = z.object({
     name: z.string(),
-    description: z.string(),
+    description: z.array(z.string()),
     repository: z.string(),
     technologies_used: z.array(z.string()),
     features: z.array(z.string())
