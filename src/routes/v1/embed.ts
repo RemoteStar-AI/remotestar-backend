@@ -57,13 +57,19 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
     );
 
     // Convert schema to a valid metadata format for Pinecone
-    const metadata = Object.entries(schema).reduce((acc, [key, value]) => {
-      // Convert values to string, number, or boolean to match RecordMetadataValue
-      if (value !== null && value !== undefined) {
-        acc[key] = String(value);
-      }
-      return acc;
-    }, {} as Record<string, string>);
+    const metadata = Object.entries(schema).reduce(
+      (acc, [key, value]) => {
+        // Convert values to string, number, or boolean to match RecordMetadataValue
+        if (value !== null && value !== undefined) {
+          acc[key] = String(value);
+        }
+        return acc;
+      },
+      {
+        firebase_id: firebaseId,
+        firebase_email: userEmail,
+      } as Record<string, string>
+    );
 
     await index.namespace("talent-pool").upsert([
       {
@@ -132,12 +138,19 @@ embedRouter.post("/bulk", authenticate, async (req: any, res: any) => {
         ...schema,
       });
 
-      const metadata = Object.entries(schema).reduce((acc, [key, value]) => {
-        if (value !== null && value !== undefined) {
-          acc[key] = String(value);
-        }
-        return acc;
-      }, {} as Record<string, string>);
+      const metadata = Object.entries(schema).reduce(
+        (acc, [key, value]) => {
+          // Convert values to string, number, or boolean to match RecordMetadataValue
+          if (value !== null && value !== undefined) {
+            acc[key] = String(value);
+          }
+          return acc;
+        },
+        {
+          firebase_id: firebaseId,
+          firebase_email: userEmail,
+        } as Record<string, string>
+      );
 
       pineconePayload.push({
         id: uniqueId.toString(),
