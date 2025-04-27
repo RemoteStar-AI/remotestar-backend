@@ -1,5 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 
+
+
 const userSchema = new Schema({
   firebase_id: { type: String, required: true },
   firebase_email: { type: String, required: true },
@@ -85,6 +87,26 @@ const userSchema = new Schema({
   }
 }, { timestamps: true });
 
+const culturalFitSchema = new Schema({
+  userId: { type: String, required: true },
+  product_score: { type: Number, min: 0, max: 5},
+  service_score: { type: Number, min: 0, max: 5},
+  startup_score: { type: Number, min: 0, max: 5},
+  mnc_score: { type: Number, min: 0, max: 5},
+  loyalty_score: { type: Number, min: 0, max: 5},
+}, { timestamps: true });
+
+const skillsSchema = new Schema({
+  name: { type: String },
+  years_experience: { type: Number },
+  score: { type: Number, min: 0, max: 5}
+});
+
+const userSkillsSchema = new Schema({
+  userId: { type: String, required: true },
+  skills: [skillsSchema],
+}, { timestamps: true });
+
 const companySchema = new Schema({
   name: { type: String, required: true },
   website: { type: String, required: true },
@@ -112,6 +134,8 @@ const jobSchema = new mongoose.Schema({
 
 export const Job = mongoose.model("Job", jobSchema);
 export const Company = mongoose.model("Company", companySchema);
+export const CulturalFit = mongoose.model("CulturalFit", culturalFitSchema);
+export const Skills = mongoose.model("Skills", userSkillsSchema);
 
 const User = mongoose.model("User", userSchema);
 export default User;

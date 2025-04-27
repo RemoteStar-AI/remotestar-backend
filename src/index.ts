@@ -10,6 +10,7 @@ import { getUserRouter } from './routes/v1/getuser';
 import { userRouter } from './routes/v1/user';
 import { companyRouter } from './routes/v1/company';
 import { jobRouter } from './routes/v1/job';
+import { embedRouter as embedRouterV2 } from './routes/v2/embed';
 
 dotenv.config();
 
@@ -23,7 +24,7 @@ app.use(cors());
 app.get('/', (req: Request, res: Response) => {
     res.send('Health Check: Server is running');
 });
-
+//v1 routes 
 app.use("/api/v1/extract", extractRouter);
 app.use("/api/v1/embed", embedRouter);
 app.use("/api/v1/search", searchRouter);
@@ -31,6 +32,9 @@ app.use("/api/v1/getuser",getUserRouter)
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/company", companyRouter);
 app.use("/api/v1/job", jobRouter);
+
+//v2 routes
+app.use("/api/v2/embed", embedRouterV2);
 
 async function main(){
     try {

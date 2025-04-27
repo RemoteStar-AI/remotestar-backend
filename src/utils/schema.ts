@@ -68,6 +68,7 @@ const experienceSchema = z.object({
   
   // Define the main resume schema that wraps the expected response in a "responce" key.
 export const resumeSchema = z.object({
+  _id: z.string().optional(),
   name: z.string(),
   email: z.string(),
   phone: z.string().optional(),
@@ -104,3 +105,17 @@ export const resumeSchema = z.object({
   soft_skills: softSkillsSchema,
 });
 
+
+export const culturalFitSchema = z.object({
+  product_score: z.number(),
+  service_score: z.number(),
+  startup_score: z.number(),
+  mnc_score: z.number(),
+  loyalty_score: z.number(),
+});
+
+export const skillsSchema = z.array(z.object({
+  name: z.string(),
+  years_experience: z.number(),
+  score: z.number(),
+}))
