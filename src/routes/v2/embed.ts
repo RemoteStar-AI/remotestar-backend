@@ -50,6 +50,9 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
       ],
       { session }
     );
+    if (!responce) {
+      throw new Error("Failed to create user");
+    }
     console.log("parsed schema received\n", data);
     const culturalFitPromptText = culturalFitPrompt(JSON.stringify(data));
 

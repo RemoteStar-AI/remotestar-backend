@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { Job,CulturalFit,Skills } from "../../utils/db";
+import { Job, CulturalFit, Skills } from "../../utils/db";
 import User from "../../utils/db";
 
 export const searchRouter = Router();
@@ -11,42 +11,39 @@ function calculateSkillsSimilarity(
   let totalScore = 0;
   let totalWeight = 0;
 
-  // Compare each skill in expectedSkills
-  expectedSkills.forEach((expectedSkill: any) => {
-    let candidateSkill = candidateSkills.find(
-      (skill) => skill.name === expectedSkill.name
-    );
-
-    if (candidateSkill) {
-      // Exact match
-      let skillMatch = Math.min(candidateSkill.score, expectedSkill.score);
-      totalScore += skillMatch * expectedSkill.years_experience;
-      totalWeight += expectedSkill.years_experience;
+  expectedSkills.forEach((exp) => {
+    const cand = candidateSkills.find((s) => s.name === exp.name);
+    if (cand) {
+      const match = Math.min(cand.score, exp.score);
+      totalScore += match * exp.years_experience;
+      totalWeight += exp.years_experience;
     } else {
-      // No match
-      totalScore += 0;
-      totalWeight += 1; // Consider a penalty for missing skill
+      totalWeight += 1;
     }
   });
 
-  return totalScore / totalWeight;
+  return totalWeight === 0 ? 0 : totalScore / totalWeight;
 }
 
 function calculateCulturalFitSimilarity(
   candidateCulturalFit: any,
   expectedCulturalFit: any
 ) {
-  let totalScore = 0;
-  let totalWeight = 0;
+  let totalNormalizedScore = 0;
+  let count = 0;
 
-  // Compare each cultural fit score
-  Object.keys(expectedCulturalFit).forEach((key) => {
-    let diff = Math.abs(candidateCulturalFit[key] - expectedCulturalFit[key]);
-    totalScore += 5 - diff; // More similar, higher score
-    totalWeight += 1;
-  });
+  Object.keys(expectedCulturalFit)
+    .filter((key) => key.endsWith("_score") && typeof expectedCulturalFit[key] === "number")
+    .forEach((key) => {
+      const expected = expectedCulturalFit[key];
+      const actual = candidateCulturalFit[key] ?? 0;
+      const diff = Math.abs(actual - expected);
+      const normalized = Math.max(0, (5 - diff) / 5);
+      totalNormalizedScore += normalized;
+      count++;
+    });
 
-  return totalScore / totalWeight;
+  return count === 0 ? 0 : totalNormalizedScore / count;
 }
 
 function calculateMatchScore(
@@ -57,60 +54,53 @@ function calculateMatchScore(
   skillsWeight = 0.7,
   culturalFitWeight = 0.3
 ) {
-  let skillsSimilarity = calculateSkillsSimilarity(
-    candidateSkills,
-    expectedSkills
-  );
-  let culturalFitSimilarity = calculateCulturalFitSimilarity(
-    candidateCulturalFit,
-    expectedCulturalFit
-  );
+  const skillsSim = calculateSkillsSimilarity(candidateSkills, expectedSkills);
+  const cultSim   = calculateCulturalFitSimilarity(candidateCulturalFit, expectedCulturalFit);
 
-  return (
-    (skillsSimilarity * skillsWeight +
-      culturalFitSimilarity * culturalFitWeight) /
-    (skillsWeight + culturalFitWeight)
-  );
+  // weighted combination, then scale to 100
+  const weighted = (skillsSim * skillsWeight + cultSim * culturalFitWeight)
+                 / (skillsWeight + culturalFitWeight);
+
+  return Math.round(weighted * 100);
 }
 
 searchRouter.get("/", async (req: any, res: any) => {
-  const params = req.query;
-  const { jobId } = params;
+  const { jobId } = req.query;
+
   try {
-    const job = await Job.findById({_id:jobId});
-    if (!job) {
-      res.status(404).json({ error: "Job not found" });
-      return;
-    }
+    // populate expectedSkills if they're stored by _id only
+    const job = await Job.findById(jobId).populate("expectedSkills");
+    if (!job) return res.status(404).json({ error: "Job not found" });
+
     const { expectedSkills, expectedCulturalFit } = job;
-    const allUsers = await User.find({});
-    console.log("all users found");
+    const users = await User.find({});
 
-    const matchResults = allUsers.map((user: any) => {
-        const candidateSkills = user.skills || [];
-        const candidateCulturalFit = user.culturalFit || {};
+    const matches = await Promise.all(
+      users.map(async (user) => {
+        const cult = await CulturalFit.findOne({ userId: user.firebase_id });
+        const skl  = await Skills.findOne({ userId: user.firebase_id });
 
-        const matchScore = calculateMatchScore(
-            candidateSkills,
-            expectedSkills,
-            candidateCulturalFit,
-            expectedCulturalFit
+        const score = calculateMatchScore(
+          skl?.skills || [],
+          expectedSkills as any[],
+          cult || {},
+          expectedCulturalFit
         );
 
         return {
-            userId: user._id,
-            matchScore,
-            culturalFit: candidateCulturalFit,
-            skills: candidateSkills
+          userId: user._id,
+          name: user.name,
+          email: user.email,
+          matchScore: score,
+          culturalFit: cult,
+          skills: skl?.skills || [],
         };
-    });
+      })
+    );
 
-    const sortedResults = matchResults.sort((a:any,b:any)=>b.matchScore - a.matchScore);
+    matches.sort((a, b) => b.matchScore - a.matchScore);
 
-    res.status(200).json({
-      message: "Search results",
-      data: sortedResults,
-    });
+    res.status(200).json({ message: "Search results", data: matches });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
