@@ -66,6 +66,15 @@ const experienceSchema = z.object({
     leadership: z.number()
   });
   
+  const jobPreferencesSchema = z.object({
+    current_location: z.string(),
+    preferred_locations: z.array(z.string()),
+    salary_expectation: z.number(),
+    employment_type: z.array(z.string()),
+    notice_period: z.number(),
+    reason_for_switch: z.string(),
+    work_type: z.array(z.string()),
+  });
   // Define the main resume schema that wraps the expected response in a "responce" key.
 export const resumeSchema = z.object({
   _id: z.string().optional(),
@@ -102,6 +111,7 @@ export const resumeSchema = z.object({
       }),
     })
   ),
+  job_preferences: jobPreferencesSchema,
   soft_skills: softSkillsSchema,
 });
 
