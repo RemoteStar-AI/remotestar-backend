@@ -30,6 +30,7 @@ jobRouter.get("/", async (req: any, res: any) => {
 
 jobRouter.post("/", async (req: any, res: any) => {
   try {
+    console.log("job creation started");
     const body = req.body;
     const parsedBody = jobSchema.safeParse(body);
     console.log("data received");
@@ -40,6 +41,8 @@ jobRouter.post("/", async (req: any, res: any) => {
     const data = parsedBody.data;
 
     //cultural fit
+    console.log("cultural fit creation started");
+
     const culturalFitPrompt = expectedCulturalFitPrompt(data);
 
     const culturalFitResponse = await openai.chat.completions.create({
@@ -58,6 +61,7 @@ jobRouter.post("/", async (req: any, res: any) => {
     console.log("parsed cultural fit received\n", parsedCulturalFit);
 
     //skills
+    console.log("cultural fit creation started");
     const skillsPrompt = expectedSkillsPrompt(data);
     console.log("sending request to openai for skills\n");
     const skillsResponse = await openai.chat.completions.create({
