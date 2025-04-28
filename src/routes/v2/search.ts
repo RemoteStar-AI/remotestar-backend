@@ -84,6 +84,7 @@ searchRouter.get("/", async (req: any, res: any) => {
     }
     const { expectedSkills, expectedCulturalFit } = job;
     const allUsers = await User.find({});
+    console.log("all users found");
 
     const matchResults = allUsers.map((user: any) => {
         const candidateSkills = user.skills || [];
