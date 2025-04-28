@@ -12,6 +12,11 @@ import { openai } from "../../utils/openai";
 import { extractJsonFromMarkdown } from "../../utils/helper-functions";
 import User from "../../utils/db";
 import mongoose from "mongoose";
+import { z } from "zod";
+
+const embedSchema = z.object({
+  schema: z.record(z.unknown()), // or z.any()
+});
 
 embedRouter.post("/", authenticate, async (req: any, res: any) => {
   const session = await mongoose.startSession();
@@ -21,14 +26,14 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
     const userId = req.user.firebase_id;
 
     // making cultural fit
-    const { schema } = req.body;
-    const parsedSchema = resumeSchema.safeParse(schema);
+    const body = req.body;
+    const parsedSchema = embedSchema.safeParse(body);
     if (!parsedSchema.success) {
       console.log("error in parsed schema\n", parsedSchema.error);
       res.status(400).json({ error: parsedSchema.error });
       return;
     }
-    const data = schema;
+    const data = body.schema;
 
     const firebaseId = req.user.firebase_id;
     const userEmail = req.user.email;
@@ -40,7 +45,7 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
           _id: uniqueId,
           firebase_id: firebaseId,
           firebase_email: userEmail,
-          ...schema,
+          ...data,
         },
       ],
       { session }
