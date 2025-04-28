@@ -11,16 +11,17 @@ import {
 import { openai } from "../../utils/openai";
 import { extractJsonFromMarkdown } from "../../utils/helper-functions";
 
-embedRouter.post("/", async (req: any, res: any) => {
-  const userId = Math.random().toString(36).substring(2, 15);
+embedRouter.post("/",authenticate,async (req: any, res: any) => {
+  const userId = req.user.firebase_id;
+
   // making cultural fit
   const { schema } = req.body;
-  //   const parsedSchema = resumeSchema.safeParse(schema);
-  //   if (!parsedSchema.success) {
-  //     console.log("error in parsed schema\n", parsedSchema.error);
-  //     res.status(400).json({ error: parsedSchema.error });
-  //     return;
-  //   }
+    const parsedSchema = resumeSchema.safeParse(schema);
+    if (!parsedSchema.success) {
+      console.log("error in parsed schema\n", parsedSchema.error);
+      res.status(400).json({ error: parsedSchema.error });
+      return;
+    }
   //need to fix parsing of schema
   const data = schema;
   console.log("parsed schema received\n", data);
