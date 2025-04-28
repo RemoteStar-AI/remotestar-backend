@@ -32,6 +32,7 @@ jobRouter.post("/", async (req: any, res: any) => {
   try {
     const body = req.body;
     const parsedBody = jobSchema.safeParse(body);
+    console.log("data received");
     if (!parsedBody.success) {
       res.status(400).json({ error: parsedBody.error.format() });
       return;
@@ -80,6 +81,7 @@ jobRouter.post("/", async (req: any, res: any) => {
       data: jobResponce,
     });
   } catch (err) {
+    console.log("error found")
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
   }
