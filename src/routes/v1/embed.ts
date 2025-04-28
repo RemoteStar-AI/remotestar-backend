@@ -25,10 +25,10 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
     const result = embedSchema.safeParse(body);
     console.log("Parsed Result:\n", result);
     if (!result.success) {
+      console.log("Error:", result.error.format());
       res.status(400).json({
         error: result.error.format(),
       });
-      console.log("Error:", result.error.format());
       return;
     }
     const { text, schema } = result.data;

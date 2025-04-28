@@ -117,7 +117,10 @@ Return only the JSON output, without additional commentary.
 `;
 }
 
-export function reformatPrompt(responseText: string, errorDetails: string): string {
+export function reformatPrompt(
+  responseText: string,
+  errorDetails: string
+): string {
   return `
 You are an advanced AI assistant. The JSON output you provided earlier does not strictly follow the required schema. Your task is to reformat the provided JSON output to exactly match the JSON schema below.
 
@@ -228,5 +231,92 @@ ${errorDetails}
 ---
 
 Return only the JSON output that exactly matches the schema above.
+  `;
+}
+
+export function culturalFitPrompt(schema: any): string {
+  return `
+  You are an advanced AI assistant.
+  do not add any extra text or comments in the output other than specified in the instructions.
+  your job is to analyze the User Data and give each of the fields a score between 0 and 5.
+  product_score: 1 if he has no experience in product based companies and 5 if has worked in really good product based companies.
+  service_score: 1 if he has no experience in service based companies and 5 if has worked in really good service based companies.
+  startup_score: 1 if he has no experience in startup companies and 5 if has worked in really good startup companies.
+  mnc_score: 1 if he has no experience in mnc companies and 5 if has worked in really good mnc companies.
+  loyalty_score: 1 if he has done a lot of frequent job changes and 5 if he has worked in the same company for a long time.
+  ### **Schema:**
+\`\`\`json
+const culturalFitSchema = new Schema({
+  product_score: { type: Number, min: 0, max: 5},
+  service_score: { type: Number, min: 0, max: 5},
+  startup_score: { type: Number, min: 0, max: 5},
+  mnc_score: { type: Number, min: 0, max: 5},
+  loyalty_score: { type: Number, min: 0, max: 5},
+})
+\`\`\`
+
+### **User Data:**
+[${schema}]
+
+## **Instructions:**
+- give each of the fields a score between 1 and 5.
+- give the score based on the user data and the criteria given above.
+- give the score according to mongoose format above.
+- make sure to follow the output format strictly.
+- all the scores are a number and not a string.
+- do not add any extra text or comments in the output.
+
+### **Expected Output Format:**
+
+{
+  "product_score": 0,
+  "service_score": 0,
+  "startup_score": 0,
+  "mnc_score": 0,
+  "loyalty_score": 0
+}
+`;
+}
+
+export function skillsPrompt(schema: any): string {
+  return `
+  You are an advanced AI assistant.do not add any extra text or comments in the output other than specified in the instructions. Your job is to take the user data and 
+  give each skill in his resume a score of 1 to 5.
+
+  1 if he has no solid projects or experience in the skill.
+  5 if he has a solid project or Industry level experience in the skill.
+  make sure to diffrentiate between skills based upon quality of the projects and the experience they have used that skill in.
+
+  try to obtain relevant experience from the user data. and put it in the years_experience field.
+
+
+  ### **Schema:**
+  \`\`\`json
+  const skillsSchema = new Schema({
+  name: { type: String },
+  years_experience: { type: Number },
+  score: { type: Number, min: 0, max: 5}
+})
+\`\`\`
+
+### **User Data:**
+[${schema}]
+
+## **Instructions:**
+- give each skill a score between 1 and 5.
+- give the score based on the user data and the criteria given above.
+- give the score according to mongoose format above.
+- make sure to follow the output format strictly.
+- all the scores are a number and not a string.
+- do not add any extra text or comments in the output.
+
+### **Expected Output Format:**
+
+{
+  "name": "string",
+  "years_experience": Number,
+  "score": Number
+}
+
   `;
 }
