@@ -118,7 +118,7 @@ const userSkillsSchema = new Schema({
 
 const companySchema = new Schema({
   name: { type: String, required: true },
-  website: { type: String, required: true },
+  website: { type: String, optional: true },
 });
 
 //fix : need to remove optional true from expectedSkills and expectedCulturalFit
