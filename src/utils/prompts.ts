@@ -238,7 +238,7 @@ export function culturalFitPrompt(schema: any): string {
   return `
   You are an advanced AI assistant.
   do not add any extra text or comments in the output other than specified in the instructions.
-  your job is to analyze the User Data and give each of the fields a score between 0 and 5.
+  your job is to analyze the User Data and give each of the fields a score between 1 and 5.
   product_score: 1 if he has no experience in product based companies and 5 if has worked in really good product based companies.
   service_score: 1 if he has no experience in service based companies and 5 if has worked in really good service based companies.
   startup_score: 1 if he has no experience in startup companies and 5 if has worked in really good startup companies.
@@ -357,11 +357,11 @@ const culturalFitSchema = new Schema({
 ### **Expected Output Format:**
 
 {
-  "product_score": 0,
-  "service_score": 0,
-  "startup_score": 0,
-  "mnc_score": 0,
-  "loyalty_score": 0
+  "product_score": 1,
+  "service_score": 1,
+  "startup_score": 1,
+  "mnc_score": 1,
+  "loyalty_score": 1
 }
   `;
 }
