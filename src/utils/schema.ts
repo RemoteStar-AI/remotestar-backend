@@ -119,3 +119,29 @@ export const skillsSchema = z.array(z.object({
   years_experience: z.number(),
   score: z.number(),
 }))
+
+export const jobSchema = z.object({
+  _id: z.string().optional(),
+  companyId: z.string(),
+  title: z.string(),
+  description: z.string(),
+  location: z.string(),
+  jobType: z.enum(["full-time", "part-time", "contract", "internship"]),
+  salaryFrequency: z.enum(["yearly", "monthly", "hourly"]),
+  salary: z.string().optional(),
+  useRanges: z.boolean(),
+  minSalary: z.string().optional(),
+  maxSalary: z.string().optional(),
+  applicationProcess: z.enum(["interview", "assessment", "direct"]),
+  yearsOfExperience: z.object({
+    min: z.string(),
+    max: z.string(),
+  }),
+  additionalRequirements: z.string().optional(),
+  expectedSkills: z.array(skillsSchema).optional(),
+  expectedCulturalFit: culturalFitSchema.optional(),
+});
+
+export const deleteJobSchema = z.object({
+  _id: z.string(),
+});

@@ -320,3 +320,98 @@ export function skillsPrompt(schema: any): string {
 
   `;
 }
+
+export function expectedCulturalFitPrompt(schema: any): string {
+  return `
+  You are an advanced AI assistant.
+  do not add any extra text or comments in the output other than specified in the instructions.
+  your job is to analyze the Job Description and give each of the fields an expected score between 0 and 5.
+  product_score: 1 if the job is mostly for service companies and 5 if it is clearly for a strong product based company.
+  service_score: 1 if the job is mostly for product companies and 5 if it is clearly for a strong service based company.
+  startup_score: 1 if the job is mostly for large companies and 5 if it is clearly for startups or high-growth companies.
+  mnc_score: 1 if the job is mostly for startups and 5 if it is clearly for MNCs (large multinational companies).
+  loyalty_score: 1 if the company is known for short-term contracts or temp work, and 5 if it encourages long-term employment.
+
+  ### **Schema:**
+\`\`\`json
+const culturalFitSchema = new Schema({
+  product_score: { type: Number, min: 0, max: 5},
+  service_score: { type: Number, min: 0, max: 5},
+  startup_score: { type: Number, min: 0, max: 5},
+  mnc_score: { type: Number, min: 0, max: 5},
+  loyalty_score: { type: Number, min: 0, max: 5},
+})
+\`\`\`
+
+### **Job Description:**
+[${schema}]
+
+## **Instructions:**
+- give each of the fields a score between 1 and 5.
+- give the score based on the job description and the criteria given above.
+- give the score according to mongoose format above.
+- make sure to follow the output format strictly.
+- all the scores are a number and not a string.
+- do not add any extra text or comments in the output.
+
+### **Expected Output Format:**
+
+{
+  "product_score": 0,
+  "service_score": 0,
+  "startup_score": 0,
+  "mnc_score": 0,
+  "loyalty_score": 0
+}
+  `;
+}
+
+export function expectedSkillsPrompt(schema: any): string {
+  return `
+  You are an advanced AI assistant.
+  do not add any extra text or comments in the output other than specified in the instructions.
+  your job is to carefully read the Job Description and extract a list of all the technical skills mentioned, implied, or required for the role.
+
+  - Include only technical skills: programming languages, frameworks, tools, libraries, databases, cloud services, devops, machine learning tools, etc.
+  - Do not include any soft skills (like communication, leadership, teamwork) or extracurricular activities.
+  - Assign a score:
+    - 1 if the skill is only slightly mentioned or optional.
+    - 5 if the skill is clearly mandatory or heavily emphasized.
+  - Estimate years_experience based on the seniority level or wording (junior: 0-1 years, mid-level: 2-4 years, senior: 5+ years, expert: 7+ years).
+
+  ### **Schema:**
+\`\`\`json
+const skillsSchema = new Schema({
+  name: { type: String },
+  years_experience: { type: Number },
+  score: { type: Number, min: 0, max: 5}
+})
+\`\`\`
+
+### **Job Description:**
+[${schema}]
+
+## **Instructions:**
+- List all relevant technical skills from the job description.
+- Assign each skill a score between 1 and 5 based on importance.
+- Estimate expected years of experience if mentioned or implied.
+- Format the result as an array of skill objects following the mongoose schema.
+- All scores and years_experience must be numbers (not strings).
+- Do not add any extra text, explanations, or comments.
+
+### **Expected Output Format:**
+
+[
+  {
+    "name": "string",
+    "years_experience": Number,
+    "score": Number
+  },
+  {
+    "name": "string",
+    "years_experience": Number,
+    "score": Number
+  }
+]
+  `;
+}
