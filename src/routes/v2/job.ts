@@ -43,7 +43,7 @@ jobRouter.post("/", async (req: any, res: any) => {
     //cultural fit
     console.log("cultural fit creation started");
 
-    const culturalFitPrompt = expectedCulturalFitPrompt(data);
+    const culturalFitPrompt = expectedCulturalFitPrompt(JSON.stringify(data));
 
     const culturalFitResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -62,7 +62,7 @@ jobRouter.post("/", async (req: any, res: any) => {
 
     //skills
     console.log("cultural fit creation started");
-    const skillsPrompt = expectedSkillsPrompt(data);
+    const skillsPrompt = expectedSkillsPrompt(JSON.stringify(data));
     console.log("sending request to openai for skills\n");
     const skillsResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
