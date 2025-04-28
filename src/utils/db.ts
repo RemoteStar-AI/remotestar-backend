@@ -96,6 +96,15 @@ const culturalFitSchema = new Schema({
   loyalty_score: { type: Number, min: 0, max: 5},
 }, { timestamps: true });
 
+const culturalFitSchema2 = new Schema({
+  userId: { type: String, optional: true },
+  product_score: { type: Number, min: 0, max: 5},
+  service_score: { type: Number, min: 0, max: 5},
+  startup_score: { type: Number, min: 0, max: 5},
+  mnc_score: { type: Number, min: 0, max: 5},
+  loyalty_score: { type: Number, min: 0, max: 5},
+}, { timestamps: true });
+
 const skillsSchema = new Schema({
   name: { type: String },
   years_experience: { type: Number },
@@ -109,9 +118,10 @@ const userSkillsSchema = new Schema({
 
 const companySchema = new Schema({
   name: { type: String, required: true },
-  website: { type: String, required: true },
+  website: { type: String, optional: true },
 });
 
+//fix : need to remove optional true from expectedSkills and expectedCulturalFit
 const jobSchema = new mongoose.Schema({
   companyId: { type: String, required: true },
   title: { type: String, required: true },
@@ -129,7 +139,8 @@ const jobSchema = new mongoose.Schema({
     max: { type: String, default: "0" }
   },
   additionalRequirements: { type: String, default: "" },
-  createdAt: { type: Date, default: Date.now }
+  expectedSkills: { type: [skillsSchema], default: [] ,optional:true},
+  expectedCulturalFit: { type: culturalFitSchema2, default: {} ,optional:true},
 }, { timestamps: true });
 
 export const Job = mongoose.model("Job", jobSchema);
