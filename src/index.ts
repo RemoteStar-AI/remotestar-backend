@@ -12,7 +12,7 @@ import { companyRouter } from './routes/v1/company';
 import { jobRouter } from './routes/v1/job';
 import { embedRouter as embedRouterV2 } from './routes/v2/embed';
 import { jobRouter as jobRouterV2 } from './routes/v2/job';
-import { searchRouter as searchRouterV2 } from './routes/v2/search';
+import { matchingRouter as searchRouterV2 } from './routes/v2/search';
 
 dotenv.config();
 
