@@ -80,13 +80,14 @@ jobRouter.post("/", async (req: any, res: any) => {
       skillsResponse.choices[0].message.content
     ).replace(/(\r\n|\n|\r)/gm, "");
     let parsedSkills = JSON.parse(skillsJson);
-    
+    console.log(skillsJson)
 
     const finalBody = {
       ...data,
       expectedCulturalFit: parsedCulturalFit,
-      expectedSkills: { ...parsedSkills },
+      expectedSkills: [ ...parsedSkills.skills ],
     };
+    console.log(finalBody);
     const jobResponce = await Job.create(finalBody);
     res.status(200).json({
       message: "Job created successfully",
