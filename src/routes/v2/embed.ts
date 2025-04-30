@@ -25,7 +25,7 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
   try {
     session.startTransaction();
 
-    const userId = req.user.firebase_id;
+    let userId = req.user.firebase_id;
 
     // making cultural fit
     const body = req.body;
@@ -55,6 +55,7 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
     if (!responce) {
       throw new Error("Failed to create user");
     }
+    userId = uniqueId;
     console.log("parsed schema received\n", data);
     const culturalFitPromptText = culturalFitPrompt(JSON.stringify(data));
 
