@@ -118,6 +118,7 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
     });
     await session.commitTransaction();
     session.endSession();
+    console.log("skills and cultural fit created successfully")
     res.json({
       message: "skills and cultural fit created successfully",
       skillsResponce,
