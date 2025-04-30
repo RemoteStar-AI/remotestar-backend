@@ -69,7 +69,10 @@ jobRouter.post("/", async (req: any, res: any) => {
       messages: [{ role: "user", content: skillsPrompt }],
       response_format: { type: "json_object" },
     });
-    console.log("skills response received\n", skillsResponse.choices[0].message.content);
+    console.log(
+      "skills response received\n",
+      skillsResponse.choices[0].message.content
+    );
     if (!skillsResponse.choices[0].message.content) {
       throw new Error("Empty response from OpenAI");
     }
@@ -77,15 +80,20 @@ jobRouter.post("/", async (req: any, res: any) => {
       skillsResponse.choices[0].message.content
     ).replace(/(\r\n|\n|\r)/gm, "");
     let parsedSkills = JSON.parse(skillsJson);
+    
 
-    const finalBody = {...data, expectedCulturalFit: parsedCulturalFit, expectedSkills: {...parsedSkills}};
+    const finalBody = {
+      ...data,
+      expectedCulturalFit: parsedCulturalFit,
+      expectedSkills: { ...parsedSkills },
+    };
     const jobResponce = await Job.create(finalBody);
     res.status(200).json({
       message: "Job created successfully",
       data: jobResponce,
     });
   } catch (err) {
-    console.log("error found")
+    console.log("error found");
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
   }

@@ -85,7 +85,7 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
     }
     const culturalFitResponce = await CulturalFit.create({
       ...parsedCulturalFit,
-      userId,
+      userId: uniqueId,
     });
 
     //making skills
@@ -114,7 +114,7 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
     }
     const skillsResponce = await Skills.create({
       skills: parsedSkills,
-      userId,
+      userId: uniqueId,
     });
     await session.commitTransaction();
     session.endSession();
@@ -138,7 +138,7 @@ embedRouter.post("/bulk", authenticate, async (req: any, res: any) => {
   try {
     session.startTransaction();
 
-    const userId = req.user.firebase_id;
+    let userId = req.user.firebase_id;
     const firebaseId = req.user.firebase_id;
     const userEmail = req.user.email;
 
@@ -202,7 +202,7 @@ embedRouter.post("/bulk", authenticate, async (req: any, res: any) => {
       
       culturalFitResults.push({
         ...parsedCulturalFit,
-        userId,
+        userId: uniqueId,
       });
 
       // Process skills
@@ -234,7 +234,7 @@ embedRouter.post("/bulk", authenticate, async (req: any, res: any) => {
       
       skillsResults.push({
         skills: parsedSkills,
-        userId,
+        userId: uniqueId,
       });
     }
 
