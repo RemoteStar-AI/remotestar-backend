@@ -111,7 +111,7 @@ export const resumeSchema = z.object({
       }),
     })
   ),
-  job_preferences: jobPreferencesSchema,
+  job_preferences: jobPreferencesSchema.optional(),
   soft_skills: softSkillsSchema,
 });
 
