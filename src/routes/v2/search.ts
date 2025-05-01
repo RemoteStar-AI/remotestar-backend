@@ -4,7 +4,6 @@ import User from "../../utils/db";
 
 export const matchingRouter = Router();
 
-// Define interfaces for better type safety
 interface SkillItem {
   name?: string | null;
   years_experience?: number | null;
@@ -108,7 +107,7 @@ function calculateMatchScore(
   return finalScore;
 }
 
-matchingRouter.get("/:jobId", async (req:any, res:any) => {
+matchingRouter.get("/:jobId", async (req: any, res: any) => {
   try {
     const { jobId } = req.params;
     console.log(`Matching candidates for Job ID: ${jobId}`);
@@ -121,30 +120,26 @@ matchingRouter.get("/:jobId", async (req:any, res:any) => {
     }
     console.log("Job found:", job.title);
 
-    const expectedSkills     = job.expectedSkills?.toObject ? job.expectedSkills.toObject() : (job.expectedSkills || []);
-    const expectedCulturalFit = job.expectedCulturalFit || {};
+    // ← simplified to plain JS
+    const expectedSkills: SkillItem[] = job.expectedSkills || [];
+    const expectedCulturalFit: CulturalFitItem = { ...(job.expectedCulturalFit || {}) };
 
     const users = await User.find({});
     console.log(`Found ${users.length} users to evaluate.`);
 
     const matches = await Promise.all(
       users.map(async (user) => {
-        const idStr    = user._id.toString();
+        const idStr = user._id.toString();
         const firebase = user.firebase_id;
         console.log("→ Processing user:", user.name, { idStr, firebase });
 
-        // lookup by either Mongo-ID or Firebase-ID
-        const culturalFit = await CulturalFit.findOne({
-          userId: { $in: [idStr, firebase] }
-        });
-        const skillsData = await Skills.findOne({
-          userId: { $in: [idStr, firebase] }
-        });
+        const culturalFit = await CulturalFit.findOne({ userId: { $in: [idStr, firebase] } });
+        const skillsData = await Skills.findOne({ userId: { $in: [idStr, firebase] } });
 
         console.log("   culturalFit found for", user.name, ":", !!culturalFit);
         console.log("   skillsData   found for", user.name, ":", !!skillsData);
 
-        const plainCulturalFit: CulturalFitItem = culturalFit?.toObject ? culturalFit.toObject() : {} as any;
+        const plainCulturalFit: CulturalFitItem = culturalFit ? { ...culturalFit.toObject?.() ?? culturalFit } : {};
 
         let plainSkills: SkillItem[] = [];
         if (skillsData?.skills && Array.isArray(skillsData.skills)) {
