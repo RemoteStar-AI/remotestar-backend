@@ -7,8 +7,7 @@ import {
   expectedSkillsPrompt,
 } from "../../utils/prompts";
 import { openai } from "../../utils/openai";
-import { extractJsonFromMarkdown } from "../../utils/helper-functions";
-import { getCanonicalSkillNames } from "../../utils/helper-functions";
+import { extractJsonFromMarkdown, saveNewSkillsIfNotExist, getCanonicalSkillNames } from "../../utils/helper-functions";
 
 jobRouter.get("/", async (req: any, res: any) => {
   const params = req.query;
@@ -82,7 +81,10 @@ jobRouter.post("/", async (req: any, res: any) => {
       skillsResponse.choices[0].message.content
     ).replace(/(\r\n|\n|\r)/gm, "");
     let parsedSkills = JSON.parse(skillsJson);
-    console.log(skillsJson)
+    console.log(skillsJson);
+
+    // 🔥 Save new skills to DB if not already present
+    await saveNewSkillsIfNotExist(parsedSkills.skills);
 
     const finalBody = {
       ...data,
