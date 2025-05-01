@@ -143,10 +143,15 @@ const jobSchema = new mongoose.Schema({
   expectedCulturalFit: { type: culturalFitSchema2, default: {} ,optional:true},
 }, { timestamps: true });
 
+const canonicalSkillsSchema = new Schema({
+  name: { type: String, required: true, unique: true },
+});
+
 export const Job = mongoose.model("Job", jobSchema);
 export const Company = mongoose.model("Company", companySchema);
 export const CulturalFit = mongoose.model("CulturalFit", culturalFitSchema);
 export const Skills = mongoose.model("Skills", userSkillsSchema);
+export const CanonicalSkills = mongoose.model("CanonicalSkills", canonicalSkillsSchema);
 
 const User = mongoose.model("User", userSchema);
 export default User;

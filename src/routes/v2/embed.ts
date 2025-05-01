@@ -13,6 +13,7 @@ import { extractJsonFromMarkdown } from "../../utils/helper-functions";
 import User from "../../utils/db";
 import mongoose from "mongoose";
 import { z } from "zod";
+import { getCanonicalSkillNames } from "../../utils/helper-functions";
 
 const embedSchema = z.object({
   schema: z.record(z.unknown()), // or z.any()
@@ -89,7 +90,8 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
     });
 
     //making skills
-    const skillsPromptText = skillsPrompt(JSON.stringify(data));
+    const canonicalSkills = await getCanonicalSkillNames();
+    const skillsPromptText = skillsPrompt(JSON.stringify(data), canonicalSkills);
     console.log("sending request to openai for skills\n");
     const skillsResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -208,7 +210,8 @@ embedRouter.post("/bulk", authenticate, async (req: any, res: any) => {
 
       // Process skills
       console.log("Processing skills for item:", data);
-      const skillsPromptText = skillsPrompt(JSON.stringify(data));
+      const canonicalSkills = await getCanonicalSkillNames();
+      const skillsPromptText = skillsPrompt(JSON.stringify(data), canonicalSkills);
       
       const skillsResponse = await openai.chat.completions.create({
         model: "gpt-4o-mini",

@@ -278,48 +278,6 @@ const culturalFitSchema = new Schema({
 `;
 }
 
-export function skillsPrompt(schema: any): string {
-  return `
-  You are an advanced AI assistant.do not add any extra text or comments in the output other than specified in the instructions. Your job is to take the user data and 
-  give each skill in his resume a score of 1 to 5.
-
-  1 if he has no solid projects or experience in the skill.
-  5 if he has a solid project or Industry level experience in the skill.
-  make sure to diffrentiate between skills based upon quality of the projects and the experience they have used that skill in.
-
-  try to obtain relevant experience from the user data. and put it in the years_experience field.
-
-
-  ### **Schema:**
-  \`\`\`json
-  const skillsSchema = new Schema({
-  name: { type: String },
-  years_experience: { type: Number },
-  score: { type: Number, min: 0, max: 5}
-})
-\`\`\`
-
-### **User Data:**
-[${schema}]
-
-## **Instructions:**
-- give each skill a score between 1 and 5.
-- give the score based on the user data and the criteria given above.
-- give the score according to mongoose format above.
-- make sure to follow the output format strictly.
-- all the scores are a number and not a string.
-- do not add any extra text or comments in the output.
-
-### **Expected Output Format:**
-
-{
-  "name": "string",
-  "years_experience": Number,
-  "score": Number
-}
-
-  `;
-}
 
 export function expectedCulturalFitPrompt(schema: any): string {
   return `
@@ -366,52 +324,107 @@ const culturalFitSchema = new Schema({
   `;
 }
 
-export function expectedSkillsPrompt(schema: any): string {
+export function skillsPrompt(schema: any, canonicalSkills: string[]): string {
+  const skillsList = canonicalSkills.map(s => `"${s}"`).join(', ');
+
   return `
-  You are an advanced AI assistant.
-  do not add any extra text or comments in the output other than specified in the instructions.
-  your job is to carefully read the Job Description and extract a list of all the technical skills mentioned, implied, or required for the role.
+You are an advanced AI assistant.
+Do not add any extra text or comments in the output other than specified in the instructions.
 
-  - Include only technical skills: programming languages, frameworks, tools, libraries, databases, cloud services, devops, machine learning tools, etc.
-  - Do not include any soft skills (like communication, leadership, teamwork) or extracurricular activities.
-  - Assign a score:
-    - 1 if the skill is only slightly mentioned or optional.
-    - 5 if the skill is clearly mandatory or heavily emphasized.
-  - Estimate years_experience based on the seniority level or wording (junior: 0-1 years, mid-level: 2-4 years, senior: 5+ years, expert: 7+ years).
+Your job is to analyze the user resume and evaluate each technical skill the user has.
 
-  ### **Schema:**
+- Match the skill name to the canonical list below if possible.
+- If not in the list, include it using lowercase consistently.
+- Score each skill from 1 to 5:
+  - 1 = no real experience or only brief exposure
+  - 5 = deep industry-level or solid project experience
+- Estimate years_experience from the resume context if available.
+
+### Canonical Skill Names:
+[${skillsList}]
+
+### Schema:
 \`\`\`json
 const skillsSchema = new Schema({
   name: { type: String },
   years_experience: { type: Number },
-  score: { type: Number, min: 0, max: 5}
+  score: { type: Number, min: 0, max: 5 }
 })
 \`\`\`
 
-### **Job Description:**
+### User Data:
 [${schema}]
 
-## **Instructions:**
-- List all relevant technical skills from the job description.
-- Assign each skill a score between 1 and 5 based on importance.
-- Estimate expected years of experience if mentioned or implied.
-- Format the result as an array of skill objects following the mongoose schema.
+### Instructions:
+- Use exact names from the canonical list when possible.
+- Normalize any new skill names to lowercase.
 - All scores and years_experience must be numbers (not strings).
-- Do not add any extra text, explanations, or comments.
+- Return each skill as an object using the schema provided.
+- Do not include any other text or comments.
 
-### **Expected Output Format:**
-
+### Expected Output Format:
 [
-  {
-    "name": "string",
-    "years_experience": Number,
-    "score": Number
-  },
   {
     "name": "string",
     "years_experience": Number,
     "score": Number
   }
 ]
-  `;
+`;
+}
+
+
+
+export function expectedSkillsPrompt(schema: any, canonicalSkills: string[]): string {
+  const skillsList = canonicalSkills.map(s => `"${s}"`).join(', ');
+
+  return `
+You are an advanced AI assistant.
+Do not add any extra text or comments in the output other than specified in the instructions.
+
+Your job is to carefully read the Job Description and extract a list of all the technical skills mentioned, implied, or required for the role.
+
+- Include only technical skills: programming languages, frameworks, tools, libraries, databases, cloud services, devops, machine learning tools, etc.
+- Do not include soft skills (e.g., communication, leadership) or general attributes.
+- Match each skill name to the canonical list provided below.
+- If the skill is not found in the list, still include it using consistent lowercase naming.
+- Assign a score:
+  - 1 if the skill is only slightly mentioned or optional.
+  - 5 if the skill is clearly mandatory or heavily emphasized.
+- Estimate years_experience based on job description wording:
+  - Junior: 0-1 years
+  - Mid-level: 2-4 years
+  - Senior: 5+ years
+  - Expert: 7+ years
+
+### Canonical Skill Names:
+[${skillsList}]
+
+### Schema:
+\`\`\`json
+const skillsSchema = new Schema({
+  name: { type: String },
+  years_experience: { type: Number },
+  score: { type: Number, min: 0, max: 5 }
+})
+\`\`\`
+
+### Job Description:
+[${schema}]
+
+### Instructions:
+- Return the skills in the format specified below.
+- Use the exact name from the canonical list if it matches.
+- Normalize any new skill names to lowercase.
+- Output must be a strict JSON array with no extra text or explanation.
+
+### Expected Output Format:
+[
+  {
+    "name": "string",
+    "years_experience": Number,
+    "score": Number
+  }
+]
+`;
 }

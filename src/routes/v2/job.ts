@@ -8,6 +8,7 @@ import {
 } from "../../utils/prompts";
 import { openai } from "../../utils/openai";
 import { extractJsonFromMarkdown } from "../../utils/helper-functions";
+import { getCanonicalSkillNames } from "../../utils/helper-functions";
 
 jobRouter.get("/", async (req: any, res: any) => {
   const params = req.query;
@@ -62,7 +63,8 @@ jobRouter.post("/", async (req: any, res: any) => {
 
     //skills
     console.log("cultural fit creation started");
-    const skillsPrompt = expectedSkillsPrompt(JSON.stringify(data));
+    const canonicalSkills = await getCanonicalSkillNames();
+    const skillsPrompt = expectedSkillsPrompt(JSON.stringify(data), canonicalSkills);
     console.log("sending request to openai for skills\n");
     const skillsResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
