@@ -120,7 +120,6 @@ matchingRouter.get("/:jobId", async (req: any, res: any) => {
     }
     console.log("Job found:", job.title);
 
-    // ← simplified to plain JS
     const expectedSkills: SkillItem[] = job.expectedSkills || [];
     const expectedCulturalFit: CulturalFitItem = { ...(job.expectedCulturalFit || {}) };
 
@@ -157,13 +156,32 @@ matchingRouter.get("/:jobId", async (req: any, res: any) => {
           expectedCulturalFit
         );
 
+        // Build per-skill match info
+        const perSkillMatch = expectedSkills.map((expected) => {
+          const matched = plainSkills.find(
+            (skill) => skill.name?.toLowerCase() === expected.name?.toLowerCase()
+          );
+          let match = 0;
+          if (matched && expected.score !== null && matched.score !== null) {
+            const diff = Math.abs((matched.score || 0) - (expected.score || 0));
+            match = Math.max(1, 5 - diff); // scale to 1–5
+          }
+          return {
+            skill: expected.name,
+            expectedScore: expected.score ?? null,
+            candidateScore: matched?.score ?? null,
+            matchScore: match,
+          };
+        });
+
         return {
           userId: user._id,
           name: user.name,
           email: user.email,
           matchScore,
           skillsMatch: calculateSkillsSimilarity(plainSkills, expectedSkills) * 100,
-          culturalFitMatch: calculateCulturalFitSimilarity(plainCulturalFit, expectedCulturalFit) * 100
+          culturalFitMatch: calculateCulturalFitSimilarity(plainCulturalFit, expectedCulturalFit) * 100,
+          perSkillMatch
         };
       })
     );
