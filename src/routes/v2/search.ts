@@ -40,15 +40,20 @@ function calculateSkillsSimilarity(
       (skill) => skill.name?.toLowerCase() === expected.name?.toLowerCase()
     );
     const weight = Math.max(1, expected.years_experience || 1);
+    const isMandatory = expected.mandatory === true;
 
     if (candidateSkill) {
+      // Apply bonus for mandatory skills
       const matchScore = Math.min(candidateSkill.score || 0, expected.score || 0);
-      totalScore += matchScore * weight;
+      const weightMultiplier = isMandatory ? 1.5 : 1; // 50% bonus for mandatory skills
+      totalScore += matchScore * weight * weightMultiplier;
       totalWeight += weight;
-      console.log(`✔ Matched skill=${expected.name}, score=${matchScore}, weight=${weight}`);
+      console.log(`✔ Matched skill=${expected.name}, score=${matchScore}, weight=${weight}, mandatory=${isMandatory}`);
     } else {
-      totalWeight += weight;
-      console.log(`✘ Missing skill=${expected.name}, penalized weight=${weight}`);
+      // Reduce the penalty for missing skills
+      const penaltyMultiplier = isMandatory ? 1 : 0.6; // Full penalty for mandatory, reduced for non-mandatory
+      totalWeight += weight * penaltyMultiplier;
+      console.log(`✘ Missing skill=${expected.name}, penalized weight=${weight * penaltyMultiplier}, mandatory=${isMandatory}`);
     }
   });
 
