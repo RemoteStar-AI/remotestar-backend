@@ -1,3 +1,5 @@
+import { ScriptTarget } from "typescript";
+
 export function extractPrompt(scrapedText: string): string {
   return `
 You are an advanced AI assistant. Your task is to process the following scraped text and structure it into a predefined JSON schema.
@@ -236,6 +238,7 @@ Return only the JSON output that exactly matches the schema above.
 }
 
 export function culturalFitPrompt(schema: any): string {
+  schema = JSON.stringify(schema);
   return `
   You are an advanced AI assistant.
   do not add any extra text or comments in the output other than specified in the instructions.
@@ -281,6 +284,7 @@ const culturalFitSchema = new Schema({
 
 
 export function expectedCulturalFitPrompt(schema: any): string {
+  schema = JSON.stringify(schema);
   return `
   You are an advanced AI assistant.
   do not add any extra text or comments in the output other than specified in the instructions.
@@ -325,8 +329,8 @@ const culturalFitSchema = new Schema({
   `;
 }
 
-export function skillsPrompt(schema: any, canonicalSkills: string[]): string {
-  const skillsList = canonicalSkills.map(s => `"${s}"`).join(', ');
+export function skillsPrompt(schema: any): string {
+  // const skillsList = canonicalSkills.map(s => `"${s}"`).join(', ');
   schema = JSON.stringify(schema);
 
   return `
@@ -335,17 +339,13 @@ Do not add any extra text or comments in the output other than specified in the 
 
 Your job is to analyze the user resume and evaluate each technical skill the user has.
 
-- Match the skill name to the canonical list below if possible.
 - If not in the list, include it using lowercase consistently.
 - Score each skill from 1 to 5:
   - 1 = no real experience or only brief exposure
   - 5 = deep industry-level or solid project experience
 - Estimate years_experience from the resume context if available.
-- Do not add any extra skills in the user skills data, canonical skills name is only for making sure you are naming the words correctly.
 - Make sure the final output should only contain the skills that were present in the user resume.
 
-### Canonical Skill Names:
-[${skillsList}]
 
 ### Schema:
 \`\`\`json
@@ -360,7 +360,6 @@ const skillsSchema = new Schema({
 [${schema}]
 
 ### Instructions:
-- Use exact names from the canonical list when possible.
 - Normalize any new skill names to lowercase.
 - All scores and years_experience must be numbers (not strings).
 - Return each skill as an object using the schema provided.
@@ -379,8 +378,8 @@ const skillsSchema = new Schema({
 
 
 
-export function expectedSkillsPrompt(schema: any, canonicalSkills: string[]): string {
-  const skillsList = canonicalSkills.map(s => `"${s}"`).join(', ');
+export function expectedSkillsPrompt(schema: any): string {
+  // const skillsList = canonicalSkills.map(s => `"${s}"`).join(', ');
   schema = JSON.stringify(schema);
 
   return `
@@ -391,7 +390,6 @@ Your job is to carefully read the Job Description and extract a list of all the 
 
 - Include only technical skills: programming languages, frameworks, tools, libraries, databases, cloud services, devops, machine learning tools, etc.
 - Do not include soft skills (e.g., communication, leadership) or general attributes.
-- Match each skill name to the canonical list provided below.
 - If the skill is not found in the list, still include it using consistent lowercase naming.
 - Assign a score based on the emphasis of the skill in the job description:
   - 1: Skill is mentioned briefly or is optional.
@@ -403,9 +401,6 @@ Your job is to carefully read the Job Description and extract a list of all the 
   - Senior: 5+ years
   - Expert: 7+ years
 - Determine if a skill is explicitly stated as "mandatory", "required", or is so central to the job description (e.g., "Flutter" for a Flutter Developer, "Node.js" for a Node.js Developer) that it is clearly non-negotiable. Only mark a skill as mandatory if the job title or description strongly indicates its essential nature for the core responsibilities.
-
-### Canonical Skill Names:
-[${skillsList}]
 
 ### Schema:
 \`\`\`json
@@ -422,9 +417,9 @@ const skillsSchema = new Schema({
 
 ### Instructions:
 - Return the skills as a strict JSON array in the format specified below.
-- Use the exact name from the canonical list if a match is found.
 - Normalize any new skill names to lowercase.
 - Do not include any extra text or explanations in the output.
+- use the general naming convention for the skills. for example node.js is a skill but nodejs is not.
 
 ### Expected Output Format:
 [
