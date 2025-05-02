@@ -11,21 +11,31 @@ export function extractJsonFromMarkdown(text:string) {
   
   export async function getCanonicalSkillNames(): Promise<string[]> {
     const skills = await Skill.find({}, 'name');
+    console.log("skills\n", skills.map(skill => skill.name));
     return skills.map(skill => skill.name);
   }
 
   export async function saveNewSkillsIfNotExist(skills: any[]) {
+    console.log("Starting saveNewSkillsIfNotExist with skills:", skills);
+    
     const existing = await Skill.find({}, 'name');
+    console.log("Found existing skills:", existing);
+    
     const existingSet = new Set(existing.map(s => s.name.toLowerCase()));
+    console.log("Created set of existing skill names:", Array.from(existingSet));
   
     const newSkills = skills.filter(skill => !existingSet.has(skill.name.toLowerCase()));
+    console.log("Filtered new skills to add:", newSkills);
   
     for (const skill of newSkills) {
+      console.log("Creating new skill:", skill.name);
       await Skill.create({
         name: skill.name.toLowerCase(),
         aliases: []
       });
     }
   
-    return newSkills.map(s => s.name);
+    const result = newSkills.map(s => s.name);
+    console.log("Returning newly added skill names:", result);
+    return result;
   }

@@ -327,6 +327,7 @@ const culturalFitSchema = new Schema({
 
 export function skillsPrompt(schema: any, canonicalSkills: string[]): string {
   const skillsList = canonicalSkills.map(s => `"${s}"`).join(', ');
+  schema = JSON.stringify(schema);
 
   return `
 You are an advanced AI assistant.
@@ -380,6 +381,7 @@ const skillsSchema = new Schema({
 
 export function expectedSkillsPrompt(schema: any, canonicalSkills: string[]): string {
   const skillsList = canonicalSkills.map(s => `"${s}"`).join(', ');
+  schema = JSON.stringify(schema);
 
   return `
 You are an advanced AI assistant.
