@@ -1,13 +1,17 @@
 import { Router } from "express";
 export const jobRouter = Router();
 import { Job } from "../../utils/db";
-import { jobSchema, deleteJobSchema } from "../../utils/schema";
+import { jobSchema } from "../../utils/schema";
 import {
   expectedCulturalFitPrompt,
   expectedSkillsPrompt,
 } from "../../utils/prompts";
 import { openai } from "../../utils/openai";
-import { extractJsonFromMarkdown, saveNewSkillsIfNotExist, getCanonicalSkillNames } from "../../utils/helper-functions";
+import {
+  extractJsonFromMarkdown,
+  saveNewSkillsIfNotExist,
+  getCanonicalSkillNames,
+} from "../../utils/helper-functions";
 
 jobRouter.get("/", async (req: any, res: any) => {
   const params = req.query;
@@ -63,7 +67,10 @@ jobRouter.post("/", async (req: any, res: any) => {
     //skills
     console.log("cultural fit creation started");
     const canonicalSkills = await getCanonicalSkillNames();
-    const skillsPrompt = expectedSkillsPrompt(JSON.stringify(data), canonicalSkills);
+    const skillsPrompt = expectedSkillsPrompt(
+      JSON.stringify(data),
+      canonicalSkills
+    );
     console.log("sending request to openai for skills\n");
     const skillsResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -89,7 +96,7 @@ jobRouter.post("/", async (req: any, res: any) => {
     const finalBody = {
       ...data,
       expectedCulturalFit: parsedCulturalFit,
-      expectedSkills: [ ...parsedSkills.skills ],
+      expectedSkills: [...parsedSkills.skills],
     };
     console.log(finalBody);
     const jobResponce = await Job.create(finalBody);
@@ -99,6 +106,20 @@ jobRouter.post("/", async (req: any, res: any) => {
     });
   } catch (err) {
     console.log("error found");
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+jobRouter.delete("/:id", async (req: any, res: any) => {
+  try {
+    const id = req.params.id;
+    const job = await Job.findByIdAndDelete(id);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+    res.status(200).json({ message: "Job deleted successfully", data: job });
+  } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
   }
