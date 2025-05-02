@@ -15,7 +15,12 @@ export function extractJsonFromMarkdown(text:string) {
     return skills.map(skill => skill.name);
   }
 
-  export async function saveNewSkillsIfNotExist(skills: any[]) {
+  export async function saveNewSkillsIfNotExist(skillsObj: { skills: any[] }) {
+    const skills = skillsObj.skills;
+    if (!Array.isArray(skills)) {
+      console.error("saveNewSkillsIfNotExist expected an array but got:", skills);
+      return [];
+    }
     console.log("Starting saveNewSkillsIfNotExist with skills:", skills);
     
     const existing = await Skill.find({}, 'name');
