@@ -9,6 +9,8 @@ import {
 import { openai } from "../../utils/openai";
 import {
   extractJsonFromMarkdown,
+  getCanonicalSkillNames,
+  saveNewSkillsIfNotExist,
 } from "../../utils/helper-functions";
 
 jobRouter.get("/", async (req: any, res: any) => {
@@ -63,9 +65,11 @@ jobRouter.post("/", async (req: any, res: any) => {
     console.log("parsed cultural fit received\n", parsedCulturalFit);
 
     //skills
-    console.log("cultural fit creation started");
+    console.log("skills creation started");
+    const canonicalSkills = await getCanonicalSkillNames();
     const skillsPrompt = expectedSkillsPrompt(
-      JSON.stringify(data)
+      JSON.stringify(data),
+      canonicalSkills
     );
     console.log("sending request to openai for skills\n");
     const skillsResponse = await openai.chat.completions.create({
@@ -85,6 +89,8 @@ jobRouter.post("/", async (req: any, res: any) => {
     ).replace(/(\r\n|\n|\r)/gm, "");
     let parsedSkills = JSON.parse(skillsJson);
     console.log(skillsJson);
+    const newSkills = await saveNewSkillsIfNotExist(parsedSkills);
+    console.log("new skills received\n", newSkills);
 
     const finalBody = {
       ...data,

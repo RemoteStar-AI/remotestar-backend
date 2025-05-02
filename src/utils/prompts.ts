@@ -352,8 +352,8 @@ const culturalFitSchema = new Schema({
   `;
 }
 
-export function skillsPrompt(schema: any): string {
-  // const skillsList = canonicalSkills.map(s => `"${s}"`).join(', ');
+export function skillsPrompt(schema: any, canonicalSkills: any): string {
+  const skillsList = canonicalSkills.map((s: any) => `"${s}"`).join(', ');
   schema = JSON.stringify(schema);
 
   return `
@@ -387,6 +387,12 @@ const skillsSchema = new Schema({
 - All scores and years_experience must be numbers (not strings).
 - Return each skill as an object using the schema provided.
 - Do not include any other text or comments.
+- i have added a list of canonical skills in the prompt so that you know how to name a skill like .Net or dotnet or .net 
+- use the canonical skills list to name the skills.
+- if the skill is not present in the canonical skills list then use the general naming convention to name the skill.
+
+### Canonical Skills List:
+[${skillsList}]
 
 ### Expected Output Format:
 [
@@ -401,8 +407,8 @@ const skillsSchema = new Schema({
 
 
 
-export function expectedSkillsPrompt(schema: any): string {
-  // const skillsList = canonicalSkills.map(s => `"${s}"`).join(', ');
+export function expectedSkillsPrompt(schema: any, canonicalSkills: any): string {
+  const skillsList = canonicalSkills.map((s: any) => `"${s}"`).join(', ');
   schema = JSON.stringify(schema);
 
   return `
@@ -443,6 +449,12 @@ const skillsSchema = new Schema({
 - Normalize any new skill names to lowercase.
 - Do not include any extra text or explanations in the output.
 - use the general naming convention for the skills. for example node.js is a skill but nodejs is not.
+- i have added a list of canonical skills in the prompt so that you know how to name a skill like .Net or dotnet or .net 
+- use the canonical skills list to name the skills.
+- if the skill is not present in the canonical skills list then use the general naming convention to name the skill.
+
+### Canonical Skills List:
+[${skillsList}]
 
 ### Expected Output Format:
 [

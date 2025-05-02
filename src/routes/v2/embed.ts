@@ -5,11 +5,10 @@ import { CulturalFit, Skills } from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
 import {
   culturalFitSchema,
-  resumeSchema,
   skillsSchema,
 } from "../../utils/schema";
 import { openai } from "../../utils/openai";
-import { extractJsonFromMarkdown } from "../../utils/helper-functions";
+import { extractJsonFromMarkdown, getCanonicalSkillNames, saveNewSkillsIfNotExist } from "../../utils/helper-functions";
 import User from "../../utils/db";
 import mongoose from "mongoose";
 import { z } from "zod";
@@ -89,7 +88,8 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
     });
 
     //making skills
-    const skillsPromptText = skillsPrompt(JSON.stringify(data));
+    const canonicalSkills = await getCanonicalSkillNames();
+    const skillsPromptText = skillsPrompt(JSON.stringify(data), canonicalSkills);
     console.log("sending request to openai for skills\n");
     const skillsResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -112,6 +112,8 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
       res.status(400).json({ error: Skillsvalidation.error });
       return;
     }
+    const newSkills = await saveNewSkillsIfNotExist(parsedSkills);
+    console.log("new skills received\n", newSkills);
     const skillsResponce = await Skills.create({
       skills: parsedSkills,
       userId: uniqueId,
@@ -208,7 +210,8 @@ embedRouter.post("/bulk", authenticate, async (req: any, res: any) => {
 
       // Process skills
       console.log("Processing skills for item:", data);
-      const skillsPromptText = skillsPrompt(JSON.stringify(data));
+      const canonicalSkills = await getCanonicalSkillNames();
+      const skillsPromptText = skillsPrompt(JSON.stringify(data), canonicalSkills);
       
       const skillsResponse = await openai.chat.completions.create({
         model: "gpt-4o-mini",
