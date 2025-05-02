@@ -120,6 +120,29 @@ Return only the JSON output, without additional commentary.
 `;
 }
 
+export function analyseUserPrompt(user: any, job: any): string {
+  user = JSON.stringify(user);
+  job = JSON.stringify(job);
+  return `
+  You are an advanced AI recruiter who analyse the user data and the job data and give a analysis of the user based on the job data.
+  your job is to analyse the user data and the job data and give a analysis of the user based on the job data.
+  the analysis should be in a way that is helpful for recruiter to understand the user is fit for the job or not.
+  ### **User Data:**
+  [${user}]
+  ### **Job Data:**
+  [${job}]
+  ### **Expected Output Format:**
+  {
+    "analysis": "string"
+  }
+    important:
+    - do not add any extra text or comments in the output.
+    - do not add any extra fields in the output.
+    - make sure the output is max to max 120 words.
+    - analyse the user like a recruiter and give the analysis in a way that is helpful for recruiter to understand the user is fit for the job or not.
+  `;
+}
+
 export function reformatPrompt(
   responseText: string,
   errorDetails: string
