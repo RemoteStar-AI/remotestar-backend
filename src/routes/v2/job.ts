@@ -89,7 +89,7 @@ jobRouter.post("/", async (req: any, res: any) => {
     ).replace(/(\r\n|\n|\r)/gm, "");
     let parsedSkills = JSON.parse(skillsJson);
     console.log(skillsJson);
-    const newSkills = await saveNewSkillsIfNotExist(parsedSkills);
+    const newSkills = await saveNewSkillsIfNotExist({ skills: Array.isArray(parsedSkills) ? parsedSkills : parsedSkills.skills });
     console.log("new skills received\n", newSkills);
 
     const finalBody = {

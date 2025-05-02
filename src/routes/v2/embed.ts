@@ -112,7 +112,8 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
       res.status(400).json({ error: Skillsvalidation.error });
       return;
     }
-    const newSkills = await saveNewSkillsIfNotExist(parsedSkills);
+    console.log(parsedSkills);
+    const newSkills = await saveNewSkillsIfNotExist({ skills: Array.isArray(parsedSkills) ? parsedSkills : parsedSkills.skills });
     console.log("new skills received\n", newSkills);
     const skillsResponce = await Skills.create({
       skills: parsedSkills,
@@ -229,6 +230,9 @@ embedRouter.post("/bulk", authenticate, async (req: any, res: any) => {
       );
       
       let parsedSkills = JSON.parse(skillValidJson);
+      console.log("parsed skills received\n", parsedSkills);
+      const newSkills = await saveNewSkillsIfNotExist({ skills: Array.isArray(parsedSkills) ? parsedSkills : parsedSkills.skills });
+      console.log("new skills received\n", newSkills);
       let skillsValidation = skillsSchema.safeParse(parsedSkills);
       
       if (!skillsValidation.success) {
