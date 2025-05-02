@@ -148,7 +148,12 @@ export const jobSchema = z.object({
     max: z.string(),
   }),
   additionalRequirements: z.string().optional(),
-  expectedSkills: z.array(skillsSchema).optional(),
+  expectedSkills: z.array(z.object({
+    name: z.string(),
+    years_experience: z.number(),
+    score: z.number(),
+    mandatory: z.boolean().optional()
+  })).optional(),
   expectedCulturalFit: culturalFitSchema.optional(),
 });
 

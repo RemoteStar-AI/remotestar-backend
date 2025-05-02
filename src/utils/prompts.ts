@@ -340,6 +340,8 @@ Your job is to analyze the user resume and evaluate each technical skill the use
   - 1 = no real experience or only brief exposure
   - 5 = deep industry-level or solid project experience
 - Estimate years_experience from the resume context if available.
+- Do not add any extra skills in the user skills data, canonical skills name is only for making sure you are naming the words correctly.
+- Make sure the final output should only contain the skills that were present in the user resume.
 
 ### Canonical Skill Names:
 [${skillsList}]
@@ -389,14 +391,16 @@ Your job is to carefully read the Job Description and extract a list of all the 
 - Do not include soft skills (e.g., communication, leadership) or general attributes.
 - Match each skill name to the canonical list provided below.
 - If the skill is not found in the list, still include it using consistent lowercase naming.
-- Assign a score:
-  - 1 if the skill is only slightly mentioned or optional.
-  - 5 if the skill is clearly mandatory or heavily emphasized.
-- Estimate years_experience based on job description wording:
+- Assign a score based on the emphasis of the skill in the job description:
+  - 1: Skill is mentioned briefly or is optional.
+  - 2-4: Skill has moderate importance.
+  - 5: Skill is clearly mandatory or heavily emphasized.
+- Estimate years_experience required for each skill based on the job description wording:
   - Junior: 0-1 years
   - Mid-level: 2-4 years
   - Senior: 5+ years
   - Expert: 7+ years
+- Determine if a skill is explicitly stated as "mandatory", "required", or is so central to the job description (e.g., "Flutter" for a Flutter Developer, "Node.js" for a Node.js Developer) that it is clearly non-negotiable. Only mark a skill as mandatory if the job title or description strongly indicates its essential nature for the core responsibilities.
 
 ### Canonical Skill Names:
 [${skillsList}]
@@ -406,7 +410,8 @@ Your job is to carefully read the Job Description and extract a list of all the 
 const skillsSchema = new Schema({
   name: { type: String },
   years_experience: { type: Number },
-  score: { type: Number, min: 0, max: 5 }
+  score: { type: Number, min: 0, max: 5 },
+  mandatory: { type: Boolean, default: false }
 })
 \`\`\`
 
@@ -414,17 +419,18 @@ const skillsSchema = new Schema({
 [${schema}]
 
 ### Instructions:
-- Return the skills in the format specified below.
-- Use the exact name from the canonical list if it matches.
+- Return the skills as a strict JSON array in the format specified below.
+- Use the exact name from the canonical list if a match is found.
 - Normalize any new skill names to lowercase.
-- Output must be a strict JSON array with no extra text or explanation.
+- Do not include any extra text or explanations in the output.
 
 ### Expected Output Format:
 [
   {
     "name": "string",
     "years_experience": Number,
-    "score": Number
+    "score": Number,
+    "mandatory": Boolean
   }
 ]
 `;

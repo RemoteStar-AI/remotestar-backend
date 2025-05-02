@@ -8,6 +8,7 @@ interface SkillItem {
   name?: string | null;
   years_experience?: number | null;
   score?: number | null;
+  mandatory?: boolean | null;
 }
 
 interface CulturalFitItem {
@@ -170,6 +171,7 @@ matchingRouter.get("/:jobId", async (req: any, res: any) => {
             skill: expected.name,
             expectedScore: expected.score ?? null,
             candidateScore: matched?.score ?? null,
+            mandatory: expected.mandatory ?? false,
             matchScore: match,
           };
         });
