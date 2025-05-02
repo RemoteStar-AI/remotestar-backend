@@ -14,6 +14,7 @@ You are an advanced AI assistant. Your task is to process the following scraped 
 4. **Descriptions for experience and projects must be arrays of bullet points**. Each bullet should be a string. if description only has one sentence then put it one value in the array.
 6. **If a field is missing from the text**, leave it as an empty string (\`""\`) or an empty array (\`[]\`) where applicable.
 7. **Ensure JSON validity**—output must be correctly formatted without syntax errors.
+8. **Only exeption is the summary field. It should be a string of around 100 words with the summary of the user. The summary should be written in a way that is telling about the user from a third person perspective.**
 
 ---
 
