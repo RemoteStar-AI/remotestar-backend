@@ -8,6 +8,7 @@ export const analyseRouter = Router();
 analyseRouter.post("/", async (req: any, res: any) => {
   const { userId, jobId } = req.body;
 
+
   const user = await User.findById(userId);
   const job = await Job.findById(jobId);
 
@@ -19,6 +20,7 @@ analyseRouter.post("/", async (req: any, res: any) => {
   const jobData = job.toObject();
 
   const prompt = analyseUserPrompt(userData, jobData);
+  console.log("analysis started");
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
