@@ -1,13 +1,17 @@
 import { Router } from "express";
 export const jobRouter = Router();
 import { Job } from "../../utils/db";
-import { jobSchema, deleteJobSchema } from "../../utils/schema";
+import { jobSchema } from "../../utils/schema";
 import {
   expectedCulturalFitPrompt,
   expectedSkillsPrompt,
 } from "../../utils/prompts";
 import { openai } from "../../utils/openai";
-import { extractJsonFromMarkdown } from "../../utils/helper-functions";
+import {
+  extractJsonFromMarkdown,
+  getCanonicalSkillNames,
+  saveNewSkillsIfNotExist,
+} from "../../utils/helper-functions";
 
 jobRouter.get("/", async (req: any, res: any) => {
   const params = req.query;
@@ -61,15 +65,22 @@ jobRouter.post("/", async (req: any, res: any) => {
     console.log("parsed cultural fit received\n", parsedCulturalFit);
 
     //skills
-    console.log("cultural fit creation started");
-    const skillsPrompt = expectedSkillsPrompt(JSON.stringify(data));
+    console.log("skills creation started");
+    const canonicalSkills = await getCanonicalSkillNames();
+    const skillsPrompt = expectedSkillsPrompt(
+      JSON.stringify(data),
+      canonicalSkills
+    );
     console.log("sending request to openai for skills\n");
     const skillsResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: skillsPrompt }],
       response_format: { type: "json_object" },
     });
-    console.log("skills response received\n", skillsResponse.choices[0].message.content);
+    console.log(
+      "skills response received\n",
+      skillsResponse.choices[0].message.content
+    );
     if (!skillsResponse.choices[0].message.content) {
       throw new Error("Empty response from OpenAI");
     }
@@ -77,15 +88,37 @@ jobRouter.post("/", async (req: any, res: any) => {
       skillsResponse.choices[0].message.content
     ).replace(/(\r\n|\n|\r)/gm, "");
     let parsedSkills = JSON.parse(skillsJson);
+    console.log(skillsJson);
+    const newSkills = await saveNewSkillsIfNotExist({ skills: Array.isArray(parsedSkills) ? parsedSkills : parsedSkills.skills });
+    console.log("new skills received\n", newSkills);
 
-    const finalBody = {...data, expectedCulturalFit: parsedCulturalFit, expectedSkills: {...parsedSkills}};
+    const finalBody = {
+      ...data,
+      expectedCulturalFit: parsedCulturalFit,
+      expectedSkills: [...parsedSkills.skills],
+    };
+    console.log(finalBody);
     const jobResponce = await Job.create(finalBody);
     res.status(200).json({
       message: "Job created successfully",
       data: jobResponce,
     });
   } catch (err) {
-    console.log("error found")
+    console.log("error found");
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+jobRouter.delete("/:id", async (req: any, res: any) => {
+  try {
+    const id = req.params.id;
+    const job = await Job.findByIdAndDelete(id);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+    res.status(200).json({ message: "Job deleted successfully", data: job });
+  } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
   }
