@@ -390,6 +390,14 @@ const skillsSchema = new Schema({
 - i have added a list of canonical skills in the prompt so that you know how to name a skill like .Net or dotnet or .net 
 - use the canonical skills list to name the skills.
 - if the skill is not present in the canonical skills list then use the general naming convention to name the skill.
+- For any specific or lower-level technology, infer knowledge of its parent technology. For example:
+
+If someone knows .NET Framework or .NET Core, infer .NET
+
+If someone knows Chi, infer Go
+
+If someone knows Express, infer Node.js
+Apply this logic consistently for similar tech stacks.
 
 ### Canonical Skills List:
 [${skillsList}]
@@ -430,6 +438,7 @@ Your job is to carefully read the Job Description and extract a list of all the 
   - Senior: 5+ years
   - Expert: 7+ years
 - Determine if a skill is explicitly stated as "mandatory", "required", or is so central to the job description (e.g., "Flutter" for a Flutter Developer, "Node.js" for a Node.js Developer) that it is clearly non-negotiable. Only mark a skill as mandatory if the job title or description strongly indicates its essential nature for the core responsibilities.
+- make sure only important skills are marked as mandatory.
 
 ### Schema:
 \`\`\`json
@@ -452,6 +461,14 @@ const skillsSchema = new Schema({
 - i have added a list of canonical skills in the prompt so that you know how to name a skill like .Net or dotnet or .net 
 - use the canonical skills list to name the skills.
 - if the skill is not present in the canonical skills list then use the general naming convention to name the skill.
+-For any specific or lower-level technology, infer knowledge of its parent technology. For example:
+
+If someone knows .NET Framework or .NET Core, infer .NET
+
+If someone knows Chi, infer Go
+
+If someone knows Express, infer Node.js
+Apply this logic consistently for similar tech stacks.
 
 ### Canonical Skills List:
 [${skillsList}]
