@@ -139,7 +139,12 @@ const jobSchema = new mongoose.Schema({
     max: { type: String, default: "0" }
   },
   additionalRequirements: { type: String, default: "" },
-  expectedSkills: { type: [skillsSchema.add({ mandatory: { type: Boolean, default: false } })], default: [], optional: true },
+  expectedSkills: { type: [{
+    name: { type: String },
+    years_experience: { type: Number },
+    score: { type: Number, min: 0, max: 5 },
+    mandatory: { type: Boolean, default: false }
+  }], default: [], optional: true },
   expectedCulturalFit: { type: culturalFitSchema2, default: {} ,optional:true},
 }, { timestamps: true });
 
