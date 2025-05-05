@@ -106,7 +106,7 @@ You are an advanced AI assistant. Your task is to process the following scraped 
 ### **Important Notes:**
 - Certification and Participation are of the same type. If any section or field in the provided JSON output could be interpreted as either certification or participation, treat them equivalently and format them accordingly.
 - Ensure that embedded link references such as '• Video' or '• Link' are removed from the text.
-- Descriptions in \`experience\` and \`projects\` must be structured as **arrays of strings**. Each string should be a concise, meaningful bullet point extracted from the text.
+- Descriptions in \`experience\` and \`projects\` must be structured as **arrays of strings**. Each string should be a concise, meaningful bullet point extracted from the text. Make sure to not change any text from the description of the project or experience.
 
 ### **Scraped Text:**  
 [${scrapedText}]
@@ -271,6 +271,9 @@ export function culturalFitPrompt(schema: any): string {
   startup_score: 1 if he has no experience in startup companies and 5 if has worked in really good startup companies.
   mnc_score: 1 if he has no experience in mnc companies and 5 if has worked in really good mnc companies.
   loyalty_score: 1 if he has done a lot of frequent job changes and 5 if he has worked in the same company for a long time.
+  coding_score: 1 if he has no hand on experience in coding and 5 if he has built a things using his own coding skills.
+  leadership_score: 1 if he has no experience in leading a team and 3 if he has managed a team of 5 or more people and 5 if he has led a team of 1 or more people.
+  architecture_score: 1 if he has no experience in designing system architecture and 3 if he has designed a system architecture for a medium scale application and 5 if he has designed a system architecture for a large scale application.
   ### **Schema:**
 \`\`\`json
 const culturalFitSchema = new Schema({
@@ -279,6 +282,9 @@ const culturalFitSchema = new Schema({
   startup_score: { type: Number, min: 0, max: 5},
   mnc_score: { type: Number, min: 0, max: 5},
   loyalty_score: { type: Number, min: 0, max: 5},
+  coding_score: { type: Number, min: 0, max: 5},
+  leadership_score: { type: Number, min: 0, max: 5},
+  architecture_score: { type: Number, min: 0, max: 5},
 })
 \`\`\`
 
@@ -300,7 +306,10 @@ const culturalFitSchema = new Schema({
   "service_score": 0,
   "startup_score": 0,
   "mnc_score": 0,
-  "loyalty_score": 0
+  "loyalty_score": 0,
+  "coding_score": 0,
+  "leadership_score": 0,
+  "architecture_score": 0
 }
 `;
 }
@@ -317,6 +326,9 @@ export function expectedCulturalFitPrompt(schema: any): string {
   startup_score: 1 if the job is mostly for large companies and 5 if it is clearly for startups or high-growth companies.
   mnc_score: 1 if the job is mostly for startups and 5 if it is clearly for MNCs (large multinational companies).
   loyalty_score: 1 if the company is known for short-term contracts or temp work, and 5 if it encourages long-term employment.
+  coding_score: 1 if the job is mostly for non-coding jobs and 5 if it is clearly for coding jobs.
+  leadership_score: 1 if the job is mostly for non-leadership jobs and 5 if it is clearly for leadership jobs.
+  architecture_score: 1 if the job is mostly for non-architecture jobs and 5 if it is clearly for architecture jobs.
 
   ### **Schema:**
 \`\`\`json
@@ -326,6 +338,9 @@ const culturalFitSchema = new Schema({
   startup_score: { type: Number, min: 0, max: 5},
   mnc_score: { type: Number, min: 0, max: 5},
   loyalty_score: { type: Number, min: 0, max: 5},
+  coding_score: { type: Number, min: 0, max: 5},
+  leadership_score: { type: Number, min: 0, max: 5},
+  architecture_score: { type: Number, min: 0, max: 5},
 })
 \`\`\`
 
@@ -347,7 +362,10 @@ const culturalFitSchema = new Schema({
   "service_score": 1,
   "startup_score": 1,
   "mnc_score": 1,
-  "loyalty_score": 1
+  "loyalty_score": 1,
+  "coding_score": 1,
+  "leadership_score": 1,
+  "architecture_score": 1
 }
   `;
 }
@@ -358,11 +376,9 @@ export function skillsPrompt(schema: any, canonicalSkills: any): string {
 
   return `
 You are an advanced AI assistant.
+Your job is to analyze the user resume and evaluate each technical skill the user has.
 Do not add any extra text or comments in the output other than specified in the instructions.
 
-Your job is to analyze the user resume and evaluate each technical skill the user has.
-
-- If not in the list, include it using lowercase consistently.
 - Score each skill from 1 to 5:
   - 1 = no real experience or only brief exposure
   - 5 = deep industry-level or solid project experience
@@ -390,13 +406,16 @@ const skillsSchema = new Schema({
 - i have added a list of canonical skills in the prompt so that you know how to name a skill like .Net or dotnet or .net 
 - use the canonical skills list to name the skills.
 - if the skill is not present in the canonical skills list then use the general naming convention to name the skill.
+- If not in the list, include it using lowercase consistently.
 - For any specific or lower-level technology, infer knowledge of its parent technology. For example:
+- make sure to not miss any skill from the user resume.
 
 If someone knows .NET Framework or .NET Core, infer .NET
 
 If someone knows Chi, infer Go
 
 If someone knows Express, infer Node.js
+and add all the skills to the list.
 Apply this logic consistently for similar tech stacks.
 
 ### Canonical Skills List:
