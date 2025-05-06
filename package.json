@@ -6,7 +6,7 @@
     "start": " node dist/index.js",
     "dev": "npm run build && npm run start",
     "validate": "ts-node src/validate-env.ts",
-    "build": "npm run validate && tsc -b"
+    "build": "tsc -b"
   },
   "keywords": [],
   "author": "",
