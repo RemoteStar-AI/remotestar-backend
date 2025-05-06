@@ -5,7 +5,8 @@
   "scripts": {
     "start": " node dist/index.js",
     "dev": "npm run build && npm run start",
-    "build": "tsc -b"
+    "validate": "ts-node src/validate-env.ts",
+    "build": "npm run validate && tsc -b"
   },
   "keywords": [],
   "author": "",
@@ -25,5 +26,8 @@
     "pinecone": "^0.1.0",
     "typescript": "^5.8.2",
     "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2"
   }
 }
