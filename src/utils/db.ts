@@ -94,6 +94,9 @@ const culturalFitSchema = new Schema({
   startup_score: { type: Number, min: 0, max: 5},
   mnc_score: { type: Number, min: 0, max: 5},
   loyalty_score: { type: Number, min: 0, max: 5},
+  coding_score: { type: Number, min: 0, max: 5},
+  leadership_score: { type: Number, min: 0, max: 5},
+  architecture_score: { type: Number, min: 0, max: 5},
 }, { timestamps: true });
 
 const culturalFitSchema2 = new Schema({
@@ -103,6 +106,9 @@ const culturalFitSchema2 = new Schema({
   startup_score: { type: Number, min: 0, max: 5},
   mnc_score: { type: Number, min: 0, max: 5},
   loyalty_score: { type: Number, min: 0, max: 5},
+  coding_score: { type: Number, min: 0, max: 5},
+  leadership_score: { type: Number, min: 0, max: 5},
+  architecture_score: { type: Number, min: 0, max: 5},
 }, { timestamps: true });
 
 const skillsSchema = new Schema({

@@ -122,6 +122,9 @@ export const culturalFitSchema = z.object({
   startup_score: z.number(),
   mnc_score: z.number(),
   loyalty_score: z.number(),
+  coding_score: z.number(),
+  leadership_score: z.number(),
+  architecture_score: z.number(),
 });
 
 export const skillsSchema = z.array(z.object({
