@@ -1,0 +1,38 @@
+# Node modules - should be installed inside the container
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build output (if building locally before copying)
+dist
+build
+
+# TypeScript
+*.ts
+!*.d.ts
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor configs
+.vscode
+.idea
+
+# Test files
+__tests__/
+coverage/
+*.test.ts
+*.spec.ts
+
+# Env files (optional: include if using secrets another way)
+.env
+.env.*
