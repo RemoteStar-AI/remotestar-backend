@@ -15,7 +15,7 @@ userRouter.get("/:id", authenticate, async (req, res) => {
       res.status(404).json({ error: "User not found" });
       return;
     } else {
-      res.status(200).json({ user, skills, culturalFit });
+      res.status(200).json({ user, skills, culturalFit, link: "https://conasems-ava-prod.s3.sa-east-1.amazonaws.com/aulas/ava/dummy-1641923583.pdf" });
     }
   } catch (e) {
     console.error(e);
