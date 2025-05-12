@@ -5,6 +5,8 @@ import mongoose, { Schema } from "mongoose";
 const userSchema = new Schema({
   firebase_id: { type: String, required: true },
   firebase_email: { type: String, required: true },
+  organisation: { type: String, default: "" },
+  job: { type: String, default: "" },
   name: { type: String, required: true },
   email: { type: String, required: true},
   phone: { type: String },
@@ -12,6 +14,7 @@ const userSchema = new Schema({
   current_location: { type: String },
   summary: { type: String },
   profile_completeness: { type: Number, min: 0},
+  years_of_experience: { type: Number, min: 0},
   
   experience: [{
     company: { type: String },
@@ -158,11 +161,18 @@ const canonicalSkillsSchema = new Schema({
   name: { type: String, required: true, unique: true },
 });
 
+const organisationSchema = new Schema({
+  name: { type: String, required: true },
+  admin: { type: [String], default: [] },
+  members: { type: [String], default: [] },
+});
+
 export const Job = mongoose.model("Job", jobSchema);
 export const Company = mongoose.model("Company", companySchema);
 export const CulturalFit = mongoose.model("CulturalFit", culturalFitSchema);
 export const Skills = mongoose.model("Skills", userSkillsSchema);
 export const CanonicalSkills = mongoose.model("CanonicalSkills", canonicalSkillsSchema);
+export const Organisation = mongoose.model("Organisation", organisationSchema);
 
 const User = mongoose.model("User", userSchema);
 export default User;

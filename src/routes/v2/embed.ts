@@ -15,6 +15,7 @@ import { z } from "zod";
 
 const embedSchema = z.object({
   schema: z.record(z.unknown()), // or z.any()
+  job: z.string().optional(),
 });
 
 const bulkEmbedSchema = z.array(embedSchema);
@@ -25,6 +26,7 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
     session.startTransaction();
 
     let userId = req.user.firebase_id;
+    const organisation = req.user.organisation;
 
     // making cultural fit
     const body = req.body;
@@ -35,6 +37,7 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
       return;
     }
     const data = body.schema;
+    const job = body.job;
 
     const firebaseId = req.user.firebase_id;
     const userEmail = req.user.email;
@@ -46,6 +49,8 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
           _id: uniqueId,
           firebase_id: firebaseId,
           firebase_email: userEmail,
+          organisation: organisation,
+          job: job,
           ...data,
         },
       ],
@@ -145,6 +150,7 @@ embedRouter.post("/bulk", authenticate, async (req: any, res: any) => {
     let userId = req.user.firebase_id;
     const firebaseId = req.user.firebase_id;
     const userEmail = req.user.email;
+    const organisation = req.user.organisation;
 
     // Parse and validate the bulk request body
     const body = req.body;
@@ -158,6 +164,7 @@ embedRouter.post("/bulk", authenticate, async (req: any, res: any) => {
       });
       return;
     }
+    const job = result.data[0].job;
 
     // Arrays to store results for response
     const userDocs = [];
@@ -174,6 +181,8 @@ embedRouter.post("/bulk", authenticate, async (req: any, res: any) => {
         _id: uniqueId,
         firebase_id: firebaseId,
         firebase_email: userEmail,
+        organisation: organisation,
+        job: job,
         ...data,
       });
 

@@ -18,6 +18,9 @@ interface CulturalFitItem {
   startup_score?: number | null;
   mnc_score?: number | null;
   loyalty_score?: number | null;
+  coding_score?: number | null;
+  leadership_score?: number | null;
+  architecture_score?: number | null;
   [key: string]: any;
 }
 
@@ -71,19 +74,22 @@ function calculateCulturalFitSimilarity(
     console.log("No cultural fit data available.");
     return 0;
   }
-
+  console.log("candidateCulturalFit", candidateCulturalFit);
+  const processedExpectedCulturalFit = expectedCulturalFit._doc || expectedCulturalFit;
+  console.log("expectedCulturalFit", processedExpectedCulturalFit);
   let totalNormalizedScore = 0;
   let count = 0;
-  const scoreFields = Object.keys(expectedCulturalFit).filter(
+  const scoreFields = Object.keys(processedExpectedCulturalFit).filter(
     (key) =>
       key.endsWith("_score") &&
-      typeof expectedCulturalFit[key] === "number" &&
+      typeof processedExpectedCulturalFit[key] === "number" &&
       key !== "userId" &&
       !key.startsWith("_")
   );
+  console.log("scoreFields", scoreFields);
 
   scoreFields.forEach((field) => {
-    const expected = expectedCulturalFit[field] || 0;
+    const expected = processedExpectedCulturalFit[field] || 0;
     const actual = candidateCulturalFit[field] || 0;
     const normalized = Math.max(0, (5 - Math.abs(actual - expected)) / 5);
     totalNormalizedScore += normalized;
@@ -128,6 +134,7 @@ matchingRouter.get("/:jobId", async (req: any, res: any) => {
 
     const expectedSkills: SkillItem[] = job.expectedSkills || [];
     const expectedCulturalFit: CulturalFitItem = { ...(job.expectedCulturalFit || {}) };
+    console.log("Job expected cultural fit:", expectedCulturalFit);
 
     const users = await User.find({});
     console.log(`Found ${users.length} users to evaluate.`);
@@ -181,6 +188,34 @@ matchingRouter.get("/:jobId", async (req: any, res: any) => {
           };
         });
 
+        // Build per-cultural fit match info
+        console.log("Building perCulturalFitMatch with:", plainCulturalFit, expectedCulturalFit);
+        
+        // Get the expected cultural fit with fallback to _doc property if it exists
+        const processedExpectedCulturalFit = expectedCulturalFit._doc || expectedCulturalFit;
+        
+        // Get all score fields from the expected cultural fit
+        const culturalFitScoreFields = Object.keys(processedExpectedCulturalFit).filter(key => 
+          key.endsWith("_score") && 
+          typeof processedExpectedCulturalFit[key] === "number" && 
+          key !== "userId" && 
+          !key.startsWith("_")
+        );
+        
+        console.log("Cultural fit score fields:", culturalFitScoreFields);
+        
+        const perCulturalFitMatch = culturalFitScoreFields.map(field => {
+          const expected = processedExpectedCulturalFit[field] || 0;
+          const actual = plainCulturalFit[field] || 0;
+          const matchScore = Math.max(0, (5 - Math.abs(actual - expected)) / 5) * 5; // Scale to 0-5
+          return {
+            trait: field,
+            expectedScore: expected,
+            candidateScore: actual,
+            matchScore: matchScore
+          };
+        });
+
         return {
           userId: user._id,
           name: user.name,
@@ -188,7 +223,8 @@ matchingRouter.get("/:jobId", async (req: any, res: any) => {
           matchScore,
           skillsMatch: calculateSkillsSimilarity(plainSkills, expectedSkills) * 100,
           culturalFitMatch: calculateCulturalFitSimilarity(plainCulturalFit, expectedCulturalFit) * 100,
-          perSkillMatch
+          perSkillMatch,
+          perCulturalFitMatch
         };
       })
     );

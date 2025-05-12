@@ -163,3 +163,10 @@ export const jobSchema = z.object({
 export const deleteJobSchema = z.object({
   _id: z.string(),
 });
+
+export const organisationSchema = z.object({
+  _id: z.string().optional(),
+  name: z.string(),
+  members: z.array(z.string()),
+  admin: z.array(z.string()),
+});
