@@ -18,6 +18,9 @@ interface CulturalFitItem {
   startup_score?: number | null;
   mnc_score?: number | null;
   loyalty_score?: number | null;
+  coding_score?: number | null;
+  leadership_score?: number | null;
+  architecture_score?: number | null;
   [key: string]: any;
 }
 
@@ -71,16 +74,19 @@ function calculateCulturalFitSimilarity(
     console.log("No cultural fit data available.");
     return 0;
   }
-
+  console.log("candidateCulturalFit", candidateCulturalFit);
+  expectedCulturalFit = expectedCulturalFit._doc;
+  console.log("expectedCulturalFit", expectedCulturalFit);
   let totalNormalizedScore = 0;
   let count = 0;
   const scoreFields = Object.keys(expectedCulturalFit).filter(
     (key) =>
       key.endsWith("_score") &&
-      typeof expectedCulturalFit[key] === "number" &&
+      typeof expectedCulturalFit._doc[key] === "number" &&
       key !== "userId" &&
       !key.startsWith("_")
   );
+  console.log("scoreFields", scoreFields);
 
   scoreFields.forEach((field) => {
     const expected = expectedCulturalFit[field] || 0;
