@@ -82,7 +82,7 @@ function calculateCulturalFitSimilarity(
   const scoreFields = Object.keys(expectedCulturalFit).filter(
     (key) =>
       key.endsWith("_score") &&
-      typeof expectedCulturalFit._doc[key] === "number" &&
+      typeof expectedCulturalFit[key] === "number" &&
       key !== "userId" &&
       !key.startsWith("_")
   );
