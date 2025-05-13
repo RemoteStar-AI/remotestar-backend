@@ -11,7 +11,7 @@ const userSchema = new Schema({
   email: { type: String, required: true},
   phone: { type: String },
   address: { type: String },
-  current_location: { type: String },
+  current_location: { type: String, default: "" },
   summary: { type: String },
   profile_completeness: { type: Number, min: 0},
   years_of_experience: { type: Number, min: 0},
