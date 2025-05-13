@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { Job } from "../../utils/db";
-import User from "../../utils/db";
+import {User} from "../../utils/db";
 import { analyseUserPrompt } from "../../utils/prompts";
 import { openai } from "../../utils/openai";
 export const analyseRouter = Router();
