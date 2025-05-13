@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { Bookmark, Job, User } from "../../utils/db";
 import { bookmarkSchema } from "../../utils/schema";
+import mongoose from "mongoose";
 
 export const bookmarksRouter = Router();
 
@@ -17,7 +18,9 @@ bookmarksRouter.get("/", async (req, res) => {
 });
 
 bookmarksRouter.post("/", async (req, res) => {
+  const session = await mongoose.startSession();
   try {
+    session.startTransaction();
     const body = req.body;
     const parsedBody = bookmarkSchema.safeParse(body);
     if (!parsedBody.success) {
@@ -30,28 +33,45 @@ bookmarksRouter.post("/", async (req, res) => {
       res.status(404).json({ error: "Job not found" });
       return;
     }
+    const user = await User.findById(parsedBody.data.userId);
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
     const companyId = job.companyId;
-    const bookmark = await Bookmark.create({ ...parsedBody.data, companyId });
+    const bookmark = await Bookmark.create({ ...parsedBody.data, companyId }, { session });
+    await User.findByIdAndUpdate(user._id, { $inc: { total_bookmarks: 1 } }, { session });
+    await session.commitTransaction();
     res.status(200).json(bookmark);
   } catch (e) {
     console.error(e);
+    await session.abortTransaction();
     res.status(500).json({ error: "Internal Server Error" });
     return;
+  } finally {
+    await session.endSession();
   }
 });
 
 bookmarksRouter.delete("/:id", async (req, res) => {
+  const session = await mongoose.startSession();
   try {
+    session.startTransaction();
     const { id } = req.params;
-    const bookmark = await Bookmark.findByIdAndDelete(id);
+    const bookmark = await Bookmark.findByIdAndDelete(id, { session });
     if (!bookmark) {
       res.status(404).json({ error: "Bookmark not found" });
       return;
     }
+    await User.findByIdAndUpdate(bookmark.userId, { $inc: { total_bookmarks: -1 } }, { session });
+    await session.commitTransaction();
     res.status(200).json(bookmark);
   } catch (e) {
     console.error(e);
+    await session.abortTransaction();
     res.status(500).json({ error: "Internal Server Error" });
     return;
+  } finally {
+    await session.endSession();
   }
 });
