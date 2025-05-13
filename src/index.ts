@@ -15,6 +15,7 @@ import { jobRouter as jobRouterV2 } from './routes/v2/job';
 import { matchingRouter as searchRouterV2 } from './routes/v2/search';
 import { userRouter as userRouterV2 } from './routes/v2/user';
 import { analyseRouter } from './routes/v2/analyse';
+import { bookmarksRouter } from './routes/v2/bookmarks';
 dotenv.config();
 
 const app: Application = express();
@@ -42,6 +43,7 @@ app.use("/api/v2/job", jobRouterV2);
 app.use("/api/v2/search", searchRouterV2);
 app.use("/api/v2/user", userRouterV2);
 app.use("/api/v2/analyse", analyseRouter);
+app.use("/api/v2/bookmarks", bookmarksRouter);
 async function main(){
     try {
         await mongoose.connect(process.env.MONGODB_URI!);
