@@ -15,6 +15,7 @@ const userSchema = new Schema({
   summary: { type: String },
   profile_completeness: { type: Number, min: 0},
   years_of_experience: { type: Number, min: 0},
+  designation: { type: String ,default: ""},
   
   experience: [{
     company: { type: String },

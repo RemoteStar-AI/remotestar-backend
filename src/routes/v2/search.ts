@@ -220,6 +220,8 @@ matchingRouter.get("/:jobId", async (req: any, res: any) => {
           userId: user._id,
           name: user.name,
           email: user.email,
+          years_experience: user.years_of_experience,
+          designation: user.designation,
           matchScore,
           skillsMatch: calculateSkillsSimilarity(plainSkills, expectedSkills) * 100,
           culturalFitMatch: calculateCulturalFitSimilarity(plainCulturalFit, expectedCulturalFit) * 100,
