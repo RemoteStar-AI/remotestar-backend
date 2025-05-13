@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { Job, CulturalFit, Skills } from "../../utils/db";
-import User from "../../utils/db";
+import { Job, CulturalFit, Skills, User } from "../../utils/db";
 
 export const matchingRouter = Router();
 

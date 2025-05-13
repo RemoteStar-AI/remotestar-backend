@@ -6,6 +6,7 @@ const userSchema = new Schema({
   firebase_id: { type: String, required: true },
   firebase_email: { type: String, required: true },
   organisation: { type: String, default: "" },
+  total_bookmarks: { type: Number, default: 0 },
   job: { type: String, default: "" },
   name: { type: String, required: true },
   email: { type: String, required: true},
@@ -168,12 +169,19 @@ const organisationSchema = new Schema({
   members: { type: [String], default: [] },
 });
 
+const bookmarkSchema = new Schema({
+  userId: { type: String, required: true },
+  memberId: { type: String, required: true },
+  jobId: { type: String, required: true },
+  companyId: { type: String, required: true },
+}, { timestamps: true });
+
 export const Job = mongoose.model("Job", jobSchema);
 export const Company = mongoose.model("Company", companySchema);
 export const CulturalFit = mongoose.model("CulturalFit", culturalFitSchema);
 export const Skills = mongoose.model("Skills", userSkillsSchema);
 export const CanonicalSkills = mongoose.model("CanonicalSkills", canonicalSkillsSchema);
 export const Organisation = mongoose.model("Organisation", organisationSchema);
+export const Bookmark = mongoose.model("Bookmark", bookmarkSchema);
+export const User = mongoose.model("User", userSchema);
 
-const User = mongoose.model("User", userSchema);
-export default User;

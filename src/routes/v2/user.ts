@@ -1,9 +1,7 @@
 import { Router } from "express";
 export const userRouter = Router();
 import { authenticate } from "../../middleware/firebase-auth";
-import User from "../../utils/db";
-import { Skills } from "../../utils/db";
-import { CulturalFit } from "../../utils/db";
+import {User, Skills, CulturalFit} from "../../utils/db";
 
 userRouter.get("/:id", authenticate, async (req, res) => {
   try {

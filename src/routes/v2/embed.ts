@@ -1,7 +1,7 @@
 import { Router } from "express";
 export const embedRouter = Router();
 import { culturalFitPrompt, skillsPrompt } from "../../utils/prompts";
-import { CulturalFit, Skills } from "../../utils/db";
+import { CulturalFit, Skills, User } from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
 import {
   culturalFitSchema,
@@ -9,7 +9,6 @@ import {
 } from "../../utils/schema";
 import { openai } from "../../utils/openai";
 import { extractJsonFromMarkdown, getCanonicalSkillNames, saveNewSkillsIfNotExist } from "../../utils/helper-functions";
-import User from "../../utils/db";
 import mongoose from "mongoose";
 import { z } from "zod";
 
