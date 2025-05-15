@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 import { authenticate } from "../../middleware/firebase-auth";
 export const bookmarksRouter = Router();
 
-bookmarksRouter.get("/:companyId", async (req, res) => {
+bookmarksRouter.get("/:companyId", authenticate, async (req, res) => {
   try {
     const { companyId } = req.params;
     const bookmarks = await Bookmark.find({ companyId });
@@ -63,7 +63,7 @@ bookmarksRouter.post("/", authenticate, async (req, res) => {
   }
 });
 
-bookmarksRouter.delete("/:id", async (req, res) => {
+bookmarksRouter.delete("/:id", authenticate, async (req, res) => {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
