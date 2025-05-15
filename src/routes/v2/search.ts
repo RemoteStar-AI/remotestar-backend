@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { Job, CulturalFit, Skills, User } from "../../utils/db";
-
+import { Job, CulturalFit, Skills, User, Bookmark } from "../../utils/db";
+import { authenticate } from "../../middleware/firebase-auth";
 export const matchingRouter = Router();
 
 interface SkillItem {
@@ -118,13 +118,17 @@ function calculateMatchScore(
   return finalScore;
 }
 
-matchingRouter.get("/:jobId", async (req: any, res: any) => {
+matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
   try {
     const { jobId } = req.params;
     console.log(`Matching candidates for Job ID: ${jobId}`);
     if (!jobId) return res.status(400).json({ success: false, message: "Job ID is required" });
 
     const job = await Job.findById(jobId);
+    const memberId = req.user.firebase_id;
+    const bookmarks = await Bookmark.find({ memberId });
+
+
     if (!job) {
       console.log("Job not found.");
       return res.status(404).json({ success: false, message: "Job not found" });
@@ -214,7 +218,13 @@ matchingRouter.get("/:jobId", async (req: any, res: any) => {
             matchScore: matchScore
           };
         });
+        
+        let isBookmarked = false;
+        const userBookmarks = bookmarks.find(bookmark => bookmark.userId === user._id.toString());
 
+        if (userBookmarks) {
+          isBookmarked = true;
+        }
         return {
           userId: user._id,
           name: user.name,
@@ -225,6 +235,7 @@ matchingRouter.get("/:jobId", async (req: any, res: any) => {
           job_id : user.job,
           uploader_name: user.firebase_uploader_name,
           current_location: user.current_location,
+          isBookmarked,
           ...(user.total_bookmarks && { total_bookmarks: user.total_bookmarks }),
           matchScore,
           skillsMatch: calculateSkillsSimilarity(plainSkills, expectedSkills) * 100,

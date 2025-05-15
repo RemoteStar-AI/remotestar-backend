@@ -2,7 +2,7 @@ import { Router } from "express";
 import { Bookmark, Job, User } from "../../utils/db";
 import { bookmarkSchema } from "../../utils/schema";
 import mongoose from "mongoose";
-
+import { authenticate } from "../../middleware/firebase-auth";
 export const bookmarksRouter = Router();
 
 bookmarksRouter.get("/:companyId", async (req, res) => {
@@ -17,7 +17,7 @@ bookmarksRouter.get("/:companyId", async (req, res) => {
   }
 });
 
-bookmarksRouter.post("/", async (req, res) => {
+bookmarksRouter.post("/", authenticate, async (req, res) => {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
@@ -28,7 +28,8 @@ bookmarksRouter.post("/", async (req, res) => {
       return;
     }
     const jobId = req.body.jobId;
-    const memberId = req.body.memberId;
+    const memberId = req.user?.firebase_id;
+    const memeberEmail = req.user?.email;
     const userId = req.body.userId;
     const job = await Job.findById(jobId);
     if (!job) {
@@ -46,6 +47,7 @@ bookmarksRouter.post("/", async (req, res) => {
       companyId,
       jobId,
       memberId,
+      memeberEmail,
     };
     const [bookmark] = await Bookmark.create([bookmarkData], { session });
     await User.findByIdAndUpdate(user._id, { $inc: { total_bookmarks: 1 } }, { session });
