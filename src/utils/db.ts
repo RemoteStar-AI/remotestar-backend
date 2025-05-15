@@ -17,7 +17,6 @@ const userSchema = new Schema({
   profile_completeness: { type: Number, min: 0},
   years_of_experience: { type: Number, min: 0},
   designation: { type: String ,default: ""},
-  
   experience: [{
     company: { type: String },
     role: { type: String },
@@ -184,4 +183,3 @@ export const CanonicalSkills = mongoose.model("CanonicalSkills", canonicalSkills
 export const Organisation = mongoose.model("Organisation", organisationSchema);
 export const Bookmark = mongoose.model("Bookmark", bookmarkSchema);
 export const User = mongoose.model("User", userSchema);
-
