@@ -222,6 +222,8 @@ matchingRouter.get("/:jobId", async (req: any, res: any) => {
           years_experience: user.years_of_experience,
           designation: user.designation,
           uploader_email: user.firebase_email,
+          job_id : user.job,
+          uploader_name: user.firebase_uploader_name,
           current_location: user.current_location,
           ...(user.total_bookmarks && { total_bookmarks: user.total_bookmarks }),
           matchScore,
