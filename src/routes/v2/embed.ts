@@ -40,6 +40,7 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
 
     const firebaseId = req.user.firebase_id;
     const userEmail = req.user.email;
+    const displayName = req.user.displayName;
 
     const uniqueId = new mongoose.Types.ObjectId();
     const responce = await User.create(
@@ -49,6 +50,7 @@ embedRouter.post("/", authenticate, async (req: any, res: any) => {
           firebase_id: firebaseId,
           firebase_email: userEmail,
           organisation: organisation,
+          firebase_uploader_name: displayName,
           job: job,
           ...data,
         },
@@ -150,7 +152,7 @@ embedRouter.post("/bulk", authenticate, async (req: any, res: any) => {
     const firebaseId = req.user.firebase_id;
     const userEmail = req.user.email;
     const organisation = req.user.organisation;
-
+    const displayName = req.user.displayName;
     // Parse and validate the bulk request body
     const body = req.body;
     console.log("Bulk Request Body Received:\n", body);
@@ -181,6 +183,7 @@ embedRouter.post("/bulk", authenticate, async (req: any, res: any) => {
         firebase_id: firebaseId,
         firebase_email: userEmail,
         organisation: organisation,
+        firebase_uploader_name: displayName,
         job: job,
         ...data,
       });

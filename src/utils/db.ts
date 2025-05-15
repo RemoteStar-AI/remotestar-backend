@@ -5,6 +5,7 @@ import mongoose, { Schema } from "mongoose";
 const userSchema = new Schema({
   firebase_id: { type: String, required: true },
   firebase_email: { type: String, required: true },
+  firebase_uploader_name: { type: String, required: true },
   organisation: { type: String, default: "" },
   total_bookmarks: { type: Number, default: 0 },
   job: { type: String, default: "" },
