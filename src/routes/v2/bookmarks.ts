@@ -28,6 +28,8 @@ bookmarksRouter.post("/", async (req, res) => {
       return;
     }
     const jobId = req.body.jobId;
+    const memberId = req.body.memberId;
+    const userId = req.body.userId;
     const job = await Job.findById(jobId);
     if (!job) {
       res.status(404).json({ error: "Job not found" });
@@ -39,7 +41,13 @@ bookmarksRouter.post("/", async (req, res) => {
       return;
     }
     const companyId = job.companyId;
-    const bookmark = await Bookmark.create({ ...parsedBody.data, companyId }, { session });
+    const bookmarkData = {
+      userId,
+      companyId,
+      jobId,
+      memberId,
+    };
+    const [bookmark] = await Bookmark.create([bookmarkData], { session });
     await User.findByIdAndUpdate(user._id, { $inc: { total_bookmarks: 1 } }, { session });
     await session.commitTransaction();
     res.status(200).json(bookmark);
