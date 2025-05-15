@@ -223,6 +223,7 @@ matchingRouter.get("/:jobId", async (req: any, res: any) => {
           designation: user.designation,
           uploader_email: user.firebase_email,
           current_location: user.current_location,
+          ...(user.total_bookmarks && { total_bookmarks: user.total_bookmarks }),
           matchScore,
           skillsMatch: calculateSkillsSimilarity(plainSkills, expectedSkills) * 100,
           culturalFitMatch: calculateCulturalFitSimilarity(plainCulturalFit, expectedCulturalFit) * 100,
