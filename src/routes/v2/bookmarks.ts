@@ -5,9 +5,9 @@ import mongoose from "mongoose";
 
 export const bookmarksRouter = Router();
 
-bookmarksRouter.get("/", async (req, res) => {
+bookmarksRouter.get("/:companyId", async (req, res) => {
   try {
-    const { companyId } = req.query;
+    const { companyId } = req.params;
     const bookmarks = await Bookmark.find({ companyId });
     res.status(200).json(bookmarks);
   } catch (e) {
