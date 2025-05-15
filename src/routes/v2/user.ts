@@ -9,11 +9,12 @@ userRouter.get("/:id", authenticate, async (req, res) => {
     const user = await User.findById(id);
     const skills = await Skills.find({ userId: id });
     const culturalFit = await CulturalFit.find({ userId: id });
+    const link = user?.resume_url;
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
     } else {
-      res.status(200).json({ user, skills, culturalFit, link: "https://conasems-ava-prod.s3.sa-east-1.amazonaws.com/aulas/ava/dummy-1641923583.pdf" });
+      res.status(200).json({ user, skills, culturalFit, link });
     }
   } catch (e) {
     console.error(e);

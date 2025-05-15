@@ -11,6 +11,8 @@ import { openai } from "../../utils/openai";
 import { extractJsonFromMarkdown, getCanonicalSkillNames, saveNewSkillsIfNotExist } from "../../utils/helper-functions";
 import mongoose from "mongoose";
 import { z } from "zod";
+import { upload } from "../../middleware/upload";
+import { uploadPDFToS3 } from "../../utils/s3";
 
 const embedSchema = z.object({
   schema: z.record(z.unknown()), // or z.any()
@@ -19,267 +21,127 @@ const embedSchema = z.object({
 
 const bulkEmbedSchema = z.array(embedSchema);
 
-embedRouter.post("/", authenticate, async (req: any, res: any) => {
-  const session = await mongoose.startSession();
-  try {
-    session.startTransaction();
 
-    let userId = req.user.firebase_id;
-    const organisation = req.user.organisation;
+embedRouter.post(
+  "/bulk",
+  authenticate,
+  upload.array("resumes"),
+  async (req: any, res: any) => {
+    const session = await mongoose.startSession();
+    try {
+      session.startTransaction();
 
-    // making cultural fit
-    const body = req.body;
-    const parsedSchema = embedSchema.safeParse(body);
-    if (!parsedSchema.success) {
-      console.log("error in parsed schema\n", parsedSchema.error);
-      res.status(400).json({ error: parsedSchema.error });
-      return;
-    }
-    const data = body.schema;
-    const job = body.job;
+      const { firebase_id, email, organisation, displayName } = req.user;
+      console.log("Raw multipart body:", req.body);
 
-    const firebaseId = req.user.firebase_id;
-    const userEmail = req.user.email;
-    const displayName = req.user.displayName;
+      // ─── Parse JSON payload ───────────────────────────────────────────────────
+      let parsedBody: any;
+      try {
+        parsedBody = JSON.parse(req.body.data);
+      } catch (err) {
+        return res.status(400).json({ error: "Invalid JSON in `data` field" });
+      }
 
-    const uniqueId = new mongoose.Types.ObjectId();
-    const responce = await User.create(
-      [
-        {
+      // ─── Validate with Zod ─────────────────────────────────────────────────────
+      const result = bulkEmbedSchema.safeParse(parsedBody);
+      if (!result.success) {
+        console.error("Validation Error:", result.error.format());
+        return res.status(400).json({ error: result.error.format() });
+      }
+
+      const userDocs: any[] = [];
+      const culturalFitResults: any[] = [];
+      const skillsResults: any[] = [];
+
+      // ─── Main loop ─────────────────────────────────────────────────────────────
+      for (let i = 0; i < result.data.length; i++) {
+        const { schema: data, job } = result.data[i];
+        const uniqueId = new mongoose.Types.ObjectId();
+
+        console.log(data.name+"\n");
+
+        // ↪️ Upload PDF to S3
+        let resume_url: string | null = null;
+        const file = req.files?.[i];
+        if (file) {
+          try {
+            resume_url = await uploadPDFToS3(
+              file.buffer,
+              file.originalname,
+              file.mimetype
+            );
+          } catch (e) {
+            console.error(`S3 upload failed for ${file.originalname}:`, e);
+            throw new Error("Resume upload to S3 failed");
+          }
+        }
+
+        // ↪️ Build user document
+       
+        userDocs.push({
           _id: uniqueId,
-          firebase_id: firebaseId,
-          firebase_email: userEmail,
-          organisation: organisation,
+          firebase_id,
+          firebase_email: email,
+          organisation,
           firebase_uploader_name: displayName,
-          job: job,
+          job,
+          resume_url,          // ← new field
           ...data,
-        },
-      ],
-      { session },
-    );
-    if (!responce) {
-      throw new Error("Failed to create user");
-    }
-    userId = uniqueId;
-    console.log("parsed schema received\n", data);
-    const culturalFitPromptText = culturalFitPrompt(JSON.stringify(data));
+        });
 
-    console.log("sending request to openai for cultural fit\n");
-    const culturalFitResponse = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: culturalFitPromptText }],
-    });
-    console.log("cultural fit response received\n", culturalFitResponse);
-    let extractedCulturalFit = culturalFitResponse.choices[0].message.content
-      ?.trim();
-    if (!extractedCulturalFit) {
-      throw new Error("Empty response from OpenAI");
-    }
-    let validJson = extractJsonFromMarkdown(extractedCulturalFit).replace(
-      /(\r\n|\n|\r)/gm,
-      "",
-    );
-    let parsedCulturalFit = JSON.parse(validJson);
-    console.log("parsed cultural fit received\n", parsedCulturalFit);
+        // ↪️ Cultural Fit
+        const cfPrompt = culturalFitPrompt(JSON.stringify(data));
+        const cfRes = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: cfPrompt }],
+        });
+        const cfText = cfRes.choices[0].message.content?.trim();
+        if (!cfText) throw new Error("Empty cultural fit response");
+        const cfJson = extractJsonFromMarkdown(cfText).replace(/[\r\n]/g, "");
+        const cfParsed = JSON.parse(cfJson);
+        if (!culturalFitSchema.safeParse(cfParsed).success) {
+          throw new Error("Cultural fit validation failed");
+        }
+        culturalFitResults.push({ ...cfParsed, userId: uniqueId });
 
-    let validation = culturalFitSchema.safeParse(parsedCulturalFit);
-    if (!validation.success) {
-      console.log("error in parsed cultural fit\n", validation.error);
-      res.status(400).json({ error: validation.error });
-      return;
-    }
-    const culturalFitResponce = await CulturalFit.create({
-      ...parsedCulturalFit,
-      userId: uniqueId,
-    });
+        // ↪️ Skills
+        const canon = await getCanonicalSkillNames();
+        const skPrompt = skillsPrompt(JSON.stringify(data), canon);
+        const skRes = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: skPrompt }],
+        });
+        const skText = skRes.choices[0].message.content?.trim();
+        if (!skText) throw new Error("Empty skills response");
+        const skJson = extractJsonFromMarkdown(skText).replace(/[\r\n]/g, "");
+        const skParsed = JSON.parse(skJson);
+        if (!skillsSchema.safeParse(skParsed).success) {
+          throw new Error("Skills validation failed");
+        }
+        await saveNewSkillsIfNotExist({
+          skills: Array.isArray(skParsed) ? skParsed : skParsed.skills,
+        });
+        skillsResults.push({ skills: skParsed, userId: uniqueId });
+      }
 
-    //making skills
-    const canonicalSkills = await getCanonicalSkillNames();
-    const skillsPromptText = skillsPrompt(JSON.stringify(data), canonicalSkills);
-    console.log("sending request to openai for skills\n");
-    const skillsResponse = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: skillsPromptText }],
-    });
-    console.log("skills response received\n", skillsResponse);
-    let extractedSkills = skillsResponse.choices[0].message.content?.trim();
-    if (!extractedSkills) {
-      throw new Error("Empty response from OpenAI");
+      // ─── Commit ────────────────────────────────────────────────────────────────
+      await User.insertMany(userDocs, { session });
+      await CulturalFit.insertMany(culturalFitResults, { session });
+      await Skills.insertMany(skillsResults, { session });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return res.status(200).json({
+        message: "Bulk processing completed successfully",
+        count: userDocs.length,
+        userIds: userDocs.map((d) => d._id.toString()),
+      });
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      console.error("Bulk Error:", error);
+      return res.status(500).json({ error: "Internal server error" });
     }
-    let skillValidJson = extractJsonFromMarkdown(extractedSkills).replace(
-      /(\r\n|\n|\r)/gm,
-      "",
-    );
-    let parsedSkills = JSON.parse(skillValidJson);
-    console.log("parsed skills received\n", parsedSkills);
-    let Skillsvalidation = skillsSchema.safeParse(parsedSkills);
-    if (!Skillsvalidation.success) {
-      console.log("error in parsed skills\n", Skillsvalidation.error);
-      res.status(400).json({ error: Skillsvalidation.error });
-      return;
-    }
-    console.log(parsedSkills);
-    const newSkills = await saveNewSkillsIfNotExist({ skills: Array.isArray(parsedSkills) ? parsedSkills : parsedSkills.skills });
-    console.log("new skills received\n", newSkills);
-    const skillsResponce = await Skills.create({
-      skills: parsedSkills,
-      userId: uniqueId,
-    });
-    await session.commitTransaction();
-    session.endSession();
-    console.log("skills and cultural fit created successfully")
-    res.json({
-      message: "skills and cultural fit created successfully",
-      skillsResponce,
-      culturalFitResponce,
-    });
-  } catch (error) {
-    await session.abortTransaction(); // Rollback transaction
-    session.endSession();
-    console.error("Error during embedding:", error);
-    res.status(500).json({
-      error: "Internal server error",
-    });
   }
-});
-
-embedRouter.post("/bulk", authenticate, async (req: any, res: any) => {
-  const session = await mongoose.startSession();
-  try {
-    session.startTransaction();
-
-    let userId = req.user.firebase_id;
-    const firebaseId = req.user.firebase_id;
-    const userEmail = req.user.email;
-    const organisation = req.user.organisation;
-    const displayName = req.user.displayName;
-    // Parse and validate the bulk request body
-    const body = req.body;
-    console.log("Bulk Request Body Received:\n", body);
-
-    const result = bulkEmbedSchema.safeParse(body);
-    if (!result.success) {
-      console.log("Validation Error:\n", result.error.format());
-      res.status(400).json({
-        error: result.error.format(),
-      });
-      return;
-    }
-    const job = result.data[0].job;
-
-    // Arrays to store results for response
-    const userDocs = [];
-    const culturalFitResults = [];
-    const skillsResults = [];
-
-    // Process each item in the array
-    for (const item of result.data) {
-      const data = item.schema;
-      const uniqueId = new mongoose.Types.ObjectId();
-
-      // Create user document
-      userDocs.push({
-        _id: uniqueId,
-        firebase_id: firebaseId,
-        firebase_email: userEmail,
-        organisation: organisation,
-        firebase_uploader_name: displayName,
-        job: job,
-        ...data,
-      });
-
-      // Process cultural fit
-      console.log("Processing cultural fit for item:", data);
-      const culturalFitPromptText = culturalFitPrompt(JSON.stringify(data));
-      
-      const culturalFitResponse = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: culturalFitPromptText }],
-      });
-      
-      let extractedCulturalFit = culturalFitResponse.choices[0].message.content?.trim();
-      if (!extractedCulturalFit) {
-        throw new Error("Empty response from OpenAI for cultural fit");
-      }
-      
-      let validJson = extractJsonFromMarkdown(extractedCulturalFit).replace(
-        /(\r\n|\n|\r)/gm,
-        "",
-      );
-      
-      let parsedCulturalFit = JSON.parse(validJson);
-      let validation = culturalFitSchema.safeParse(parsedCulturalFit);
-      
-      if (!validation.success) {
-        console.log("Error in parsed cultural fit\n", validation.error);
-        throw new Error("Cultural fit validation failed");
-      }
-      
-      culturalFitResults.push({
-        ...parsedCulturalFit,
-        userId: uniqueId,
-      });
-
-      // Process skills
-      console.log("Processing skills for item:", data);
-      const canonicalSkills = await getCanonicalSkillNames();
-      const skillsPromptText = skillsPrompt(JSON.stringify(data), canonicalSkills);
-      
-      const skillsResponse = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: skillsPromptText }],
-      });
-      
-      let extractedSkills = skillsResponse.choices[0].message.content?.trim();
-      if (!extractedSkills) {
-        throw new Error("Empty response from OpenAI for skills");
-      }
-      
-      let skillValidJson = extractJsonFromMarkdown(extractedSkills).replace(
-        /(\r\n|\n|\r)/gm,
-        "",
-      );
-      
-      let parsedSkills = JSON.parse(skillValidJson);
-      console.log("parsed skills received\n", parsedSkills);
-      const newSkills = await saveNewSkillsIfNotExist({ skills: Array.isArray(parsedSkills) ? parsedSkills : parsedSkills.skills });
-      console.log("new skills received\n", newSkills);
-      let skillsValidation = skillsSchema.safeParse(parsedSkills);
-      
-      if (!skillsValidation.success) {
-        console.log("Error in parsed skills\n", skillsValidation.error);
-        throw new Error("Skills validation failed");
-      }
-      
-      skillsResults.push({
-        skills: parsedSkills,
-        userId: uniqueId,
-      });
-    }
-
-    // Batch insert all user documents
-    await User.insertMany(userDocs, { session });
-
-    // Batch insert all cultural fit results
-    await CulturalFit.insertMany(culturalFitResults, { session });
-
-    // Batch insert all skills results
-    await Skills.insertMany(skillsResults, { session });
-
-    await session.commitTransaction();
-    session.endSession();
-
-    res.status(200).json({
-      message: "Bulk processing completed successfully",
-      count: userDocs.length,
-      userIds: userDocs.map(doc => doc._id.toString()),
-    });
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error("Bulk Error:", error);
-    res.status(500).json({
-      error: "Internal server error",
-    });
-  }
-});
+);

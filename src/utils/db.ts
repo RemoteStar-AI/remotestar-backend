@@ -8,6 +8,7 @@ const userSchema = new Schema({
   firebase_uploader_name: { type: String, required: true },
   organisation: { type: String, default: "" },
   total_bookmarks: { type: Number, default: 0 },
+  resume_url: { type: String, default: "https://conasems-ava-prod.s3.sa-east-1.amazonaws.com/aulas/ava/dummy-1641923583.pdf" },
   job: { type: String, default: "" },
   name: { type: String, required: true },
   email: { type: String, required: true},
