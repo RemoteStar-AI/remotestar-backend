@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { Job, CulturalFit, Skills } from "../../utils/db";
-import User from "../../utils/db";
+import { Job, CulturalFit, Skills, User } from "../../utils/db";
 
 export const matchingRouter = Router();
 
@@ -220,6 +219,11 @@ matchingRouter.get("/:jobId", async (req: any, res: any) => {
           userId: user._id,
           name: user.name,
           email: user.email,
+          years_experience: user.years_of_experience,
+          designation: user.designation,
+          uploader_email: user.firebase_email,
+          current_location: user.current_location,
+          ...(user.total_bookmarks && { total_bookmarks: user.total_bookmarks }),
           matchScore,
           skillsMatch: calculateSkillsSimilarity(plainSkills, expectedSkills) * 100,
           culturalFitMatch: calculateCulturalFitSimilarity(plainCulturalFit, expectedCulturalFit) * 100,

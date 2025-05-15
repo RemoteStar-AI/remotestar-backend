@@ -170,3 +170,10 @@ export const organisationSchema = z.object({
   members: z.array(z.string()),
   admin: z.array(z.string()),
 });
+
+export const bookmarkSchema = z.object({
+  _id: z.string().optional(),
+  userId: z.string(),
+  memberId: z.string(),
+  jobId: z.string(),
+});

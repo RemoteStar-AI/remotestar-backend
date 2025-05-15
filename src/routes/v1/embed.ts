@@ -5,7 +5,7 @@ import { openai } from "../../utils/openai";
 import { config } from "dotenv";
 config();
 export const embedRouter = Router();
-import User from "../../utils/db";
+import {User} from "../../utils/db";
 import mongoose from "mongoose";
 import { authenticate } from "../../middleware/firebase-auth";
 

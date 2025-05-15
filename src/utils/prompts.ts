@@ -32,6 +32,7 @@ You are an advanced AI assistant. Your task is to process the following scraped 
   "summary": "string",
   "profile_completeness": 0,
   "years_of_experience": 0,
+  "designation": "string",
   "experience": [
     {
       "company": "string",
