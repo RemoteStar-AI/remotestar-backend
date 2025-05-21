@@ -11,7 +11,7 @@ const userSchema = new Schema({
   resume_url: { type: String, default: "https://conasems-ava-prod.s3.sa-east-1.amazonaws.com/aulas/ava/dummy-1641923583.pdf" },
   job: { type: String, default: "" },
   name: { type: String, required: true },
-  email: { type: String, required: true},
+  email: { type: String, required: true, unique: true },
   phone: { type: String },
   address: { type: String },
   current_location: { type: String, default: "" },
