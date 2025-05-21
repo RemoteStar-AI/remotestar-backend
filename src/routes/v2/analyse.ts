@@ -6,46 +6,56 @@ import { openai } from "../../utils/openai";
 export const analyseRouter = Router();
 
 analyseRouter.post("/", async (req: any, res: any) => {
-  const { userId, jobId } = req.body;
+  try {
+    // Validate request body
+    if (!req.body.userId || !req.body.jobId) {
+      return res.status(400).json({ error: "Missing required fields: userId and jobId" });
+    }
 
+    const { userId, jobId } = req.body;
 
-  const user = await User.findById(userId);
-  const job = await Job.findById(jobId);
+    // Find user and job
+    let user, job;
+    try {
+      user = await User.findById(userId);
+      job = await Job.findById(jobId);
+    } catch (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error occurred" });
+    }
 
-  if (!user || !job) {
-    return res.status(404).json({ error: "User or job not found" });
+    if (!user || !job) {
+      return res.status(404).json({ error: "User or job not found" });
+    }
+
+    const userData = user.toObject();
+    const jobData = job.toObject();
+
+    const prompt = analyseUserPrompt(userData, jobData);
+    console.log("Analysis started");
+
+    // Call OpenAI API
+    let response;
+    try {
+      response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        stream: false
+      });
+    } catch (err) {
+      console.error("OpenAI API error:", err);
+      return res.status(503).json({ error: "AI service temporarily unavailable" });
+    }
+
+    if (!response.choices?.[0]?.message?.content) {
+      return res.status(500).json({ error: "Invalid response from AI service" });
+    }
+
+    const content = response.choices[0].message.content;
+    return res.status(200).json({ content });
+
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    return res.status(500).json({ error: "An unexpected error occurred" });
   }
-
-  const userData = user.toObject();
-  const jobData = job.toObject();
-
-  const prompt = analyseUserPrompt(userData, jobData);
-  console.log("analysis started");
-
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
-    stream: true
-  });
-
-  // Set headers for streaming
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-
-  let fullResponse = '';
-
-  for await (const chunk of response) {
-    const content = chunk.choices[0]?.delta?.content || '';
-    fullResponse += content;
-    
-    // Send the chunk to the client
-    res.write(`data: ${JSON.stringify({ content })}\n\n`);
-  }
-
-  // End the stream
-  res.write(`data: ${JSON.stringify({ done: true, fullResponse })}\n\n`);
-  res.end();
 });
-
-
