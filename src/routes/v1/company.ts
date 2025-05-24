@@ -4,11 +4,13 @@ import { z } from "zod";
 import { Company } from "../../utils/db";
 import { Job } from "../../utils/db";
 import mongoose from "mongoose";
+import { authenticate } from "../../middleware/firebase-auth";
 
 const companySchema = z.object({
   _id: z.string().optional(),
   name: z.string().min(1).max(255),
   website: z.string(),
+  organisation_id: z.string().optional(),
 });
 
 companyRouter.get("/", async (req, res) => {
@@ -28,6 +30,12 @@ companyRouter.get("/", async (req, res) => {
   }
 });
 
+companyRouter.get("/:id", async (req, res) => {
+ const id = req.params.id;
+ const company = await Company.find({ organisation_id: id });
+ res.status(200).json({ message: "Company fetched successfully", data: company });
+});
+
 companyRouter.post("/", async (req, res) => {
   try {
     const body = req.body;
@@ -36,10 +44,11 @@ companyRouter.post("/", async (req, res) => {
       res.status(400).json({ error: parsedBody.error.format() });
       return;
     }
-    const { name, website } = parsedBody.data;
+    const { name, website, organisation_id } = parsedBody.data;
     const response = await Company.create({
       name,
       website,
+      organisation_id,
     });
     if (!response) {
       res.status(500).json({ error: "Internal Server Error" });

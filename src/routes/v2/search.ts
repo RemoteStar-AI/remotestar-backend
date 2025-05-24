@@ -163,7 +163,7 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     };
     console.log("Job expected cultural fit:", expectedCulturalFit);
 
-    const users = await User.find({});
+    const users = await User.find({organisation_id: job.organisation_id || "USER_UPLOADED"});
     console.log(`Found ${users.length} users to evaluate.`);
 
     const matches = await Promise.all(

@@ -138,6 +138,7 @@ export const jobSchema = z.object({
   companyId: z.string(),
   title: z.string(),
   description: z.string(),
+  organisation_id: z.string().optional(),
   location: z.string(),
   jobType: z.enum(["full-time", "part-time", "contract", "internship"]),
   salaryFrequency: z.enum(["yearly", "monthly", "hourly"]),
@@ -167,8 +168,8 @@ export const deleteJobSchema = z.object({
 export const organisationSchema = z.object({
   _id: z.string().optional(),
   name: z.string(),
-  members: z.array(z.string()),
-  admin: z.array(z.string()),
+  members: z.array(z.string()).optional(),
+  admin: z.array(z.string()).optional(),
 });
 
 export const bookmarkSchema = z.object({

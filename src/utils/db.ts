@@ -6,7 +6,7 @@ const userSchema = new Schema({
   firebase_id: { type: String, required: true },
   firebase_email: { type: String, required: true },
   firebase_uploader_name: { type: String ,default: ""},
-  organisation: { type: String, default: "" },
+  organisation_id: { type: String, default: "" },
   total_bookmarks: { type: Number, default: 0 },
   resume_url: { type: String, default: "https://conasems-ava-prod.s3.sa-east-1.amazonaws.com/aulas/ava/dummy-1641923583.pdf" },
   job: { type: String, default: "" },
@@ -130,6 +130,7 @@ const userSkillsSchema = new Schema({
 
 const companySchema = new Schema({
   name: { type: String, required: true },
+  organisation_id: { type: String, default: "" },
   website: { type: String, optional: true },
 });
 
@@ -138,6 +139,7 @@ const jobSchema = new mongoose.Schema({
   companyId: { type: String, required: true },
   title: { type: String, required: true },
   description: { type: String, required: true },
+  organisation_id: { type: String, default: "" },
   location: { type: String, required: true },
   jobType: { type: String, enum: ['full-time', 'part-time', 'contract', 'internship'], required: true },
   salaryFrequency: { type: String, enum: ['yearly', 'monthly', 'hourly'], required: true },

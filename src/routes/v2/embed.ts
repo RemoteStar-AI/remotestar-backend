@@ -13,6 +13,7 @@ import mongoose from "mongoose";
 import { z } from "zod";
 import { upload } from "../../middleware/upload";
 import { uploadPDFToS3 } from "../../utils/s3";
+import { Organisation } from "../../utils/db";
 
 const embedSchema = z.object({
   schema: z.record(z.unknown()), // or z.any()
@@ -31,7 +32,8 @@ embedRouter.post(
     try {
       session.startTransaction();
 
-      const { firebase_id, email, organisation, displayName } = req.user;
+      const { firebase_id, email, organisation_id, displayName } = req.user;
+      let organisation_id_to_use = organisation_id;
       console.log("Raw multipart body:", req.body);
 
       // ─── Parse JSON payload ───────────────────────────────────────────────────
@@ -82,7 +84,7 @@ embedRouter.post(
           _id: uniqueId,
           firebase_id,
           firebase_email: email,
-          organisation,
+          organisation_id: organisation_id_to_use,
           firebase_uploader_name: displayName,
           job,
           resume_url,          // ← new field

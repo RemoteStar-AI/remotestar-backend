@@ -2,14 +2,14 @@ import { Router } from "express";
 import { organisationSchema } from "../../utils/schema";
 import { Organisation } from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
-const OrganisationRouter = Router();
+const organisationRouter = Router();
 import { z } from "zod";
 
 const addMemberSchema = z.object({
-  email: z.string().email(),
+  email: z.array(z.string().email()),
 });
 
-OrganisationRouter.get("/:id", authenticate, async (req, res) => {
+organisationRouter.get("/:id", authenticate, async (req, res) => {
   try {
     const id = req.params.id;
     const organisation = await Organisation.findById(id);
@@ -24,7 +24,17 @@ OrganisationRouter.get("/:id", authenticate, async (req, res) => {
   }
 });
 
-OrganisationRouter.post("/", authenticate, async (req, res) => {
+organisationRouter.get("/", authenticate, async (req, res) => {
+  const userEmail = req.user!.email;
+  const organisation = await Organisation.find({ members: { $in: [userEmail] } });
+  const orgs = organisation.map(org => ({
+    organisation_id: org._id,
+    name: org.name
+  }));
+  res.status(200).json({ message: "Organisations found", organisations: orgs });
+});
+
+organisationRouter.post("/", authenticate, async (req, res) => {
   const body = req.body;
   const parsedBody = organisationSchema.safeParse(body);
   if (!parsedBody.success) {
@@ -32,6 +42,7 @@ OrganisationRouter.post("/", authenticate, async (req, res) => {
     return;
   }
   const userEmail = req.user!.email;
+
   const payload = {
     ...parsedBody.data,
     admin: [userEmail],
@@ -42,7 +53,7 @@ OrganisationRouter.post("/", authenticate, async (req, res) => {
   res.status(200).json({ message: "Organisation created successfully", organisation });
 });
 
-OrganisationRouter.post("/:id/add", authenticate, async (req, res) => {
+organisationRouter.post("/:id/add", authenticate, async (req, res) => {
   try {
     const id = req.params.id;
     const body = req.body;
@@ -61,7 +72,9 @@ OrganisationRouter.post("/:id/add", authenticate, async (req, res) => {
       res.status(403).json({ message: "You are not authorized to add members to this organisation" });
       return;
     }
-    organisation.members.push(parsedBody.data.email);
+    parsedBody.data.email.forEach(email => {
+      organisation.members.push(email);
+    });
     await organisation.save();
     res.status(200).json({ message: "Member added to organisation successfully", organisation });
   } catch (error) {
@@ -70,7 +83,7 @@ OrganisationRouter.post("/:id/add", authenticate, async (req, res) => {
   }
 });
 
-OrganisationRouter.delete("/:id", authenticate, async (req, res) => {
+organisationRouter.delete("/:id", authenticate, async (req, res) => {
   try {
     const id = req.params.id;
     const userEmail = req.user!.email;
@@ -91,4 +104,4 @@ OrganisationRouter.delete("/:id", authenticate, async (req, res) => {
   }
 });
 
-export default OrganisationRouter;
+export { organisationRouter };
