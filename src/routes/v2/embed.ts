@@ -15,6 +15,7 @@ import { upload } from "../../middleware/upload";
 import { uploadPDFToS3 } from "../../utils/s3";
 import { Organisation } from "../../utils/db";
 
+
 const embedSchema = z.object({
   schema: z.record(z.unknown()), // or z.any()
   job: z.string().optional(),
