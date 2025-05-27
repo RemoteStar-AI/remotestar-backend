@@ -63,13 +63,25 @@ organisationRouter.post("/:id/add", authenticate, async (req, res) => {
       return;
     }
     const userEmail = req.user!.email;
+    console.log("Requesting user:", userEmail);
     const organisation = await Organisation.findById(id);
     if (!organisation) {
       res.status(404).json({ message: "Organisation not found" });
       return;
     }
-    if (!organisation.admin.includes(userEmail!)) {
-      res.status(403).json({ message: "You are not authorized to add members to this organisation" });
+    console.log("Organisation admins:", organisation.admin);
+    // Normalize email addresses for comparison
+    const normalizedUserEmail = userEmail!.toLowerCase().trim();
+    const normalizedAdminList = organisation.admin.map(email => email.toLowerCase().trim());
+    if (!normalizedAdminList.includes(normalizedUserEmail)) {
+      console.log("User not found in admin list");
+      res.status(403).json({ 
+        message: "You are not authorized to add members to this organisation",
+        requestingUser: userEmail,
+        adminList: organisation.admin,
+        normalizedUserEmail: normalizedUserEmail,
+        normalizedAdminList: normalizedAdminList
+      });
       return;
     }
     parsedBody.data.email.forEach(email => {
