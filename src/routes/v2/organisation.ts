@@ -5,7 +5,7 @@ import { authenticate } from "../../middleware/firebase-auth";
 const organisationRouter = Router();
 import { z } from "zod";
 
-const addMemberSchema = z.object({
+const addOrRemoveMemberSchema = z.object({
   email: z.array(z.string().email()),
 });
 
@@ -57,7 +57,7 @@ organisationRouter.post("/:id/add", authenticate, async (req, res) => {
   try {
     const id = req.params.id;
     const body = req.body;
-    const parsedBody = addMemberSchema.safeParse(body);
+    const parsedBody = addOrRemoveMemberSchema.safeParse(body);
     if (!parsedBody.success) {
       res.status(400).json({ message: "Invalid add member data", errors: parsedBody.error.errors });
       return;
@@ -91,6 +91,47 @@ organisationRouter.post("/:id/add", authenticate, async (req, res) => {
     res.status(200).json({ message: "Member added to organisation successfully", organisation });
   } catch (error) {
     console.error("Error adding member to organisation:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+organisationRouter.post("/:id/remove", authenticate, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const body = req.body;
+    const parsedBody = addOrRemoveMemberSchema.safeParse(body);
+    if (!parsedBody.success) {
+      res.status(400).json({ message: "Invalid remove member data", errors: parsedBody.error.errors });
+      return;
+    }
+    const userEmail = req.user!.email;
+    const organisation = await Organisation.findById(id);
+    if (!organisation) {
+      res.status(404).json({ message: "Organisation not found" });
+      return;
+    }
+    // Normalize email addresses for comparison
+    const normalizedUserEmail = userEmail!.toLowerCase().trim();
+    const normalizedAdminList = organisation.admin.map(email => email.toLowerCase().trim());
+    if (!normalizedAdminList.includes(normalizedUserEmail)) {
+      res.status(403).json({ 
+        message: "You are not authorized to remove members from this organisation",
+        requestingUser: userEmail,
+        adminList: organisation.admin,
+        normalizedUserEmail: normalizedUserEmail,
+        normalizedAdminList: normalizedAdminList
+      });
+      return;
+    }
+    // Remove specified emails from members array
+    organisation.members = organisation.members.filter(memberEmail => {
+      const normalizedMemberEmail = memberEmail.toLowerCase().trim();
+      return !parsedBody.data.email.map(e => e.toLowerCase().trim()).includes(normalizedMemberEmail);
+    });
+    await organisation.save();
+    res.status(200).json({ message: "Member(s) removed from organisation successfully", organisation });
+  } catch (error) {
+    console.error("Error removing member from organisation:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
