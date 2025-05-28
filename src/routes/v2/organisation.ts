@@ -84,9 +84,26 @@ organisationRouter.post("/:id/add", authenticate, async (req, res) => {
       });
       return;
     }
-    parsedBody.data.email.forEach(email => {
-      organisation.members.push(email);
-    });
+    if(parsedBody.data.email.includes(userEmail!)) {
+      res.status(403).json({ message: "You cannot add yourself as a member" });
+      return;
+    }
+    const existingMembers = parsedBody.data.email.filter(email => 
+      organisation.members.map(m => m.toLowerCase().trim()).includes(email.toLowerCase().trim())
+    );
+    if(existingMembers.length === parsedBody.data.email.length) {
+      console.log("All emails are already members of this organisation");
+      res.status(400).json({ 
+        message: "All emails are already members of this organisation",
+        existingMembers
+      });
+      return;
+    }
+    // Filter out existing members and add only unique ones
+    const newMembers = parsedBody.data.email.filter(email => 
+      !organisation.members.map(m => m.toLowerCase().trim()).includes(email.toLowerCase().trim())
+    );
+    organisation.members.push(...newMembers);
     await organisation.save();
     res.status(200).json({ message: "Member added to organisation successfully", organisation });
   } catch (error) {
@@ -163,9 +180,32 @@ organisationRouter.post("/:id/admin/add", authenticate, async (req, res) => {
       });
       return;
     }
-    parsedBody.data.email.forEach(email => {
-      organisation.admin.push(email);
-      organisation.members.push(email);
+    // Prevent adding self as admin
+    const normalizedRequestEmails = parsedBody.data.email.map(email => email.toLowerCase().trim());
+    if (normalizedRequestEmails.includes(normalizedUserEmail)) {
+      res.status(403).json({ message: "You cannot add yourself as an admin" });
+      return;
+    }
+    // Filter out emails that are already admins
+    const existingAdmins = normalizedRequestEmails.filter(email =>
+      normalizedAdminList.includes(email)
+    );
+    if (existingAdmins.length > 0) {
+      res.status(400).json({ 
+        message: "Some emails are already admins of this organisation",
+        existingAdmins
+      });
+      return;
+    }
+    // Add only unique new admins and also add to members if not present
+    const normalizedMemberList = organisation.members.map(email => email.toLowerCase().trim());
+    normalizedRequestEmails.forEach(email => {
+      if (!normalizedAdminList.includes(email)) {
+        organisation.admin.push(email);
+      }
+      if (!normalizedMemberList.includes(email)) {
+        organisation.members.push(email);
+      }
     });
     await organisation.save();
     res.status(200).json({ message: "Admin added to organisation successfully", organisation });
