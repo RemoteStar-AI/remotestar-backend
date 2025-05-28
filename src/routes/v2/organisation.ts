@@ -136,6 +136,83 @@ organisationRouter.post("/:id/remove", authenticate, async (req, res) => {
   }
 });
 
+organisationRouter.post("/:id/admin/add", authenticate, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const body = req.body;
+    const parsedBody = addOrRemoveMemberSchema.safeParse(body);
+    if (!parsedBody.success) {
+      res.status(400).json({ message: "Invalid add admin data", errors: parsedBody.error.errors });
+      return;
+    }
+    const userEmail = req.user!.email;
+    const organisation = await Organisation.findById(id);
+    if (!organisation) {
+      res.status(404).json({ message: "Organisation not found" });
+      return;
+    }
+    const normalizedUserEmail = userEmail!.toLowerCase().trim();
+    const normalizedAdminList = organisation.admin.map(email => email.toLowerCase().trim());
+    if (!normalizedAdminList.includes(normalizedUserEmail)) {
+      res.status(403).json({ 
+        message: "You are not authorized to add admins to this organisation",
+        requestingUser: userEmail,
+        adminList: organisation.admin,
+        normalizedUserEmail: normalizedUserEmail,
+        normalizedAdminList: normalizedAdminList
+      });
+      return;
+    }
+    parsedBody.data.email.forEach(email => {
+      organisation.admin.push(email);
+      organisation.members.push(email);
+    });
+    await organisation.save();
+    res.status(200).json({ message: "Admin added to organisation successfully", organisation });
+  } catch (error) {
+    console.error("Error adding admin to organisation:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+organisationRouter.post("/:id/admin/remove", authenticate, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const body = req.body;
+    const parsedBody = addOrRemoveMemberSchema.safeParse(body);
+    if (!parsedBody.success) {
+      res.status(400).json({ message: "Invalid remove admin data", errors: parsedBody.error.errors });
+      return;
+    }
+    const userEmail = req.user!.email;
+    const organisation = await Organisation.findById(id);
+    if (!organisation) {
+      res.status(404).json({ message: "Organisation not found" });
+      return;
+    }
+    const normalizedUserEmail = userEmail!.toLowerCase().trim();
+    const normalizedAdminList = organisation.admin.map(email => email.toLowerCase().trim());
+    if (!normalizedAdminList.includes(normalizedUserEmail)) {
+      res.status(403).json({ 
+        message: "You are not authorized to remove admins from this organisation",
+        requestingUser: userEmail,
+        adminList: organisation.admin,
+        normalizedUserEmail: normalizedUserEmail,
+        normalizedAdminList: normalizedAdminList
+      });
+      return;
+    }
+    parsedBody.data.email.forEach(email => {
+      organisation.admin = organisation.admin.filter(adminEmail => adminEmail !== email);
+    });
+    await organisation.save();
+    res.status(200).json({ message: "Admin removed from organisation successfully", organisation });
+  } catch (error) {
+    console.error("Error removing admin from organisation:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 organisationRouter.delete("/:id", authenticate, async (req, res) => {
   try {
     const id = req.params.id;
