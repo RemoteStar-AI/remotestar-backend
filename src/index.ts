@@ -17,6 +17,7 @@ import { userRouter as userRouterV2 } from './routes/v2/user';
 import { analyseRouter } from './routes/v2/analyse';
 import { bookmarksRouter } from './routes/v2/bookmarks';
 import { organisationRouter } from './routes/v2/organisation';
+import { addOrganisationId } from './utils/migration';
 dotenv.config();
 
 const app: Application = express();
@@ -54,6 +55,7 @@ async function main(){
         app.listen(PORT, () => {
             console.log(`Server is running on port ${PORT}`);
         });
+       // addOrganisationId(process.env.MONGODB_URI!);
     } catch (error) {
         console.error("Error connecting to MongoDB", error);
     }
