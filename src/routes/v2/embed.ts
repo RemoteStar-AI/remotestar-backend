@@ -33,8 +33,8 @@ embedRouter.post(
     try {
       session.startTransaction();
 
-      const { firebase_id, email, organisation_id, displayName } = req.user;
-      let organisation_id_to_use = organisation_id;
+      const { firebase_id, email, organisation, displayName } = req.user;
+      let organisation_id_to_use = organisation;
       console.log("Raw multipart body:", req.body);
 
       // ─── Parse JSON payload ───────────────────────────────────────────────────

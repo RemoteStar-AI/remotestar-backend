@@ -15,9 +15,11 @@ import {
 
 jobRouter.get("/", async (req: any, res: any) => {
   const params = req.query;
-  const { companyId } = params;
+  const { companyId, organisation_id } = params;
+  console.log("companyId", companyId);
+  console.log("organisation_id", organisation_id);
   try {
-    const response = await Job.find({ companyId });
+    const response = await Job.find({ companyId,organisation_id});
     if (!response) {
       res.status(500).json({ error: "Internal Server Error" });
       return;
