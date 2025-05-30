@@ -30,9 +30,9 @@ companyRouter.get("/", async (req, res) => {
   }
 });
 
-companyRouter.get("/:id", async (req, res) => {
- const id = req.params.id;
- const company = await Company.find({ organisation_id: id });
+companyRouter.get("/:organisation_id", async (req, res) => {
+ const organisation_id = req.params.organisation_id;
+ const company = await Company.find({ organisation_id: organisation_id });
  res.status(200).json({ message: "Company fetched successfully", data: company });
 });
 
