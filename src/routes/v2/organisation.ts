@@ -2,6 +2,7 @@ import { Router } from "express";
 import { organisationSchema } from "../../utils/schema";
 import { Organisation } from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
+import { sendEmail, defaultMemberEmail, defaultAdminEmail } from "../../utils/mail";
 const organisationRouter = Router();
 import { z } from "zod";
 
@@ -42,6 +43,8 @@ organisationRouter.post("/", authenticate, async (req, res) => {
     return;
   }
   const userEmail = req.user!.email;
+  const userName = req.user!.displayName;
+
 
   const payload = {
     ...parsedBody.data,
@@ -50,6 +53,11 @@ organisationRouter.post("/", authenticate, async (req, res) => {
   };
   const organisation = new Organisation(payload);
   await organisation.save();
+  try{
+    await sendEmail(userEmail!, "Organisation created successfully", defaultAdminEmail(parsedBody.data.name, userName));
+  } catch (error) {
+    console.error("Error sending email to admin:", error);
+  }
   res.status(200).json({ message: "Organisation created successfully", organisation });
 });
 
@@ -105,6 +113,13 @@ organisationRouter.post("/:id/add", authenticate, async (req, res) => {
     );
     organisation.members.push(...newMembers);
     await organisation.save();
+    try{
+      for(const email of newMembers) {
+        await sendEmail(email, "You have been added as a member to an organisation", defaultMemberEmail(organisation.name, email));
+      }
+    } catch (error) {
+      console.error("Error sending email to new members:", error);
+    }
     res.status(200).json({ message: "Member added to organisation successfully", organisation });
   } catch (error) {
     console.error("Error adding member to organisation:", error);
@@ -208,6 +223,13 @@ organisationRouter.post("/:id/admin/add", authenticate, async (req, res) => {
       }
     });
     await organisation.save();
+    try{
+      for(const email of parsedBody.data.email) {
+        await sendEmail(email, "You have been added as an admin to an organisation", defaultAdminEmail(organisation.name, email));
+      }
+    } catch (error) {
+      console.error("Error sending email to new admins:", error);
+    }
     res.status(200).json({ message: "Admin added to organisation successfully", organisation });
   } catch (error) {
     console.error("Error adding admin to organisation:", error);
