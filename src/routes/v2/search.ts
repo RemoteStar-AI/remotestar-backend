@@ -170,7 +170,31 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
 
     if (!job?.needRevaluation) {
       console.log("previous response found");
-      res.status(200).json(jobSearchResponse?.response);
+      const cached = jobSearchResponse?.response;
+      if (cached?.data?.candidates?.length) {
+        // Get all userIds from cached candidates
+        const userIds = cached.data.candidates.map((c: any) => c.userId);
+        // Fetch latest total_bookmarks for these users
+        const users = await User.find({ _id: { $in: userIds } }, { _id: 1, total_bookmarks: 1 });
+        const bookmarksMap = new Map(users.map((u: any) => [u._id.toString(), u.total_bookmarks]));
+        // Fetch bookmarks for the current user
+        const memberId = req.user.firebase_id;
+        const bookmarks = await Bookmark.find({ memberId });
+        // Update candidates with latest total_bookmarks, isBookmarked, and bookmarkId
+        cached.data.candidates = cached.data.candidates.map((c: any) => {
+          const userIdStr = c.userId.toString();
+          const userBookmarks = bookmarks.find((bookmark: any) => bookmark.userId === userIdStr);
+          const isBookmarked = !!userBookmarks;
+          const bookmarkId = userBookmarks?._id?.toString();
+          return {
+            ...c,
+            total_bookmarks: bookmarksMap.get(userIdStr) ?? c.total_bookmarks,
+            isBookmarked,
+            bookmarkId,
+          };
+        });
+      }
+      res.status(200).json(cached);
       return;
     }
     const memberId = req.user.firebase_id;
