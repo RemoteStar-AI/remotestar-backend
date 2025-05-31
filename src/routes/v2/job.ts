@@ -1,7 +1,7 @@
 import { Router } from "express";
 export const jobRouter = Router();
-import { Job } from "../../utils/db";
-import { jobSchema } from "../../utils/schema";
+import { Job, JobSearchResponse } from "../../utils/db";
+import { jobSchema} from "../../utils/schema";
 import {
   expectedCulturalFitPrompt,
   expectedSkillsPrompt,
@@ -16,8 +16,8 @@ import {
 jobRouter.get("/", async (req: any, res: any) => {
   const params = req.query;
   const { companyId, organisation_id } = params;
-  console.log("companyId", companyId);
-  console.log("organisation_id", organisation_id);
+  // console.log("companyId", companyId);
+  // console.log("organisation_id", organisation_id);
   try {
     const response = await Job.find({ companyId,organisation_id});
     if (!response) {
@@ -101,6 +101,11 @@ jobRouter.post("/", async (req: any, res: any) => {
     };
     console.log(finalBody);
     const jobResponce = await Job.create(finalBody);
+    const jobSearchResponse = await JobSearchResponse.create({
+      jobId: jobResponce._id,
+      organisation_id: jobResponce.organisation_id,
+      response: {},
+    });
     res.status(200).json({
       message: "Job created successfully",
       data: jobResponce,
@@ -116,8 +121,12 @@ jobRouter.delete("/:id", async (req: any, res: any) => {
   try {
     const id = req.params.id;
     const job = await Job.findByIdAndDelete(id);
+    const jobSearchResponse = await JobSearchResponse.findByIdAndDelete(job?._id);
     if (!job) {
       return res.status(404).json({ error: "Job not found" });
+    }
+    if (!jobSearchResponse) {
+      return res.status(404).json({ error: "Job search response not found" });
     }
     res.status(200).json({ message: "Job deleted successfully", data: job });
   } catch (err) {

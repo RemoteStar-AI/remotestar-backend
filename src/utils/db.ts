@@ -140,6 +140,7 @@ const jobSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
   organisation_id: { type: String, default: "" },
+  needRevaluation: { type: Boolean, default: true },
   location: { type: String, required: true },
   jobType: { type: String, enum: ['full-time', 'part-time', 'contract', 'internship'], required: true },
   salaryFrequency: { type: String, enum: ['yearly', 'monthly', 'hourly'], required: true },
@@ -179,6 +180,12 @@ const bookmarkSchema = new Schema({
   companyId: { type: String, required: true },
 }, { timestamps: true });
 
+const jobSearchResposeSchema = new Schema({
+  jobId : {type: String, required: true},
+  organisation_id: {type:String,required:true},
+  response: { type: Object,default:{}},
+},{timestamps:true})
+
 export const Job = mongoose.model("Job", jobSchema);
 export const Company = mongoose.model("Company", companySchema);
 export const CulturalFit = mongoose.model("CulturalFit", culturalFitSchema);
@@ -187,3 +194,4 @@ export const CanonicalSkills = mongoose.model("CanonicalSkills", canonicalSkills
 export const Organisation = mongoose.model("Organisation", organisationSchema);
 export const Bookmark = mongoose.model("Bookmark", bookmarkSchema);
 export const User = mongoose.model("User", userSchema);
+export const JobSearchResponse = mongoose.model("JobSearchResponse", jobSearchResposeSchema);

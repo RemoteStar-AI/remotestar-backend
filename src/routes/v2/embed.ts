@@ -1,20 +1,20 @@
 import { Router } from "express";
 export const embedRouter = Router();
 import { culturalFitPrompt, skillsPrompt } from "../../utils/prompts";
-import { CulturalFit, Skills, User } from "../../utils/db";
+import { CulturalFit, Job, Skills, User } from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
-import {
-  culturalFitSchema,
-  skillsSchema,
-} from "../../utils/schema";
+import { culturalFitSchema, skillsSchema } from "../../utils/schema";
 import { openai } from "../../utils/openai";
-import { extractJsonFromMarkdown, getCanonicalSkillNames, saveNewSkillsIfNotExist } from "../../utils/helper-functions";
+import {
+  extractJsonFromMarkdown,
+  getCanonicalSkillNames,
+  saveNewSkillsIfNotExist,
+} from "../../utils/helper-functions";
 import mongoose from "mongoose";
 import { z } from "zod";
 import { upload } from "../../middleware/upload";
 import { uploadPDFToS3 } from "../../utils/s3";
 import { Organisation } from "../../utils/db";
-
 
 const embedSchema = z.object({
   schema: z.record(z.unknown()), // or z.any()
@@ -22,7 +22,6 @@ const embedSchema = z.object({
 });
 
 const bulkEmbedSchema = z.array(embedSchema);
-
 
 embedRouter.post(
   "/bulk",
@@ -55,13 +54,13 @@ embedRouter.post(
       const userDocs: any[] = [];
       const culturalFitResults: any[] = [];
       const skillsResults: any[] = [];
-
+      const jobId = result.data[0].job;
       // ─── Main loop ─────────────────────────────────────────────────────────────
       for (let i = 0; i < result.data.length; i++) {
         const { schema: data, job } = result.data[i];
         const uniqueId = new mongoose.Types.ObjectId();
 
-        console.log(data.name+"\n");
+        console.log(data.name + "\n");
 
         // ↪️ Upload PDF to S3
         let resume_url: string | null = null;
@@ -80,7 +79,7 @@ embedRouter.post(
         }
 
         // ↪️ Build user document
-       
+
         userDocs.push({
           _id: uniqueId,
           firebase_id,
@@ -88,7 +87,7 @@ embedRouter.post(
           organisation_id: organisation_id_to_use,
           firebase_uploader_name: displayName,
           job,
-          resume_url,          // ← new field
+          resume_url,
           ...data,
         });
 
@@ -128,6 +127,25 @@ embedRouter.post(
       }
 
       // ─── Commit ────────────────────────────────────────────────────────────────
+      console.log(jobId);
+      if (jobId) {
+        try {
+          await Job.findByIdAndUpdate(jobId, { needRevaluation: true });
+          console.log("Job revaluation successfully");
+        } catch (err) {
+          console.error("Error updating job:", err);
+        }
+      } else {
+        try {
+          await Job.updateMany(
+            { organisation_id: organisation_id_to_use },
+            { needRevaluation: true }
+          );
+          console.log("Organisation revaluation successfully");
+        } catch (err) {
+          console.error("Error updating jobs:", err);
+        }
+      }
       await User.insertMany(userDocs, { session });
       await CulturalFit.insertMany(culturalFitResults, { session });
       await Skills.insertMany(skillsResults, { session });

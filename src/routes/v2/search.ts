@@ -1,5 +1,12 @@
 import { Router } from "express";
-import { Job, CulturalFit, Skills, User, Bookmark } from "../../utils/db";
+import {
+  Job,
+  CulturalFit,
+  Skills,
+  User,
+  Bookmark,
+  JobSearchResponse,
+} from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
 export const matchingRouter = Router();
 
@@ -148,6 +155,24 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         .json({ success: false, message: "Job ID is required" });
 
     const job = await Job.findById(jobId);
+    const jobSearchResponse = await JobSearchResponse.findOne({ jobId: jobId });
+    try {
+      if (!jobSearchResponse) {
+        await JobSearchResponse.create({
+          jobId: jobId,
+          response: {},
+          organisation_id: job?.organisation_id,
+        });
+      }
+    } catch (err) {
+      console.error("Error creating job search response:", err);
+    }
+
+    if (!job?.needRevaluation) {
+      console.log("previous response found");
+      res.status(200).json(jobSearchResponse?.response);
+      return;
+    }
     const memberId = req.user.firebase_id;
     const bookmarks = await Bookmark.find({ memberId });
 
@@ -163,7 +188,9 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     };
     console.log("Job expected cultural fit:", expectedCulturalFit);
 
-    const users = await User.find({organisation_id: job.organisation_id || "USER_UPLOADED"});
+    const users = await User.find({
+      organisation_id: job.organisation_id || "USER_UPLOADED",
+    });
     //const users = await User.find();
     console.log(`Found ${users.length} users to evaluate.`);
 
@@ -302,7 +329,7 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
 
     const sorted = matches.sort((a, b) => b.matchScore - a.matchScore);
     console.log("Matching completed.");
-    res.status(200).json({
+    const payload = {
       success: true,
       message: "Candidates matched successfully",
       data: {
@@ -311,7 +338,17 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         totalCandidates: sorted.length,
         candidates: sorted,
       },
-    });
+    };
+    try {
+      await JobSearchResponse.findOneAndUpdate(
+        { jobId: jobId },
+        { response: payload }
+      );
+      await Job.findByIdAndUpdate(jobId, { needRevaluation: false });
+    } catch (err) {
+      console.error("Error updating job search response:", err);
+    }
+    res.status(200).json(payload);
   } catch (err: any) {
     console.error("Error matching candidates:", err);
     res.status(500).json({
