@@ -18,6 +18,7 @@ import { analyseRouter } from './routes/v2/analyse';
 import { bookmarksRouter } from './routes/v2/bookmarks';
 import { organisationRouter } from './routes/v2/organisation';
 import { addOrganisationId } from './utils/migration';
+import {embedRouter3} from './routes/v3/embed';
 dotenv.config();
 
 const app: Application = express();
@@ -48,6 +49,10 @@ app.use("/api/v2/user", userRouterV2);
 app.use("/api/v2/analyse", analyseRouter);
 app.use("/api/v2/bookmarks", bookmarksRouter);
 app.use("/api/v2/organisation", organisationRouter);
+
+//v3 routes
+app.use("/api/v3/embed", embedRouter3);
+
 async function main(){
     try {
         await mongoose.connect(process.env.MONGODB_URI!);
