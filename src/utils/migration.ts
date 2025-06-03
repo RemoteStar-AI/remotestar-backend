@@ -1,3 +1,23 @@
+/**
+ * @file src/utils/migration.ts
+ *
+ * @description
+ *   This script provides a utility function to add a default organisation_id to all User, Company, and Job documents in the database.
+ *   It is intended for use as a one-time or ad-hoc migration to ensure all relevant documents have the specified organisation ID.
+ *
+ *   Main Function:
+ *     - addOrganisationId(MongoURI: string):
+ *         Connects to the MongoDB instance, updates all User, Company, and Job records to set the organisation_id field to the hardcoded ORG_ID, then disconnects.
+ *
+ *   Usage:
+ *     - Uncomment the last line and provide the correct MongoDB URI to run the migration.
+ *     - Example: node -r ts-node/register src/utils/migration.ts
+ *
+ * @disclaimer
+ *   This script performs bulk updates on production data. Use with caution and ensure you have backups before running.
+ *   Only run this script if you understand its impact. It is not intended for regular application use.
+ */
+
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();

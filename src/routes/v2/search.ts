@@ -1,3 +1,35 @@
+/**
+ * @file src/routes/v2/search.ts
+ *
+ * @description
+ *   This file defines the Express router for candidate-job matching logic in the Remotestar backend (v2 API).
+ *   It provides an endpoint to match candidates to a job based on skills and cultural fit, returning a ranked list of candidates with detailed match breakdowns.
+ *
+ *   Main Features:
+ *   - Calculates match scores for users against a job using both skills and cultural fit metrics.
+ *   - Supports caching of match results for performance, with recalculation triggered by the `needRevaluation` flag.
+ *   - For each candidate, provides:
+ *       - Overall match score
+ *       - Per-skill and per-cultural fit trait match breakdowns
+ *       - Bookmarking information (isBookmarked, bookmarkId, total_bookmarks, bookmarkedBy)
+ *   - Integrates with Firebase to fetch user details for bookmarkers.
+ *
+ *   Endpoint:
+ *     GET /:jobId
+ *       - Authenticated route
+ *       - Returns a list of matched candidates for the given job ID, with all relevant match and bookmark data.
+ *
+ *   Key Logic:
+ *     - Uses MongoDB models for Job, User, Skills, CulturalFit, Bookmark, and JobSearchResponse.
+ *     - Calculates similarity using custom functions for skills and cultural fit.
+ *     - Handles both fresh and cached responses, always updating bookmark-related fields for accuracy.
+ *
+ * @disclaimer
+ *   This file processes sensitive user and job data, including personal identifiers and Firebase user records.
+ *   Ensure that access to this endpoint is properly authenticated and authorized.
+ *   The logic involves multiple database and external (Firebase) calls per candidate, which may impact performance for large datasets.
+ *   Use with care in production environments and consider optimizing for scale if needed.
+ */
 import { Router } from "express";
 import {
   Job,

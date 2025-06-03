@@ -17,9 +17,7 @@ import { userRouter as userRouterV2 } from './routes/v2/user';
 import { analyseRouter } from './routes/v2/analyse';
 import { bookmarksRouter } from './routes/v2/bookmarks';
 import { organisationRouter } from './routes/v2/organisation';
-import { addOrganisationId } from './utils/migration';
-//import {embedRouter3} from './routes/v3/embed';
-import {resumeUploadRouter as embedRouter3} from './routes/v3/resume-upload';
+import {resumeUploadRouter as embedRouter3} from './routes/v3/embed';
 dotenv.config();
 
 const app: Application = express();
