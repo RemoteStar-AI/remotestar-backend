@@ -8,6 +8,8 @@ import {
   JobSearchResponse,
 } from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
+import admin from '../../utils/firebase';
+
 export const matchingRouter = Router();
 
 interface SkillItem {
@@ -180,25 +182,44 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         // Fetch bookmarks for the current user
         const memberId = req.user.firebase_id;
         const bookmarks = await Bookmark.find({ memberId });
-        // Update candidates with latest total_bookmarks, isBookmarked, and bookmarkId
-        cached.data.candidates = cached.data.candidates.map((c: any) => {
+        // Update candidates with latest total_bookmarks, isBookmarked, bookmarkId, and bookmarkedBy
+        cached.data.candidates = await Promise.all(cached.data.candidates.map(async (c: any) => {
           const userIdStr = c.userId.toString();
           const userBookmarks = bookmarks.find((bookmark: any) => bookmark.userId === userIdStr);
           const isBookmarked = !!userBookmarks;
           const bookmarkId = userBookmarks?._id?.toString();
+
+          // Recalculate bookmarkedBy
+          const memberBookmarks = await Bookmark.find({ userId: userIdStr });
+          const uniqueMemberIds = [...new Set(memberBookmarks.map((b: any) => b.memberId))];
+          const bookmarkedBy = await Promise.all(uniqueMemberIds.map(async (firebaseId) => {
+            try {
+              const userRecord = await admin.auth().getUser(firebaseId);
+              return {
+                email: userRecord.email || null,
+                name: userRecord.displayName || null,
+              };
+            } catch (err) {
+              return null;
+            }
+          }));
+          const filteredBookmarkedBy = bookmarkedBy.filter(Boolean);
+
           return {
             ...c,
             total_bookmarks: bookmarksMap.get(userIdStr) ?? c.total_bookmarks,
             isBookmarked,
             bookmarkId,
+            bookmarkedBy: filteredBookmarkedBy,
           };
-        });
+        }));
       }
       res.status(200).json(cached);
       return;
     }
     const memberId = req.user.firebase_id;
     const bookmarks = await Bookmark.find({ memberId });
+    
 
     if (!job) {
       console.log("Job not found.");
@@ -324,6 +345,26 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         if (userBookmarks) {
           isBookmarked = true;
         }
+        // Get all unique memberIds from bookmarks
+        const memberBookmarks = await Bookmark.find({userId:user._id})
+
+        const uniqueMemberIds = [...new Set(memberBookmarks.map(c => c.memberId))];
+        console.log("uniques",bookmarks);
+        // Fetch user records from Firebase for each memberId
+        const bookmarkedBy = await Promise.all(uniqueMemberIds.map(async (firebaseId) => {
+          try {
+            const userRecord = await admin.auth().getUser(firebaseId);
+            return {
+              email: userRecord.email || null,
+              name: userRecord.displayName || null,
+            };
+          } catch (err) {
+            // If user not found or error, skip
+            return null;
+          }
+        }));
+        // Filter out any nulls (errors)
+        const filteredBookmarkedBy = bookmarkedBy.filter(Boolean);
         return {
           userId: user._id,
           name: user.name,
@@ -347,6 +388,7 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
             ) * 100,
           perSkillMatch,
           perCulturalFitMatch,
+          bookmarkedBy: filteredBookmarkedBy,
         };
       })
     );
