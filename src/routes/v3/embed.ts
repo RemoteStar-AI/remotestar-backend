@@ -128,6 +128,19 @@ async function processFile(
     }
     console.log(`[VALIDATION] Extraction validated for: ${file.originalname}`);
 
+    // Duplicate check: email + organisation_id
+    const existingUser = await User.findOne({
+      email: parsedJson.email,
+      organisation_id: organisation
+    });
+    if (existingUser) {
+      console.warn(`[DUPLICATE] User with email ${parsedJson.email} already exists in organisation ${organisation}. Skipping file: ${file.originalname}`);
+      return {
+        success: false,
+        error: "Resume already exists in organisation"
+      };
+    }
+
     // Upload PDF to S3
     let resume_url: string | null = null;
     try {
