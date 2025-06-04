@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
@@ -32,4 +32,21 @@ export const getSignedUrlForResume = async (key: string, expiresIn = 3600) => {
     Key: key,
   });
   return await getSignedUrl(s3, command, { expiresIn });
+};
+
+export const deleteFileFromS3 = async (fileUrlOrKey: string) => {
+  // Accepts either a full S3 URL or just the key
+  let key = fileUrlOrKey;
+  // If a full URL is provided, extract the key
+  if (fileUrlOrKey.startsWith("https://")) {
+    const url = new URL(fileUrlOrKey);
+    // The key is everything after the bucket domain
+    key = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
+  }
+  await s3.send(
+    new DeleteObjectCommand({
+      Bucket: process.env.AWS_BUCKET_NAME!,
+      Key: key,
+    })
+  );
 };
