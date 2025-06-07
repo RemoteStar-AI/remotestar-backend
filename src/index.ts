@@ -55,11 +55,10 @@ app.use("/api/v3/embed", embedRouter3);
 async function main(){
     try {
         await mongoose.connect(process.env.MONGODB_URI!);
-        console.log("Connected to MongoDB");
+        console.log("Connected to MongoDB with database name: " + process.env.MONGODB_URI!.split('/').pop());
         app.listen(PORT, () => {
             console.log(`Server is running on port ${PORT}`);
         });
-       // addOrganisationId(process.env.MONGODB_URI!);
     } catch (error) {
         console.error("Error connecting to MongoDB", error);
     }

@@ -414,6 +414,7 @@ const skillsSchema = new Schema({
 - If not in the list, include it using lowercase consistently.
 - For any specific or lower-level technology, infer knowledge of its parent technology. For example:
 - make sure to not miss any skill from the user resume.
+- make sure years_experience is throughly analysed and is not a guess and is a number.
 
 If someone knows .NET Framework or .NET Core, infer .NET
 

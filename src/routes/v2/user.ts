@@ -38,6 +38,7 @@ userRouter.get("/:id", authenticate, async (req, res) => {
   }
 });
 
+
 userRouter.delete("/:id", authenticate, async (req, res) => {
   const session = await mongoose.startSession();
   try {
