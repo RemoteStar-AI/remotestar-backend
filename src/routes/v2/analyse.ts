@@ -186,3 +186,87 @@ analyseRouter.post("/reanalyse", async (req: any, res: any) => {
     return res.status(500).json({ error: "An unexpected error occurred" });
   }
 });
+
+analyseRouter.post("/refresh", async (req: any, res: any) => {
+  try {
+    console.log("[POST /analyse/refresh] Request received", { userId: req.body.userId, jobId: req.body.jobId });
+
+    // Validate request body
+    if (!req.body.userId || !req.body.jobId) {
+      console.warn("[POST /analyse/refresh] Missing required fields");
+      return res.status(400).json({ error: "Missing required fields: userId and jobId" });
+    }
+
+    const { userId, jobId } = req.body;
+
+    // Find user and job
+    let user, job;
+    try {
+      console.log("[POST /analyse/refresh] Fetching user and job data", { userId, jobId });
+      user = await User.findById(userId);
+      job = await Job.findById(jobId);
+    } catch (err) {
+      console.error("[POST /analyse/refresh] Database error while fetching user/job:", err);
+      return res.status(500).json({ error: "Database error occurred" });
+    }
+
+    if (!user) {
+      console.warn("[POST /analyse/refresh] User not found", { userId });
+      return res.status(404).json({ error: "User not found" });
+    }
+    if (!job) {
+      console.warn("[POST /analyse/refresh] Job not found", { jobId });
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    // Delete existing analysis (if any)
+    try {
+      console.log("[POST /analyse/refresh] Deleting existing analysis if present");
+      await Analysis.deleteOne({ userId, jobId });
+    } catch (err) {
+      console.error("[POST /analyse/refresh] Database error while deleting existing analysis:", err);
+      return res.status(500).json({ error: "Database error occurred" });
+    }
+
+    const userData = user.toObject();
+    const jobData = job.toObject();
+
+    const prompt = analyseUserPrompt(userData, jobData);
+    console.log("[POST /analyse/refresh] Generating new analysis", { userId, jobId });
+
+    // Call OpenAI API
+    let response;
+    try {
+      console.log("[POST /analyse/refresh] Calling OpenAI API");
+      response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        stream: false
+      });
+    } catch (err) {
+      console.error("[POST /analyse/refresh] OpenAI API error:", err);
+      return res.status(503).json({ error: "AI service temporarily unavailable" });
+    }
+
+    if (!response.choices?.[0]?.message?.content) {
+      console.error("[POST /analyse/refresh] Invalid response from OpenAI");
+      return res.status(500).json({ error: "Invalid response from AI service" });
+    }
+
+    const content = response.choices[0].message.content;
+    try {
+      console.log("[POST /analyse/refresh] Saving new analysis result to database");
+      await Analysis.create({ userId, jobId, analysis: content });
+    } catch (err) {
+      console.error("[POST /analyse/refresh] Database error while saving new analysis:", err);
+      return res.status(500).json({ error: "Database error occurred" });
+    }
+
+    console.log("[POST /analyse/refresh] New analysis created successfully", { userId, jobId });
+    return res.status(200).json({ content });
+
+  } catch (err) {
+    console.error("[POST /analyse/refresh] Unexpected error:", err);
+    return res.status(500).json({ error: "An unexpected error occurred" });
+  }
+});
