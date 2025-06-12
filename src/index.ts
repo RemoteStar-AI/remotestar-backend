@@ -18,6 +18,8 @@ import { analyseRouter } from './routes/v2/analyse';
 import { bookmarksRouter } from './routes/v2/bookmarks';
 import { organisationRouter } from './routes/v2/organisation';
 import {resumeUploadRouter as embedRouter3} from './routes/v3/embed';
+import { resumeUploadRouter as embedRouter4 } from './routes/v4/embed';
+import { jobRouter as jobRouter4 } from './routes/v4/job';
 dotenv.config();
 
 const app: Application = express();
@@ -51,6 +53,10 @@ app.use("/api/v2/organisation", organisationRouter);
 
 //v3 routes
 app.use("/api/v3/embed", embedRouter3);
+
+//v4 routes
+app.use("/api/v4/embed", embedRouter4);
+app.use("/api/v4/job", jobRouter4);
 
 async function main(){
     try {

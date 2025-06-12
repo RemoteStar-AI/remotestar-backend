@@ -438,7 +438,54 @@ Apply this logic consistently for similar tech stacks.
 `;
 }
 
+export function skillsPromptNoCanon(schema: any): string {
+  schema = JSON.stringify(schema);
+  return `
+You are an advanced AI assistant.
+Your job is to analyze the user resume and evaluate each technical skill the user has.
+Do not add any extra text or comments in the output other than specified in the instructions.
 
+- Score each skill from 1 to 5:
+  - 1 = no real experience or only brief exposure
+  - 5 = deep industry-level or solid project experience
+- Estimate years_experience from the resume context if available.
+- Make sure the final output should only contain the skills that were present in the user resume.
+
+### Schema:
+\`\`\`json
+const skillsSchema = new Schema({
+  name: { type: String },
+  years_experience: { type: Number },
+  score: { type: Number, min: 0, max: 5 }
+})
+\`\`\`
+
+### User Data:
+[${schema}]
+
+### Instructions:
+- Normalize all skill names to lowercase (e.g., "Node.js" → "node.js").
+- All scores and years_experience must be numbers (not strings).
+- Return each skill as an object using the schema provided.
+- Do not include any other text or comments.
+- For any specific or lower-level technology, infer knowledge of its parent technology. For example:
+  - If someone knows .NET Framework or .NET Core, infer .NET
+  - If someone knows Chi, infer Go
+  - If someone knows Express, infer Node.js
+  - Apply this logic consistently for similar tech stacks.
+- Make sure to not miss any skill from the user resume.
+- Make sure years_experience is thoroughly analysed and is not a guess and is a number.
+
+### Expected Output Format:
+[
+  {
+    "name": "string",
+    "years_experience": Number,
+    "score": Number
+  }
+]
+`;
+}
 
 export function expectedSkillsPrompt(schema: any, canonicalSkills: any): string {
   const skillsList = canonicalSkills.map((s: any) => `"${s}"`).join(', ');
@@ -497,6 +544,66 @@ Apply this logic consistently for similar tech stacks.
 
 ### Canonical Skills List:
 [${skillsList}]
+
+### Expected Output Format:
+[
+  {
+    "name": "string",
+    "years_experience": Number,
+    "score": Number,
+    "mandatory": Boolean
+  }
+]
+`;
+}
+
+export function expectedSkillsPromptNoCanon(schema: any): string {
+  schema = JSON.stringify(schema);
+  return `
+You are an advanced AI assistant.
+Do not add any extra text or comments in the output other than specified in the instructions.
+
+Your job is to carefully read the Job Description and extract a list of all the technical skills mentioned, implied, or required for the role.
+
+- Include only technical skills: programming languages, frameworks, tools, libraries, databases, cloud services, devops, machine learning tools, etc.
+- Do not include soft skills (e.g., communication, leadership) or general attributes.
+- Assign a score based on the emphasis of the skill in the job description:
+  - 1: Skill is mentioned briefly or is optional.
+  - 2-4: Skill has moderate importance.
+  - 5: Skill is clearly mandatory or heavily emphasized.
+- Estimate years_experience required for each skill based on the job description wording:
+  - Junior: 0-1 years
+  - Mid-level: 2-4 years
+  - Senior: 5+ years
+  - Expert: 7+ years
+- Determine if a skill is explicitly stated as "mandatory", "required", or is so central to the job description (e.g., "Flutter" for a Flutter Developer, "Node.js" for a Node.js Developer) that it is clearly non-negotiable. Only mark a skill as mandatory if the job title or description strongly indicates its essential nature for the core responsibilities.
+- Make sure only important skills are marked as mandatory.
+
+### Schema:
+\`\`\`json
+const skillsSchema = new Schema({
+  name: { type: String },
+  years_experience: { type: Number },
+  score: { type: Number, min: 0, max: 5 },
+  mandatory: { type: Boolean, default: false }
+})
+\`\`\`
+
+### Job Description:
+[${schema}]
+
+### Instructions:
+- Normalize all skill names to lowercase (e.g., "Node.js" → "node.js").
+- All scores and years_experience must be numbers (not strings).
+- Return each skill as an object using the schema provided.
+- Do not include any other text or comments.
+- For any specific or lower-level technology, infer knowledge of its parent technology. For example:
+  - If someone knows .NET Framework or .NET Core, infer .NET
+  - If someone knows Chi, infer Go
+  - If someone knows Express, infer Node.js
+  - Apply this logic consistently for similar tech stacks.
+- Make sure to not miss any skill from the job description.
+- Make sure years_experience is thoroughly analysed and is not a guess and is a number.
 
 ### Expected Output Format:
 [

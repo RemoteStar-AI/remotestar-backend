@@ -1,4 +1,9 @@
 import { CanonicalSkills as Skill } from "./db";
+import { pinecone } from "./pinecone";
+import { openai } from "./openai";
+
+const PINECONE_INDEX_NAME = 'remotestar';
+const SIMILARITY_THRESHOLD = 0.70;
 
 export function extractJsonFromMarkdown(text:string) {
     const regex = /```json\s*([\s\S]*?)```/;
@@ -43,4 +48,47 @@ export function extractJsonFromMarkdown(text:string) {
     const result = newSkills.map(s => s.name);
     console.log("Returning newly added skill names:", result);
     return result;
+  }
+
+  /**
+   * Normalize a skill name using Pinecone vector DB.
+   * @param skillName The skill name to normalize.
+   * @returns The canonical skill name (if found), or the original name (if new, and also adds to Pinecone).
+   */
+  export async function normalizeSkillNameWithPinecone(skillName: string): Promise<string> {
+    // 1. Get embedding for the skill name
+    const embeddingResponse = await openai.embeddings.create({
+      model: "text-embedding-3-large",
+      input: skillName,
+    });
+    const embedding = embeddingResponse.data[0].embedding;
+
+    // 2. Query Pinecone for the closest match
+    const index = pinecone.index(PINECONE_INDEX_NAME);
+    const queryResult = await index.namespace("skills").query({
+      vector: embedding,
+      topK: 1,
+      includeMetadata: true,
+      includeValues: false,
+    });
+
+    if (queryResult.matches && queryResult.matches.length > 0) {
+      const match = queryResult.matches[0];
+      const score = typeof match.score === 'number' ? match.score : 0;
+      const canonicalName = typeof match.metadata?.canonicalName === 'string' ? match.metadata.canonicalName : undefined;
+      console.log(`[PINECONE] Skill normalization: '${skillName}' top match '${canonicalName}' with similarity ${(score * 100).toFixed(2)}%`);
+      if (score >= SIMILARITY_THRESHOLD && canonicalName) {
+        return canonicalName;
+      }
+    }
+
+    // 3. If not found, upsert the new skill to Pinecone
+    await index.namespace("skills").upsert([
+      {
+        id: String(skillName).toLowerCase(),
+        values: embedding,
+        metadata: { canonicalName: String(skillName) },
+      },
+    ]);
+    return skillName;
   }
