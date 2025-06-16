@@ -3,7 +3,7 @@ import { pinecone } from "./pinecone";
 import { openai } from "./openai";
 
 const PINECONE_INDEX_NAME = 'remotestar';
-const SIMILARITY_THRESHOLD = 0.70;
+const SIMILARITY_THRESHOLD = 0.50;
 
 export function extractJsonFromMarkdown(text:string) {
     const regex = /```json\s*([\s\S]*?)```/;
@@ -51,15 +51,19 @@ export function extractJsonFromMarkdown(text:string) {
   }
 
   /**
-   * Normalize a skill name using Pinecone vector DB.
+   * Normalize a skill name using Pinecone vector DB, using the summary for embedding.
    * @param skillName The skill name to normalize.
+   * @param summary The summary/description of the skill (should start with the skill name and describe it).
    * @returns The canonical skill name (if found), or the original name (if new, and also adds to Pinecone).
    */
-  export async function normalizeSkillNameWithPinecone(skillName: string): Promise<string> {
-    // 1. Get embedding for the skill name
+  export async function normalizeSkillNameWithPinecone(skillName: string, summary?: string): Promise<string> {
+    // Use summary for embedding if provided, otherwise fallback to skillName
+    const skillForEmbedding = summary ? summary : skillName;
+
+    // 1. Get embedding for the summary (or skill name)
     const embeddingResponse = await openai.embeddings.create({
       model: "text-embedding-3-large",
-      input: skillName,
+      input: skillForEmbedding,
     });
     const embedding = embeddingResponse.data[0].embedding;
 
@@ -82,12 +86,12 @@ export function extractJsonFromMarkdown(text:string) {
       }
     }
 
-    // 3. If not found, upsert the new skill to Pinecone
+    // 3. If not found, upsert the new skill to Pinecone (with summary)
     await index.namespace("skills").upsert([
       {
         id: String(skillName).toLowerCase(),
         values: embedding,
-        metadata: { canonicalName: String(skillName) },
+        metadata: { canonicalName: String(skillName), summary: skillForEmbedding },
       },
     ]);
     return skillName;

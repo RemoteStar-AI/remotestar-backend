@@ -92,7 +92,7 @@ jobRouter.post("/", async (req: any, res: any) => {
     const skillsArr = Array.isArray(parsedSkills) ? parsedSkills : parsedSkills.skills;
     console.log("skillsArr", skillsArr);
     for (const skill of skillsArr) {
-      skill.name = await normalizeSkillNameWithPinecone(skill.name);
+      skill.name = await normalizeSkillNameWithPinecone(skill.name, skill.summary);
     }
     console.log(skillsJson);
     const newSkills = await saveNewSkillsIfNotExist({ skills: skillsArr });

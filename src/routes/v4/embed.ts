@@ -193,7 +193,7 @@ async function processFile(
     }
     // Normalize skill names using Pinecone
     for (const skill of skParsed) {
-      skill.name = await normalizeSkillNameWithPinecone(skill.name);
+      skill.name = await normalizeSkillNameWithPinecone(skill.name, skill.summary);
     }
     console.log(`[VALIDATION] Skills validated for: ${file.originalname}`);
 
@@ -497,7 +497,7 @@ resumeUploadRouter.post("/reanalyse/:id", upload.single('file'), async (req: any
     }
     // Normalize skill names using Pinecone
     for (const skill of skParsed) {
-      skill.name = await normalizeSkillNameWithPinecone(skill.name);
+      skill.name = await normalizeSkillNameWithPinecone(skill.name, skill.summary);
     }
     await Skills.create([{ skills: skParsed, userId: id }], { session: transaction });
 

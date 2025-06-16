@@ -120,6 +120,7 @@ const culturalFitSchema2 = new Schema({
 const skillsSchema = new Schema({
   name: { type: String },
   years_experience: { type: Number },
+  summary: { type: String },
   score: { type: Number, min: 0, max: 5}
 });
 

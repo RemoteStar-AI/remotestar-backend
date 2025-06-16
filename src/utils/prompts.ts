@@ -444,6 +444,9 @@ export function skillsPromptNoCanon(schema: any): string {
 You are an advanced AI assistant.
 Your job is to analyze the user resume and evaluate each technical skill the user has.
 Do not add any extra text or comments in the output other than specified in the instructions.
+For each skill, generate a short, clear summary (1-2 sentences) describing what the skill or technology is and what it is used for. This summary should be suitable for a recruiter or developer who may not be familiar with the technology. Do not add any extra text or comments in the output other than specified in the instructions.
+the summary should start with the name of the skill then describe what it is used for.
+for example: summary:"Node.js is a JavaScript runtime built on Chrome's V8 JavaScript engine. It allows developers to build server-side and network applications."
 
 - Score each skill from 1 to 5:
   - 1 = no real experience or only brief exposure
@@ -455,6 +458,7 @@ Do not add any extra text or comments in the output other than specified in the 
 \`\`\`json
 const skillsSchema = new Schema({
   name: { type: String },
+  summary: { type: String }, // A short, clear description of the skill or technology
   years_experience: { type: Number },
   score: { type: Number, min: 0, max: 5 }
 })
@@ -466,6 +470,7 @@ const skillsSchema = new Schema({
 ### Instructions:
 - Normalize all skill names to lowercase (e.g., "Node.js" → "node.js").
 - All scores and years_experience must be numbers (not strings).
+- For each skill, generate a short summary (1-2 sentences) describing what the skill is and what it is used for. The summary should be clear and concise, suitable for a recruiter or developer.
 - Return each skill as an object using the schema provided.
 - Do not include any other text or comments.
 - For any specific or lower-level technology, infer knowledge of its parent technology. For example:
@@ -480,6 +485,7 @@ const skillsSchema = new Schema({
 [
   {
     "name": "string",
+    "summary": "string",
     "years_experience": Number,
     "score": Number
   }
@@ -564,6 +570,9 @@ You are an advanced AI assistant.
 Do not add any extra text or comments in the output other than specified in the instructions.
 
 Your job is to carefully read the Job Description and extract a list of all the technical skills mentioned, implied, or required for the role.
+For each skill, generate a short, clear summary (1-2 sentences) describing what the skill or technology is and what it is used for. This summary should be suitable for a recruiter or developer who may not be familiar with the technology. Do not add any extra text or comments in the output other than specified in the instructions.
+the summary should start with the name of the skill then describe what it is used for.
+for example: summary:"Node.js is a JavaScript runtime built on Chrome's V8 JavaScript engine. It allows developers to build server-side and network applications."
 
 - Include only technical skills: programming languages, frameworks, tools, libraries, databases, cloud services, devops, machine learning tools, etc.
 - Do not include soft skills (e.g., communication, leadership) or general attributes.
@@ -583,6 +592,7 @@ Your job is to carefully read the Job Description and extract a list of all the 
 \`\`\`json
 const skillsSchema = new Schema({
   name: { type: String },
+  summary: { type: String }, // A short, clear description of the skill or technology
   years_experience: { type: Number },
   score: { type: Number, min: 0, max: 5 },
   mandatory: { type: Boolean, default: false }
@@ -595,6 +605,7 @@ const skillsSchema = new Schema({
 ### Instructions:
 - Normalize all skill names to lowercase (e.g., "Node.js" → "node.js").
 - All scores and years_experience must be numbers (not strings).
+- For each skill, generate a short summary (1-2 sentences) describing what the skill is and what it is used for. The summary should be clear and concise, suitable for a recruiter or developer.
 - Return each skill as an object using the schema provided.
 - Do not include any other text or comments.
 - For any specific or lower-level technology, infer knowledge of its parent technology. For example:
@@ -609,6 +620,7 @@ const skillsSchema = new Schema({
 [
   {
     "name": "string",
+    "summary": "string",
     "years_experience": Number,
     "score": Number,
     "mandatory": Boolean
