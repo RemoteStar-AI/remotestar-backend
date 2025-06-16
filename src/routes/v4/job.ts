@@ -9,7 +9,7 @@ import {
 import { openai } from "../../utils/openai";
 import {
   extractJsonFromMarkdown,
-  saveNewSkillsIfNotExist,
+  // saveNewSkillsIfNotExist,
   normalizeSkillNameWithPinecone,
 } from "../../utils/helper-functions";
 
@@ -94,16 +94,14 @@ jobRouter.post("/", async (req: any, res: any) => {
     for (const skill of skillsArr) {
       skill.name = await normalizeSkillNameWithPinecone(skill.name, skill.summary);
     }
-    console.log(skillsJson);
-    const newSkills = await saveNewSkillsIfNotExist({ skills: skillsArr });
-    console.log("new skills received\n", newSkills);
+    // console.log(skillsJson);
 
     const finalBody = {
       ...data,
       expectedCulturalFit: parsedCulturalFit,
       expectedSkills: [...skillsArr],
     };
-    console.log(finalBody);
+    // console.log(finalBody);
     const jobResponce = await Job.create(finalBody);
     const jobSearchResponse = await JobSearchResponse.create({
       jobId: jobResponce._id,

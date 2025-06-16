@@ -2,10 +2,10 @@ import { Router } from "express";
 import { upload } from "../../middleware/upload";
 import { authenticate } from "../../middleware/firebase-auth";
 import { z } from "zod";
-import { extractPrompt, reformatPrompt, culturalFitPrompt, skillsPrompt, skillsPromptNoCanon } from "../../utils/prompts";
+import { extractPrompt, reformatPrompt, culturalFitPrompt, skillsPromptNoCanon } from "../../utils/prompts";
 import { openai } from "../../utils/openai";
 import { resumeSchema, culturalFitSchema, skillsSchema } from "../../utils/schema";
-import { extractJsonFromMarkdown, getCanonicalSkillNames, saveNewSkillsIfNotExist, normalizeSkillNameWithPinecone } from "../../utils/helper-functions";
+import { extractJsonFromMarkdown, normalizeSkillNameWithPinecone } from "../../utils/helper-functions";
 import { User, CulturalFit, Skills, Job } from "../../utils/db";
 import { uploadPDFToS3 } from "../../utils/s3";
 import mongoose from "mongoose";
@@ -400,7 +400,6 @@ resumeUploadRouter.post("/reanalyse/:id", upload.single('file'), async (req: any
 
     // Get canonical skills
     console.log(`[REANALYSE] Fetching canonical skills`);
-    const canonicalSkills = await getCanonicalSkillNames();
 
     let resumeText: string | null = null;
     let resume_url = user.resume_url;
@@ -483,7 +482,7 @@ resumeUploadRouter.post("/reanalyse/:id", upload.single('file'), async (req: any
 
     // Reanalyse skills
     console.log(`[REANALYSE] Analyzing skills for user ID: ${id}`);
-    const skPrompt = skillsPrompt(resumeText ? { ...parsedJson, resumeText } : parsedJson, canonicalSkills);
+    const skPrompt = skillsPromptNoCanon(resumeText ? { ...parsedJson, resumeText } : parsedJson);
     const skRes = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: skPrompt }],
