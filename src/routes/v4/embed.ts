@@ -11,6 +11,7 @@ import { uploadPDFToS3 } from "../../utils/s3";
 import mongoose from "mongoose";
 import pdfParse from "pdf-parse";
 import { v4 as uuidv4 } from 'uuid';
+import logger from "../../utils/loggers";
 
 const resumeUploadRouter = Router();
 
@@ -39,11 +40,11 @@ async function processFile(
   organisation_id: string | null
 ) {
   try {
-    console.log(`[PROCESS] Starting file: ${file.originalname}`);
+    logger.info(`[PROCESS] Starting file: ${file.originalname}`);
     // Extract text from PDF
     const data = await pdfParse(file.buffer);
     let extractedText = data.text || "";
-    console.log(`[PROCESS] Extracted text from PDF: ${file.originalname}`);
+    logger.info(`[PROCESS] Extracted text from PDF: ${file.originalname}`);
 
     // Extract links from PDF
     const extractedLinks: { url: string, text: string }[] = [];
@@ -73,10 +74,10 @@ async function processFile(
         }
       });
       if (extractedLinks.length > 0) {
-        console.log(`[PROCESS] Extracted ${extractedLinks.length} links from PDF: ${file.originalname}`);
+        logger.info(`[PROCESS] Extracted ${extractedLinks.length} links from PDF: ${file.originalname}`);
       }
     } catch (linkError) {
-      console.error(`[PROCESS] Link extraction error for ${file.originalname}:`, linkError);
+      logger.error(`[PROCESS] Link extraction error for ${file.originalname}:`, linkError);
     }
 
     // Add links to the text if any were found
@@ -89,12 +90,12 @@ async function processFile(
 
     // Extract structured data using OpenAI
     const extractPromptText = extractPrompt(extractedText);
-    console.log(`[OPENAI] Sending extraction prompt for: ${file.originalname}`);
+    logger.info(`[OPENAI] Sending extraction prompt for: ${file.originalname}`);
     let response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: extractPromptText }],
     });
-    console.log(`[OPENAI] Received extraction response for: ${file.originalname}`);
+    logger.info(`[OPENAI] Received extraction response for: ${file.originalname}`);
 
     let extractedData = response.choices[0].message.content?.trim();
     if (!extractedData) throw new Error("Empty response from OpenAI");
@@ -104,29 +105,29 @@ async function processFile(
     let parsedJson = JSON.parse(validJson);
     let validation = resumeSchema.safeParse(parsedJson);
     if (!validation.success) {
-      console.log(`[VALIDATION] Extraction did not match schema for: ${file.originalname}`);
+      logger.info(`[VALIDATION] Extraction did not match schema for: ${file.originalname}`);
       // Try reformatting if validation fails
       const errorDetails = validation.error.errors
         .map((err) => `Path: ${err.path.join(".") || "root"} - ${err.message}`)
         .join("\n");
       const reformatText = reformatPrompt(extractedData, errorDetails);
-      console.log(`[OPENAI] Sending reformat prompt for: ${file.originalname}`);
+      logger.info(`[OPENAI] Sending reformat prompt for: ${file.originalname}`);
       response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [{ role: "user", content: reformatText }],
       });
-      console.log(`[OPENAI] Received reformatted response for: ${file.originalname}`);
+      logger.info(`[OPENAI] Received reformatted response for: ${file.originalname}`);
       extractedData = response.choices[0].message.content?.trim();
       if (!extractedData) throw new Error("Empty reformatted response from OpenAI");
       validJson = extractJsonFromMarkdown(extractedData).replace(/(\r\n|\n|\r)/gm, "");
       parsedJson = JSON.parse(validJson);
       validation = resumeSchema.safeParse(parsedJson);
       if (!validation.success) {
-        console.error(`[VALIDATION] Reformatted response still does not match schema for: ${file.originalname}`);
+        logger.error(`[VALIDATION] Reformatted response still does not match schema for: ${file.originalname}`);
         throw new Error("Failed to format response into the required schema");
       }
     }
-    console.log(`[VALIDATION] Extraction validated for: ${file.originalname}`);
+    logger.info(`[VALIDATION] Extraction validated for: ${file.originalname}`);
 
     // Duplicate check: email + organisation_id
     const existingUser = await User.findOne({
@@ -134,7 +135,7 @@ async function processFile(
       organisation_id: organisation
     });
     if (existingUser) {
-      console.warn(`[DUPLICATE] User with email ${parsedJson.email} already exists in organisation ${organisation}. Skipping file: ${file.originalname}`);
+      logger.warn(`[DUPLICATE] User with email ${parsedJson.email} already exists in organisation ${organisation}. Skipping file: ${file.originalname}`);
       return {
         success: false,
         error: "Resume already exists in organisation"
@@ -149,19 +150,19 @@ async function processFile(
         file.originalname,
         file.mimetype
       );
-      console.log(`[S3] Uploaded PDF to S3 for: ${file.originalname}`);
+      logger.info(`[S3] Uploaded PDF to S3 for: ${file.originalname}`);
     } catch (e) {
-      console.error(`[S3] S3 upload failed for ${file.originalname}:`, e);
+      logger.error(`[S3] S3 upload failed for ${file.originalname}:`, e);
       throw new Error("Resume upload to S3 failed");
     }
 
     // Create unique ID for the user
     const uniqueId = new mongoose.Types.ObjectId();
-    console.log(`[DB] Creating user document for: ${file.originalname}`);
+    logger.info(`[DB] Creating user document for: ${file.originalname}`);
 
     // Get cultural fit
     const cfPrompt = culturalFitPrompt(JSON.stringify(parsedJson));
-    console.log(`[OPENAI] Sending cultural fit prompt for: ${file.originalname}`);
+    logger.info(`[OPENAI] Sending cultural fit prompt for: ${file.originalname}`);
     const cfRes = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: cfPrompt }],
@@ -171,14 +172,14 @@ async function processFile(
     const cfJson = extractJsonFromMarkdown(cfText).replace(/[\r\n]/g, "");
     const cfParsed = JSON.parse(cfJson);
     if (!culturalFitSchema.safeParse(cfParsed).success) {
-      console.error(`[VALIDATION] Cultural fit validation failed for: ${file.originalname}`);
+      logger.error(`[VALIDATION] Cultural fit validation failed for: ${file.originalname}`);
       throw new Error("Cultural fit validation failed");
     }
-    console.log(`[VALIDATION] Cultural fit validated for: ${file.originalname}`);
+    logger.info(`[VALIDATION] Cultural fit validated for: ${file.originalname}`);
 
     // Get skills
     const skPrompt = skillsPromptNoCanon(JSON.stringify(parsedJson));
-    console.log(`[OPENAI] Sending skills prompt for: ${file.originalname}`);
+    logger.info(`[OPENAI] Sending skills prompt for: ${file.originalname}`);
     const skRes = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: skPrompt }],
@@ -188,15 +189,16 @@ async function processFile(
     const skJson = extractJsonFromMarkdown(skText).replace(/[\r\n]/g, "");
     let skParsed = JSON.parse(skJson);
     if (!skillsSchema.safeParse(skParsed).success) {
-      console.error(`[VALIDATION] Skills validation failed for: ${file.originalname}`);
+      logger.error(`[VALIDATION] Skills validation failed for: ${file.originalname}`);
       throw new Error("Skills validation failed");
     }
+    logger.info(`[SKILLS] Skills before normalization : ${JSON.stringify(skParsed)}`);
     // Normalize skill names using Pinecone
     for (const skill of skParsed) {
       skill.name = await normalizeSkillNameWithPinecone(skill.name, skill.summary);
     }
-    console.log(`[VALIDATION] Skills validated for: ${file.originalname}`);
-
+    logger.info(`[VALIDATION] Skills validated for: ${file.originalname}`);
+    logger.info(`[SKILLS] Skills after normalization for: ${JSON.stringify(skParsed)}`);
     // Save to database
     const session = await mongoose.startSession();
     try {
@@ -225,17 +227,17 @@ async function processFile(
       // Update job revaluation status if needed
       if (jobId) {
         await Job.findByIdAndUpdate(jobId, { needRevaluation: true });
-        console.log(`[DB] Job revaluation set for jobId: ${jobId}`);
+        logger.info(`[DB] Job revaluation set for jobId: ${jobId}`);
       } else {
         await Job.updateMany(
           { organisation_id: organisation },
           { needRevaluation: true }
         );
-        console.log(`[DB] Organisation revaluation set for organisation: ${organisation}`);
+        logger.info(`[DB] Organisation revaluation set for organisation: ${organisation}`);
       }
       await session.commitTransaction();
       session.endSession();
-      console.log(`[DB] All documents saved for: ${file.originalname}`);
+      logger.info(`[DB] All documents saved for: ${file.originalname}`);
       return {
         success: true,
         data: {
@@ -246,11 +248,11 @@ async function processFile(
     } catch (error) {
       await session.abortTransaction();
       session.endSession();
-      console.error(`[DB] Transaction failed for: ${file.originalname}`, error);
+      logger.error(`[DB] Transaction failed for: ${file.originalname}`, error);
       throw error;
     }
   } catch (error: any) {
-    console.error(`[PROCESS] Error processing file ${file.originalname}:`, error);
+    logger.error(`[PROCESS] Error processing file ${file.originalname}:`, error);
     return {
       success: false,
       error: error.message || "Failed to process file"
@@ -269,23 +271,23 @@ async function sendWebhookNotification(webhookUrl: string, data: any) {
       body: JSON.stringify(data),
     });
   } catch (error) {
-    console.error('Failed to send webhook notification:', error);
+    logger.error('Failed to send webhook notification:', error);
   }
 }
 
 resumeUploadRouter.post("/", authenticate, upload.array('files'), async (req: any, res: any) => {
   try {
-    console.log(`[ROUTE] Resume upload started. Files: ${req.files?.length || 0}`);
+    logger.info(`[ROUTE] Resume upload started. Files: ${req.files?.length || 0}`);
     // Validate input
     const validation = extractSchema.safeParse(req.body);
     if (!validation.success) {
-      console.error(`[ROUTE] Validation error:`, validation.error.format());
+      logger.error(`[ROUTE] Validation error:`, validation.error.format());
       return res.status(400).json({ error: validation.error.format() });
     }
     const { jobId, organisation_id, webhook_url } = validation.data;
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) {
-      console.error(`[ROUTE] No files provided.`);
+      logger.error(`[ROUTE] No files provided.`);
       return res.status(400).json({ error: "No files provided" });
     }
     // Generate a unique processing ID
@@ -305,7 +307,7 @@ resumeUploadRouter.post("/", authenticate, upload.array('files'), async (req: an
         const results = [];
         const { firebase_id, email, organisation, displayName } = req.user;
         for (let i = 0; i < files.length; i++) {
-          console.log(`[ROUTE] Processing file ${i + 1}/${files.length}: ${files[i].originalname}`);
+          logger.info(`[ROUTE] Processing file ${i + 1}/${files.length}: ${files[i].originalname}`);
           const file = files[i];
           const result = await processFile(
             file,
@@ -352,7 +354,7 @@ resumeUploadRouter.post("/", authenticate, upload.array('files'), async (req: an
             results
           });
         }
-        console.log(`[ROUTE] All files processed for processingId: ${processingId}`);
+        logger.info(`[ROUTE] All files processed for processingId: ${processingId}`);
       } catch (error: any) {
         processingStatus.set(processingId, {
           status: 'failed',
@@ -365,7 +367,7 @@ resumeUploadRouter.post("/", authenticate, upload.array('files'), async (req: an
             error: error.message || "Processing failed"
           });
         }
-        console.error(`[ROUTE] Processing failed for processingId: ${processingId}`, error);
+        logger.error(`[ROUTE] Processing failed for processingId: ${processingId}`, error);
       }
     })();
     // Immediately return the processing ID
@@ -375,31 +377,31 @@ resumeUploadRouter.post("/", authenticate, upload.array('files'), async (req: an
       status: "pending"
     });
   } catch (error) {
-    console.error(`[ROUTE] Error during resume processing:`, error);
+    logger.error(`[ROUTE] Error during resume processing:`, error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // Convert GET /reanalyse/:id to POST with file upload
 resumeUploadRouter.post("/reanalyse/:id", upload.single('file'), async (req: any, res: any) => {
-  console.log(`[REANALYSE] Starting reanalysis for user ID: ${req.params.id}`);
+  logger.info(`[REANALYSE] Starting reanalysis for user ID: ${req.params.id}`);
   const { id } = req.params;
   const user = await User.findById(id);
   if (!user) {
-    console.log(`[REANALYSE] User not found with ID: ${id}`);
+    logger.info(`[REANALYSE] User not found with ID: ${id}`);
     return res.status(404).json({ error: "User not found" });
   }
   const transaction = await mongoose.startSession();
   transaction.startTransaction();
-  console.log(`[REANALYSE] Started transaction for user ID: ${id}`);
+  logger.info(`[REANALYSE] Started transaction for user ID: ${id}`);
   try {
     // Remove old skills and cultural fit
-    console.log(`[REANALYSE] Deleting existing skills and cultural fit for user ID: ${id}`);
+    logger.info(`[REANALYSE] Deleting existing skills and cultural fit for user ID: ${id}`);
     await Skills.deleteMany({ userId: id });
     await CulturalFit.deleteMany({ userId: id });
 
     // Get canonical skills
-    console.log(`[REANALYSE] Fetching canonical skills`);
+    logger.info(`[REANALYSE] Fetching canonical skills`);
 
     let resumeText: string | null = null;
     let resume_url = user.resume_url;
@@ -407,15 +409,15 @@ resumeUploadRouter.post("/reanalyse/:id", upload.single('file'), async (req: any
     let file = req.file as Express.Multer.File | undefined;
 
     if (file) {
-      console.log(`[REANALYSE] Processing new resume file for user ID: ${id}`);
+      logger.info(`[REANALYSE] Processing new resume file for user ID: ${id}`);
       // New resume uploaded: parse, upload to S3, extract text, and reanalyse
       const data = await pdfParse(file.buffer);
       resumeText = data.text || "";
       // Upload new PDF to S3
-      console.log(`[REANALYSE] Uploading PDF to S3 for user ID: ${id}`);
+      logger.info(`[REANALYSE] Uploading PDF to S3 for user ID: ${id}`);
       resume_url = await uploadPDFToS3(file.buffer, file.originalname, file.mimetype);
       // Extract structured data using OpenAI
-      console.log(`[REANALYSE] Extracting structured data using OpenAI for user ID: ${id}`);
+      logger.info(`[REANALYSE] Extracting structured data using OpenAI for user ID: ${id}`);
       const extractPromptText = extractPrompt(resumeText);
       let response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -427,7 +429,7 @@ resumeUploadRouter.post("/reanalyse/:id", upload.single('file'), async (req: any
       parsedJson = JSON.parse(validJson);
       let validation = resumeSchema.safeParse(parsedJson);
       if (!validation.success) {
-        console.log(`[REANALYSE] Initial validation failed, attempting reformatting for user ID: ${id}`);
+        logger.info(`[REANALYSE] Initial validation failed, attempting reformatting for user ID: ${id}`);
         // Try reformatting if validation fails
         const errorDetails = validation.error.errors
           .map((err) => `Path: ${err.path.join(".") || "root"} - ${err.message}`)
@@ -447,7 +449,7 @@ resumeUploadRouter.post("/reanalyse/:id", upload.single('file'), async (req: any
         }
       }
     } else if (resume_url && resume_url !== "https://conasems-ava-prod.s3.sa-east-1.amazonaws.com/aulas/ava/dummy-1641923583.pdf") {
-      console.log(`[REANALYSE] Fetching existing resume from URL for user ID: ${id}`);
+      logger.info(`[REANALYSE] Fetching existing resume from URL for user ID: ${id}`);
       // No new file, but user has a resume_url: fetch and parse
       try {
         const fetch = (await import('node-fetch')).default;
@@ -460,12 +462,12 @@ resumeUploadRouter.post("/reanalyse/:id", upload.single('file'), async (req: any
           resumeText = data.text;
         }
       } catch (err) {
-        console.error(`[REANALYSE] Failed to fetch/parse resume PDF for user ID: ${id}`, err);
+        logger.error(`[REANALYSE] Failed to fetch/parse resume PDF for user ID: ${id}`, err);
       }
     }
 
     // Reanalyse cultural fit
-    console.log(`[REANALYSE] Analyzing cultural fit for user ID: ${id}`);
+    logger.info(`[REANALYSE] Analyzing cultural fit for user ID: ${id}`);
     const cfPrompt = culturalFitPrompt(resumeText ? { ...parsedJson, resumeText } : parsedJson);
     const cfRes = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -481,7 +483,7 @@ resumeUploadRouter.post("/reanalyse/:id", upload.single('file'), async (req: any
     await CulturalFit.create([{ ...cfParsed, userId: id }], { session: transaction });
 
     // Reanalyse skills
-    console.log(`[REANALYSE] Analyzing skills for user ID: ${id}`);
+    logger.info(`[REANALYSE] Analyzing skills for user ID: ${id}`);
     const skPrompt = skillsPromptNoCanon(resumeText ? { ...parsedJson, resumeText } : parsedJson);
     const skRes = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -503,7 +505,7 @@ resumeUploadRouter.post("/reanalyse/:id", upload.single('file'), async (req: any
     // Update user document with new resume_url and parsed fields if new file uploaded
     let updatedUser;
     if (file) {
-      console.log(`[REANALYSE] Updating user document with new resume data for user ID: ${id}`);
+      logger.info(`[REANALYSE] Updating user document with new resume data for user ID: ${id}`);
       await User.findByIdAndUpdate(id, {
         ...parsedJson,
         resume_url,
@@ -516,7 +518,7 @@ resumeUploadRouter.post("/reanalyse/:id", upload.single('file'), async (req: any
 
     await transaction.commitTransaction();
     transaction.endSession();
-    console.log(`[REANALYSE] Successfully completed reanalysis for user ID: ${id}`);
+    logger.info(`[REANALYSE] Successfully completed reanalysis for user ID: ${id}`);
 
     return res.status(200).json({
       message: "Reanalysis complete",
@@ -527,7 +529,7 @@ resumeUploadRouter.post("/reanalyse/:id", upload.single('file'), async (req: any
   } catch (error: any) {
     await transaction.abortTransaction();
     transaction.endSession();
-    console.error(`[REANALYSE] Error during reanalysis for user ID: ${id}:`, error);
+    logger.error(`[REANALYSE] Error during reanalysis for user ID: ${id}:`, error);
     return res.status(500).json({ error: error.message || "Failed to reanalyse user" });
   }
 });
@@ -537,11 +539,11 @@ resumeUploadRouter.get("/status/:processingId", authenticate, (req: any, res: an
   const { processingId } = req.params;
   const status = processingStatus.get(processingId);
   if (!status) {
-    console.error(`[ROUTE] Status check: Processing ID not found: ${processingId}`);
+    logger.error(`[ROUTE] Status check: Processing ID not found: ${processingId}`);
     return res.status(404).json({ error: "Processing ID not found" });
   }
-  console.log(`[ROUTE] Status check: Processing ID found: ${processingId}`);
-  console.log(`[ROUTE] Status:`, status);
+  logger.info(`[ROUTE] Status check: Processing ID found: ${processingId}`);
+  logger.info(`[ROUTE] Status:`, status);
   return res.status(200).json(status);
 });
 
