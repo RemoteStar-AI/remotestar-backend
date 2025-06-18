@@ -13,6 +13,7 @@ import pdfParse from "pdf-parse";
 import { v4 as uuidv4 } from 'uuid';
 import logger from "../../utils/loggers";
 
+
 const resumeUploadRouter = Router();
 
 const extractSchema = z.object({
@@ -41,71 +42,37 @@ async function processFile(
 ) {
   try {
     logger.info(`[PROCESS] Starting file: ${file.originalname}`);
-    // Extract text from PDF
-    const data = await pdfParse(file.buffer);
-    let extractedText = data.text || "";
-    logger.info(`[PROCESS] Extracted text from PDF: ${file.originalname}`);
+    // --- UPLOAD PDF to OpenAI ---
+    logger.info(`[OPENAI] Uploading PDF to OpenAI for: ${file.originalname}`);
+    const uploadedFile = await openai.files.create({
+      file: new File([new Uint8Array(file.buffer)], file.originalname, { type: file.mimetype }),
+      purpose: "user_data"
+    });
+    logger.info(`[OPENAI] Uploaded PDF to OpenAI with file_id: ${uploadedFile.id}`);
 
-    // Extract links from PDF
-    const extractedLinks: { url: string, text: string }[] = [];
-    try {
-      const linkBuffer = Buffer.from(file.buffer);
-      await pdfParse(linkBuffer, {
-        pagerender: function(pageData: any) {
-          if (!pageData.getAnnotations) return pageData;
-          return pageData.getAnnotations().then(function(annotations: any[]) {
-            if (!annotations || !annotations.length) return pageData;
-            annotations.forEach(function(annotation: any) {
-              if (
-                annotation.subtype === 'Link' && 
-                annotation.url && 
-                typeof annotation.url === 'string'
-              ) {
-                extractedLinks.push({
-                  url: annotation.url,
-                  text: annotation.title || ''
-                });
-              }
-            });
-            return pageData;
-          }).catch(function() {
-            return pageData;
-          });
-        }
-      });
-      if (extractedLinks.length > 0) {
-        logger.info(`[PROCESS] Extracted ${extractedLinks.length} links from PDF: ${file.originalname}`);
-      }
-    } catch (linkError) {
-      logger.error(`[PROCESS] Link extraction error for ${file.originalname}:`, linkError);
-    }
-
-    // Add links to the text if any were found
-    if (extractedLinks.length > 0) {
-      extractedText += "\n\nLinks found in document:\n";
-      extractedLinks.forEach(link => {
-        extractedText += `${link.text ? link.text + ": " : ""}${link.url}\n`;
-      });
-    }
-
-    // Extract structured data using OpenAI
-    const extractPromptText = extractPrompt(extractedText);
+    // --- Structured data extraction using file input ---
+    const extractPromptText = extractPrompt("a file has been uploaded of that candidate use that to extract the data"); // You may want to update this prompt to clarify file context
     logger.info(`[OPENAI] Sending extraction prompt for: ${file.originalname}`);
     let response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [{ role: "user", content: extractPromptText }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "file", file: { file_id: uploadedFile.id } },
+            { type: "text", text: extractPromptText }
+          ]
+        }
+      ]
     });
     logger.info(`[OPENAI] Received extraction response for: ${file.originalname}`);
 
     let extractedData = response.choices[0].message.content?.trim();
-    console.log("extractedData", extractedData);
     if (!extractedData) throw new Error("Empty response from OpenAI");
 
     // Parse and validate the extracted data
     let validJson = extractJsonFromMarkdown(extractedData).replace(/(\r\n|\n|\r)/gm, "");
-    console.log("validJson", validJson);
     let parsedJson = JSON.parse(validJson);
-    console.log("parsedJson", parsedJson);
     let validation = resumeSchema.safeParse(parsedJson);
     if (!validation.success) {
       logger.info(`[VALIDATION] Extraction did not match schema for: ${file.originalname}`);
@@ -117,7 +84,15 @@ async function processFile(
       logger.info(`[OPENAI] Sending reformat prompt for: ${file.originalname}`);
       response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: reformatText }],
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "file", file: { file_id: uploadedFile.id } },
+              { type: "text", text: reformatText }
+            ]
+          }
+        ]
       });
       logger.info(`[OPENAI] Received reformatted response for: ${file.originalname}`);
       extractedData = response.choices[0].message.content?.trim();
@@ -163,12 +138,20 @@ async function processFile(
     const uniqueId = new mongoose.Types.ObjectId();
     logger.info(`[DB] Creating user document for: ${file.originalname}`);
 
-    // Get cultural fit
-    const cfPrompt = culturalFitPrompt(JSON.stringify(parsedJson));
+    // Get cultural fit using file input
+    const cfPrompt = culturalFitPrompt("a file has been uploaded of that candidate use that to extract the data");
     logger.info(`[OPENAI] Sending cultural fit prompt for: ${file.originalname}`);
     const cfRes = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [{ role: "user", content: cfPrompt }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "file", file: { file_id: uploadedFile.id } },
+            { type: "text", text: cfPrompt }
+          ]
+        }
+      ]
     });
     const cfText = cfRes.choices[0].message.content?.trim();
     if (!cfText) throw new Error("Empty cultural fit response");
@@ -180,13 +163,21 @@ async function processFile(
     }
     logger.info(`[VALIDATION] Cultural fit validated for: ${file.originalname}`);
 
-    // Get skills
-    const skPrompt = skillsPromptNoCanon(JSON.stringify(validJson));
+    // Get skills using file input
+    const skPrompt = skillsPromptNoCanon("a file has been uploaded of that candidate use that to extract the data");
     logger.info(`[SKILLS] Skills prompt: ${skPrompt}`);
     logger.info(`[OPENAI] Sending skills prompt for: ${file.originalname}`);
     const skRes = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [{ role: "user", content: skPrompt }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "file", file: { file_id: uploadedFile.id } },
+            { type: "text", text: skPrompt }
+          ]
+        }
+      ]
     });
     const skText = skRes.choices[0].message.content?.trim();
     if (!skText) throw new Error("Empty skills response");
@@ -546,6 +537,8 @@ resumeUploadRouter.get("/status/:processingId", authenticate, (req: any, res: an
     logger.error(`[ROUTE] Status check: Processing ID not found: ${processingId}`);
     return res.status(404).json({ error: "Processing ID not found" });
   }
+  logger.info(`[ROUTE] Status check requested for processingId: ${processingId}`);
+  logger.info(`[ROUTE] Status object for processingId ${processingId}: ${JSON.stringify(status)}`);
   logger.info(`[ROUTE] Status check: Processing ID found: ${processingId}`);
   logger.info(`[ROUTE] Status:`, status);
   return res.status(200).json(status);

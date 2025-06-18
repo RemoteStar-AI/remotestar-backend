@@ -26,7 +26,7 @@ export async function authenticate(req:Request,res:Response,next:NextFunction){
             req.user.organisation = "";
         }
         // Log the decoded token for debugging
-        console.log('Decoded token:', decodedToken);
+        // console.log('Decoded token:', decodedToken);
         next();
     }catch (error) {
         console.error('Error verifying token:', error);

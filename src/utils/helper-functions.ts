@@ -4,7 +4,7 @@ import { openai } from "./openai";
 import {pineconeLogger as logger} from "./pinecone-logger";
 
 const PINECONE_INDEX_NAME = 'remotestar';
-const SIMILARITY_THRESHOLD = 0.70;
+const SIMILARITY_THRESHOLD = 0.60;
 
 export function extractJsonFromMarkdown(text:string) {
     const regex = /```json\s*([\s\S]*?)```/;
