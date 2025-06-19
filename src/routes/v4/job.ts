@@ -1,10 +1,12 @@
 import { Router } from "express";
 export const jobRouter = Router();
 import { Job, JobSearchResponse } from "../../utils/db";
-import { jobSchema} from "../../utils/schema";
+import { jobSchema } from "../../utils/schema";
 import {
   expectedCulturalFitPrompt,
   expectedSkillsPromptNoCanon,
+  updatedExpectedCulturalFitPrompt,
+  updatedExpectedSkillsPrompt,
 } from "../../utils/prompts";
 import { openai } from "../../utils/openai";
 import {
@@ -19,7 +21,7 @@ jobRouter.get("/", async (req: any, res: any) => {
   // console.log("companyId", companyId);
   // console.log("organisation_id", organisation_id);
   try {
-    const response = await Job.find({ companyId,organisation_id});
+    const response = await Job.find({ companyId, organisation_id });
     if (!response) {
       res.status(500).json({ error: "Internal Server Error" });
       return;
@@ -49,7 +51,10 @@ jobRouter.post("/", async (req: any, res: any) => {
     //cultural fit
     console.log("cultural fit creation started");
 
-    const culturalFitPrompt = expectedCulturalFitPrompt(JSON.stringify(data));
+    // const culturalFitPrompt = expectedCulturalFitPrompt(JSON.stringify(data));
+    const culturalFitPrompt = updatedExpectedCulturalFitPrompt(
+      JSON.stringify(data)
+    );
 
     const culturalFitResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -68,9 +73,10 @@ jobRouter.post("/", async (req: any, res: any) => {
 
     //skills
     console.log("skills creation started");
-    const skillsPrompt = expectedSkillsPromptNoCanon(
-      JSON.stringify(data)
-    );
+    // const skillsPrompt = expectedSkillsPromptNoCanon(
+    //   JSON.stringify(data)
+    // );
+    const skillsPrompt = updatedExpectedSkillsPrompt(JSON.stringify(data));
     console.log("sending request to openai for skills\n");
     const skillsResponse = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -89,10 +95,15 @@ jobRouter.post("/", async (req: any, res: any) => {
     ).replace(/(\r\n|\n|\r)/gm, "");
     let parsedSkills = JSON.parse(skillsJson);
     // Normalize skill names using Pinecone
-    const skillsArr = Array.isArray(parsedSkills) ? parsedSkills : parsedSkills.skills;
+    const skillsArr = Array.isArray(parsedSkills)
+      ? parsedSkills
+      : parsedSkills.skills;
     console.log("skillsArr", skillsArr);
     for (const skill of skillsArr) {
-      skill.name = await normalizeSkillNameWithPinecone(skill.name, skill.summary);
+      skill.name = await normalizeSkillNameWithPinecone(
+        skill.name,
+        skill.summary
+      );
     }
     // console.log(skillsJson);
 
@@ -123,7 +134,9 @@ jobRouter.delete("/:id", async (req: any, res: any) => {
   try {
     const id = req.params.id;
     const job = await Job.findByIdAndDelete(id);
-    const jobSearchResponse = await JobSearchResponse.findByIdAndDelete(job?._id);
+    const jobSearchResponse = await JobSearchResponse.findByIdAndDelete(
+      job?._id
+    );
     if (!job) {
       return res.status(404).json({ error: "Job not found" });
     }

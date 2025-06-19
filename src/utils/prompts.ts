@@ -626,5 +626,256 @@ const skillsSchema = new Schema({
     "mandatory": Boolean
   }
 ]
+
+### Instructions:
+- Do not include any comments, explanations, or additional text before, during, or after the JSON output.
+`;
+}
+
+export function updatedExpectedSkillsPrompt(schema: any): string {
+  schema = JSON.stringify(schema);
+  return `You are an expert AI assistant. Your sole function is to analyze the provided Job Description (JD) text and extract the required professional skills.
+**Your Task:**
+1.  **Identify**: Meticulously scan the JD to identify all required professional skills, tools, software, platforms, and methodologies. Exclude soft skills (e.g., communication, teamwork).
+2.  **Handle Umbrella Skills**: Treat both general categories (e.g., "Cloud Platforms") and specific tools within them (e.g., "AWS") as separate, individual skills.
+3.  **Evaluate**: For each identified skill, you will provide:
+    *   A score (from 1 to 5) indicating its importance.
+    *   An estimated years_experience required.
+    *   A  summary defining the skill within the scope of the role.
+    *   A weightage score representing its relative importance.
+    *   If that skill is mandatory for that skill or not.
+4.  **Output**: Produce a single, clean JSON array containing an object for each skill.
+---
+### **Detailed Instructions & Evaluation Guidelines**
+For each skill, you must generate the following four fields:
+*   **score (1-5 Scale)**: Assess the absolute importance of the skill to the role.
+    *   Lower Score: The skill is mentioned as optional, a "plus," or is a minor part of the responsibilities.
+    *   Mid-Range Score: The skill is a standard requirement and part of the day-to-day responsibilities but not the single most critical element.
+    *   Higher Score: The skill is explicitly mandatory, central to the job title (e.g., "React Developer"), or repeatedly emphasized as a core, non-negotiable requirement.
+*   **years_experience (Integer)**: Estimate the required years of experience based on the role's seniority (e.g., "Senior," "Lead," "Junior") and the complexity of the tasks described. Provide a reasonable integer estimate. If impossible to determine, use 0.
+*   **summary (String)**: This is a critical instruction. Provide a definition of what the skill entails, specifically scoped to how the job description requires it to be used.
+    *   Your goal is to define the term itself, but only using the evidence within the JD. Answer the question: "For this role, what does proficiency in this skill actually mean?"
+    *   This is NOT a copy-paste of the JD's responsibilities. It is a synthesized definition of the skill's application.
+    *   Example:
+        *   JD Text: "The candidate will build and maintain ETL pipelines using SQL to transform data in our Snowflake data warehouse."
+        *   Skill: SQL
+        *   Correct summary: "A query language required for designing, building, and maintaining ETL data transformation pipelines within a data warehouse environment."
+*   **weightage (Integer)**: This is the most important field for ranking. Assign a relative importance value to each skill.
+    *   The sum of all weightage values for all skills in the output must equal 100.
+    *   Base this value on the score and overall emphasis. A skill with a high score must receive a proportionally larger share of the 100 total points than a skill with a low score. This reflects its true priority in the role.
+*  **Determine if a skill is explicitly stated as "mandatory", "required", or is so central to the job description (e.g., "Flutter" for a Flutter Developer, "Node.js" for a Node.js Developer) that it is clearly non-negotiable. Only mark a skill as mandatory if the job title or description strongly indicates its essential nature for the core responsibilities    
+### Schema:
+const skillsSchema = new Schema({
+  name: { type: String },
+  summary: { type: String }, // A definition of the skill as required for this role
+  years_experience: { type: Number },
+  score: { type: Number, min: 1, max: 5 },
+  weightage: { type: Number },
+  mandatory: { type: Boolean, default: false }
+})
+
+### Job Description:
+[${schema}]
+
+### Expected Output Format:
+[
+  {
+    "name": "string",
+    "summary": "string",
+    "years_experience": Number,
+    "score": Number,
+    "weightage": Number,
+    "mandatory": Boolean
+  }
+]
+
+### Instructions:
+  - Do not include any comments, explanations, or additional text before, during, or after the JSON output.
+  `;
+}
+
+export function updatedExpectedCulturalFitPrompt(schema: any): string {
+  schema = JSON.stringify(schema);
+  return `
+---
+You are an advanced AI assistant.
+Your task is to analyze the provided **Job Description (JD)** and assign an **expected score** from 1 to 5 for each of the specified fields. These scores must reflect the ideal candidate profile and company culture as implied or stated in the JD.
+You must only return the result in the specified JSON format. Do not include any comments, explanations, or additional text before, during, or after the JSON output.
+---
+### **SCORING PARAMETERS:**
+-   **product_score**: Reflects the degree to which the role is centered within a **product-based company**, where the primary focus is on a proprietary product (e.g., SaaS, consumer app).
+    *   **Description**: Assess the company and role type based on the JD.
+        *   **Lower Score**: The role is explicitly in a service, consulting, or agency environment, focused on client delivery.
+        *   **Mid-Range Score**: The role exists in a hybrid company (e.g., product with a strong services arm) or the JD is ambiguous, blending product and client-service responsibilities.
+        *   **Higher Score**: The role is unambiguously within a product-centric company, with responsibilities tied directly to building, maintaining, or growing a specific product.
+-   **service_score**: Reflects the degree to which the role is centered within a **service-based company**, focusing on client delivery, consulting, or managed services.
+    *   **Description**: Assess the role's orientation toward external client work.
+        *   **Lower Score**: The role is internally focused at a product company with minimal or no required client delivery responsibilities.
+        *   **Mid-Range Score**: The role is a hybrid, such as "Solutions Engineer" or "Customer Success," requiring significant client interaction alongside product expertise.
+        *   **Higher Score**: The role's primary function is serving external clients within a consulting, outsourcing, or professional services firm.
+-   **startup_score**: Reflects the degree to which the role operates in a **startup-like environment**, characterized by a fast pace, ambiguity, broad responsibilities, and building from scratch.
+    *   **Description**: Determine the expected work environment.
+        *   **Lower Score**: The JD describes a highly structured, corporate environment with well-defined and specialized roles.
+        *   **Mid-Range Score**: The role is in a "scale-up" or a new, agile division within a larger company that adopts startup principles.
+        *   **Higher Score**: The JD describes a startup culture, emphasizing a need for a proactive, self-starting individual comfortable with rapid change and undefined processes.
+-   **mnc_score**: Reflects the degree to which the role operates within a **large, multinational corporation (MNC)**, characterized by formal processes, global teams, and matrixed organizational structures.
+    *   **Description**: Gauge the organizational structure and scale.
+        *   **Lower Score**: The company is described as a startup or a small/medium business.
+        *   **Mid-Range Score**: The company is a mid-to-large size national company or a less structured MNC.
+        *   **Higher Score**: The JD is for a large, established global corporation, and the role requires navigating its complex, structured environment.
+-   **loyalty_score**: Reflects the company's **implied desire for long-term commitment** based on the nature of the role.
+    *   **Description**: Evaluate the implicit expectation for employee tenure.
+        *   **Lower Score**: The role is explicitly a short-term contract, temporary, or project-based with a defined end.
+        *   **Mid-Range Score**: The role is a standard permanent position with no specific language implying tenure expectations.
+        *   **Higher Score**: The role is described as foundational or strategic, where stability and long-term investment are implicitly crucial for success.
+-   **coding_score**: Reflects the extent to which the role is a hands-on **"doer" or Individual Contributor (IC)**.
+    *   **Description**: Assess the primary function of the role.
+        *   **Lower Score**: The role is predominantly managerial or strategic, focusing on overseeing others, planning, and delegation.
+        *   **Mid-Range Score**: The role is a hybrid (e.g., "Team Lead") that involves both hands-on execution and supervisory duties.
+        *   **Higher Score**: The role's responsibilities are centered on direct, personal execution of tasks (e.g., "Software Engineer," "Digital Marketer").
+-   **people_management_score**: Reflects the requirement for **formal people management** skills and responsibilities.
+    *   **Description**: Determine if the role manages people's careers.
+        *   **Lower Score**: The role is an Individual Contributor or a lead without formal reports.
+        *   **Mid-Range Score**: The role mentions "leading a team" or "mentorship" but lacks explicit details about formal management duties like performance reviews or hiring.
+        *   **Higher Score**: The JD explicitly states responsibilities for the full people management lifecycle, including performance reviews, career development, and hiring for the team.
+-   **technical_leadership_score**: Reflects the requirement for guiding **technical direction and strategy**, separate from managing people.
+    *   **Description**: Gauge the role's influence over technical decisions.
+        *   **Lower Score**: The role is focused on implementation, following a pre-defined technical direction.
+        *   **Mid-Range Score**: The role is for a senior team member expected to mentor others and contribute to design decisions.
+        *   **Higher Score**: The role is explicitly a "Technical Lead," "Staff Engineer," or "Architect" responsible for setting technical standards and making critical design decisions.
+---
+### Job Description:
+[${schema}]
+
+### Expected Output Format:
+{
+  "product_score": Number,
+  "service_score": Number,
+  "startup_score": Number,
+  "mnc_score": Number,
+  "loyalty_score": Number,
+  f"coding_score": Number,
+  "people_management_score": Number,
+  "technical_leadership_score": Number
+}
+
+### Instructions:
+  - Do not include any comments, explanations, or additional text before, during, or after the JSON output.
+`;
+}
+
+export function updatedSkillsPrompt(schema: any): string {
+  schema = JSON.stringify(schema);
+  return `
+You are an expert AI resume analyzer. Your sole function is to analyze the provided resume text and evaluate the specialized skills, tools, and platforms mentioned within it.
+**Your Task:**
+1.  **Identify**: Meticulously scan the resume to identify all professional skills, tools, software, platforms, and methodologies.
+2.  **Handle Umbrella Skills**: Treat both general categories (e.g., "CRM") and specific tools (e.g., "Salesforce") as separate, individual skills.
+3.  **Evaluate**: For each identified skill, you will provide:
+    *   A \`skill_score\` (from 1 to 5).
+    *   An estimated \`years_experience\`.
+    *   A \`summary\` that defines the skill based on its application in the resume.
+4.  **Output**: Produce a single, clean JSON array containing an object for each skill.
+---
+### **Detailed Instructions**
+#### **Rule for General Categories and Specific Tools (Umbrella Skills)**
+If the resume mentions a general category and specific examples, capture **both** as separate items. For example, if it says *"experienced with cloud platforms like AWS and Azure,"* create entries for "Cloud Platforms," "AWS," and "Azure."
+#### **Evaluation Guidelines**
+For each skill, you must generate the following three fields:
+*   **\`skill_score\` (1-5 Scale)**: Assess the depth of experience.
+    *   **Lower Score**: For skills listed without context or used in minor projects.
+    *   **Mid-Range Score**: For skills used as a regular part of a job but not as a core focus.
+    *   **Higher Score**: For skills fundamental to the candidate's primary responsibilities and achievements.
+*   **\`years_experience\` (Integer)**: Estimate the professional years of use based on job timelines. If impossible to determine, use \`0\`.
+*   **\`summary\` (String)**: **This is the most critical instruction.** For each skill, provide a definition of what that skill entails, **specifically scoped to how the candidate has applied it**.
+    *   **Your goal is to define the term itself, but only using the evidence present in the resume.** Answer the question: "What does this skill mean in the context of this person's experience?"
+    *   This is **NOT** a list of the candidate's achievements or a copy-paste from the resume. It is a synthesized definition.
+    *   **Example 1**:
+        *   **Resume Text**: "Managed network security by configuring and optimizing Check Point firewall rule-bases and monitoring traffic logs."
+        *   **Skill**: \`Firewall Management\`
+        *   **Correct \`summary\`**: "The administration of network firewalls, specifically involving the configuration and optimization of rule-sets and the analysis of traffic logs."
+        *   **Incorrect meaning**: "The candidate managed firewalls and optimized rules." (This is what they *did*, not what the skill *means* in this context).
+    *   **Example 2**:
+        *   **Resume Text**: "Led project teams by tracking tasks in Jira, running daily stand-ups, and reporting on progress to leadership."
+        *   **Skill**: \`Project Management\`
+        *   **Correct \`summary\`**: "The practice of overseeing project execution through task tracking, conducting daily team meetings, and status reporting."
+        *   **Incorrect meaning (too broad)**: "The process of leading the work of a team to achieve all project goals." (This is a generic definition, not tailored to the resume).
+        ### Schema:
+      \`\`\`json
+        const skillsSchema = new Schema({
+        name: { type: String },
+        summary: { type: String }, // A short, clear description of the skill or technology
+        years_experience: { type: Number },
+        score: { type: Number, min: 0, max: 5 }
+        })
+      \`\`\`
+
+      ### User Data:
+      [${schema}]
+   ### Expected Output Format:
+   [
+    {
+     "name": "string",
+     "summary": "string",
+     "years_experience": Number,
+     "score": Number
+    }
+  ]
+
+`;
+}
+
+export function updatedCulturalFitPrompt(schema: any): string {
+  schema = JSON.stringify(schema);
+  return `
+You are an advanced AI assistant.
+  Your task is to analyze the provided resume content and assign a score from 1 to 5 for each of the specified fields. These scores should reflect your objective judgment of the candidate's cultural alignment and experience depth *solely based on the information present in the resume*.
+  You must only return the result in the specified JSON format. Do not include any comments, explanations, or additional text before, during, or after the JSON output.
+  ## SCORING PARAMETERS:
+  -   **product_score**: Reflects how much time the individual has spent working **within product-based companies**. This includes companies where the core revenue comes from a product (e.g., SaaS platforms, consumer apps), and not just from services or client work.
+      * **Description**: Evaluate the candidate's career trajectory. A lower score signifies minimal to no experience focused on product development within product-based organizations. A mid-range score indicates some involvement in product environments, possibly alongside significant service-based roles, or limited direct product impact. A higher score denotes extensive and deep exposure to product company culture, evidenced by consistent roles emphasizing product roadmaps, cross-functional collaboration, and direct contribution to product success.
+  -   **service_score**: Reflects experience in **service-based companies**, such as IT consulting, managed services, outsourcing firms, or professional services. This includes experience working on client projects, delivery models, SLAs, and multi-client handling.
+      * **Description**: Assess the candidate's background in service-oriented roles. A lower score implies negligible experience in service delivery. A mid-range score suggests a blend of service and other experiences, or a moderate engagement with client projects and delivery models. A higher score indicates a career heavily embedded in service delivery culture, with extensive experience managing client relationships, project lifecycles, and adherence to SLAs.
+  -   **startup_score**: Reflects experience working in **startup environments**, characterized by fast-paced work, small teams, ambiguity, broad responsibilities, and building from scratch. It does not include just working in a small team inside a big company.
+      * **Description**: Determine the candidate's exposure to startup culture. A lower score means no explicit or clear startup experience. A mid-range score might suggest indirect exposure or roles within larger entities that possessed some startup-like characteristics. A higher score points to strong, verifiable experience in multiple startup environments, demonstrating comfort with rapid change, broad responsibilities, and building solutions from the ground up.
+  -   **mnc_score**: Reflects experience in **multinational corporations (MNCs)** — large, global companies with mature processes, regulatory compliance, distributed teams, and layered hierarchies.
+      * **Description**: Gauge the candidate's familiarity with MNC structures. A lower score signifies limited to no experience in large, global corporate settings. A mid-range score suggests some exposure to MNCs, possibly in more localized roles or for shorter durations. A higher score reflects extensive and consistent experience navigating the complexities of large-scale MNC organizations, including mature processes, global collaboration, and compliance.
+  -   **loyalty_score**: Represents **job stability and retention behavior (job switch)**. Focus especially on **recent roles**. Early-career frequent switches are acceptable, but consistent short stints (e.g., <1.5 years) in recent roles reduce this score.
+      * **Description**: Evaluate the candidate's job tenure patterns, particularly in recent years. A lower score indicates frequent job switching, with consistently short tenures. A higher score signifies consistent long tenures in recent professional history, demonstrating predictability and dependability in commitment to roles.
+  -   **coding_score**: Reflects the degree of the candidate's direct, hands-on execution of the core functions of their role. This score measures the extent to which the individual is a "doer," personally creating the tangible outputs and deliverables central to their job, regardless of the field (e.g., writing code for an engineer, creating campaigns for a marketer, closing deals for a salesperson). This score is inversely related to time spent on delegation, high-level strategy, or management.
+  Description: Assess the candidate's role as a direct, hands-on contributor.
+  Lower Score: Reserved for roles that are predominantly focused on oversight, delegation, strategy, or management. The candidate is primarily responsible for directing the work of others with minimal personal execution of core tasks.
+  Mid-Range Score: Indicates a hybrid role where the candidate performs some hands-on work but also has significant responsibilities in management, coordination, or strategy.
+  Higher Score: Assigned to a classic Individual Contributor (IC). The candidate's primary responsibility is the direct creation of tangible deliverables, and their resume shows consistent, active, and personal involvement in producing the core work of their function.
+  -   **leadership_score**: Strictly reflects formal people management experience. This involves explicit responsibilities for the careers and performance of direct reports, such as conducting performance reviews, managing compensation, hiring and firing, approving time off, and being formally responsible for team members' career growth and mentorship. This score is only awarded when there is clear evidence of these specific duties.
+  Description: Determine the depth of the candidate's formal people management experience.
+  Lower Score: No evidence of formal people management. The candidate is an individual contributor, a project lead, or a technical lead without formal HR-related authority over team members.
+  Mid-Range Score: Some supervisory duties are mentioned (e.g., "managed a team of 5," "had direct reports"), but there are no specific details about performance reviews, hiring, or other core people management functions. The role may be supervisory without full managerial authority.
+  Higher Score: Assigned to candidates with clear, repeated, and detailed experience as a true people manager. The resume explicitly mentions responsibilities like conducting performance reviews, managing career development, and direct involvement in hiring/firing decisions for their team.
+
+  -   **architecture_score**: 
+  Assesses the candidate's experience in guiding the technical direction, strategy, and quality for a team or project, distinct from people management. This includes making key technical decisions, establishing best practices, leading system design, mentoring engineers on technical skills, and taking ownership of the overall technical execution and health of a project or system. This is the realm of a Technical Lead, Staff/Principal Engineer, or Architect who guides the "how" of the work.
+  Description: Gauge the candidate's influence over technical direction and execution.
+  Lower Score: The candidate is primarily an implementer who executes assigned tasks. There is no evidence of influencing technical decisions, mentoring others, or setting technical direction.
+  Mid-Range Score: Indicates emerging technical leadership. The candidate may have led a small project, been the "go-to" person for a specific domain, actively participated in code reviews, or mentored junior team members on technical tasks.
+  Higher Score: Assigned to candidates who are a clear technical authority. They are responsible for setting the technical vision for their team, making critical architecture and design decisions, enforcing technical standards, and are ultimately accountable for the technical success of their projects, even if they don't manage the people directly.
+
+  ### resume content:
+  [${schema}]
+
+  ### Expected Output Format:
+  {
+    "product_score": Number,
+    "service_score": Number,
+    "startup_score": Number,
+    "mnc_score": Number,
+    "loyalty_score": Number,
+    "coding_score": Number,
+    "leadership_score": Number,
+    "architecture_score": Number
+  }
+
+### Instructions:
+  - Do not include any comments, explanations, or additional text before, during, or after the JSON output.
 `;
 }
