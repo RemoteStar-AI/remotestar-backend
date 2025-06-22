@@ -1,0 +1,133 @@
+import { Router } from "express";
+import {
+  Job,
+  CulturalFit,
+  Skills,
+  User,
+  Bookmark,
+  JobSearchResponse,
+} from "../../utils/db";
+import { authenticate } from "../../middleware/firebase-auth";
+import admin from '../../utils/firebase';
+import { pinecone } from "../../utils/pinecone";
+import mongoose from 'mongoose';
+import logger from "../../utils/loggers";
+const PINECONE_INDEX_NAME = 'remotestar';
+const topK = 50;
+
+
+export const searchRouter = Router();
+
+searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
+  try {
+    const Id = req.params.jobId;
+    if (!mongoose.Types.ObjectId.isValid(Id)) {
+      return res.status(400).json({ error: "Invalid job ID format" });
+    }
+    const memberId = req.user.firebase_id;
+
+    let job;
+    try {
+      job = await Job.findById(Id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+    } catch (error) {
+      console.error("Error finding job:", error);
+      return res.status(500).json({ error: "Error retrieving job details" });
+    }
+
+    // 1. Fetch job embedding
+    let jobEmbedding;
+    try {
+      const jobEmbeddingResponse = await pinecone
+        .index(PINECONE_INDEX_NAME)
+        .namespace("job-pool-v2")
+        .fetch([Id]);
+      logger.info(`[PINECONE] Successfully fetched job embedding for job ${Id}`);
+      logger.debug(`[PINECONE] Job embedding response: ${JSON.stringify(jobEmbeddingResponse)}`);
+      
+      jobEmbedding = jobEmbeddingResponse.records[Id]?.values;
+      if (!jobEmbedding) {
+        logger.error(`[PINECONE] Job embedding not found for job ${Id}`);
+        return res.status(404).json({ error: "Job embedding not found" });
+      }
+    } catch (error) {
+      logger.error(`[PINECONE] Error fetching job embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return res.status(500).json({ error: "Error fetching job embedding" });
+    }
+
+    // 2. Query for matching candidates
+    let topMatches;
+    try {
+      topMatches = await pinecone.index(PINECONE_INDEX_NAME).namespace("talent-pool-v2").query({
+        vector: jobEmbedding,
+        topK: topK,
+        includeMetadata: true,
+        includeValues: false,
+      });
+      logger.info(`[PINECONE] Successfully queried for matching candidates. Found ${topMatches.matches.length} matches`);
+      logger.debug(`[PINECONE] Top matches: ${JSON.stringify(topMatches)}`);
+    } catch (error) {
+      logger.error(`[PINECONE] Error querying for matches: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return res.status(500).json({ error: "Error finding matching candidates" });
+    }
+
+    const userIds = topMatches.matches.map((record: any) => record.id);
+
+    // 3. Fetch user details
+    let users;
+    try {
+      users = await User.find({ _id: { $in: userIds } });
+      logger.info(`[DB] Successfully fetched ${users.length} user details`);
+    } catch (error) {
+      logger.error(`[DB] Error finding users: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return res.status(500).json({ error: "Error retrieving user details" });
+    }
+
+    // 4. Fetch bookmarks
+    let userBookmarks;
+    try {
+      userBookmarks = await Bookmark.find({ userId: { $in: userIds } });
+      logger.info(`[DB] Successfully fetched ${userBookmarks.length} bookmarks`);
+    } catch (error) {
+      logger.error(`[DB] Error finding bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return res.status(500).json({ error: "Error retrieving bookmark details" });
+    }
+
+    // 5. Prepare response
+    try {
+      const userProfiles = users.map((user) => ({
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        years_of_experience: user.years_of_experience,
+        designation: user.designation,
+        uploader_email: user.firebase_email,
+        current_location: user.current_location,
+        isBookmarked: userBookmarks.some((bookmark: any) => bookmark.memberId === memberId),
+        total_bookmarks: user.total_bookmarks,
+        bookmarkedBy: userBookmarks.filter((bookmark: any) => bookmark.memberId === memberId).map((bookmark: any) => bookmark.userId),
+      }));
+
+      const finalResponse = {
+        jobTitle: job.title,
+        jobId: job._id,
+        totalCandidates: topMatches.matches.length,
+        data: userProfiles,
+      }
+
+      logger.info(`[RESPONSE] Successfully prepared response with ${userProfiles.length} profiles`);
+      return res.status(200).json(finalResponse);
+    } catch (error) {
+      logger.error(`[RESPONSE] Error preparing response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return res.status(500).json({ error: "Error preparing response" });
+    }
+
+  } catch (error) {
+    console.error("Unexpected error in search route:", error);
+    return res.status(500).json({ error: "An unexpected error occurred" });
+  }
+});
+
+export default searchRouter;

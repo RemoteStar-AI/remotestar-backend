@@ -7,6 +7,7 @@ import {
   reformatPrompt,
   culturalFitPrompt,
   skillsPromptNoCanon,
+  resumeEmbeddingPrompt,
 } from "../../utils/prompts";
 import { openai } from "../../utils/openai";
 import {
@@ -16,7 +17,7 @@ import {
 } from "../../utils/schema";
 import {
   extractJsonFromMarkdown,
-  normalizeSkillNameWithPinecone,
+  createAndStoreEmbedding,
 } from "../../utils/helper-functions";
 import { User, CulturalFit, Skills, Job } from "../../utils/db";
 import { uploadPDFToS3 } from "../../utils/s3";
@@ -26,6 +27,7 @@ import { v4 as uuidv4 } from "uuid";
 import logger from "../../utils/loggers";
 
 const resumeUploadRouter = Router();
+const namespace = "talent-pool-v2";
 
 const extractSchema = z.object({
   jobId: z.string().optional().nullable(),
@@ -55,79 +57,44 @@ async function processFile(
   email: string,
   organisation: string,
   displayName: string,
-  jobId: string | null,
-  organisation_id: string | null
+  jobId: string | null
 ) {
   try {
     logger.info(`[PROCESS] Starting file: ${file.originalname}`);
-    // Extract text from PDF
-    const data = await pdfParse(file.buffer);
-    let extractedText = data.text || "";
-    logger.info(`[PROCESS] Extracted text from PDF: ${file.originalname}`);
+    // --- UPLOAD PDF to OpenAI ---
+    logger.info(`[OPENAI] Uploading PDF to OpenAI for: ${file.originalname}`);
+    const uploadedFile = await openai.files.create({
+      file: new File([new Uint8Array(file.buffer)], file.originalname, {
+        type: file.mimetype,
+      }),
+      purpose: "user_data",
+    });
+    logger.info(
+      `[OPENAI] Uploaded PDF to OpenAI with file_id: ${uploadedFile.id}`
+    );
 
-    // Extract links from PDF
-    const extractedLinks: { url: string; text: string }[] = [];
-    try {
-      const linkBuffer = Buffer.from(file.buffer);
-      await pdfParse(linkBuffer, {
-        pagerender: function (pageData: any) {
-          if (!pageData.getAnnotations) return pageData;
-          return pageData
-            .getAnnotations()
-            .then(function (annotations: any[]) {
-              if (!annotations || !annotations.length) return pageData;
-              annotations.forEach(function (annotation: any) {
-                if (
-                  annotation.subtype === "Link" &&
-                  annotation.url &&
-                  typeof annotation.url === "string"
-                ) {
-                  extractedLinks.push({
-                    url: annotation.url,
-                    text: annotation.title || "",
-                  });
-                }
-              });
-              return pageData;
-            })
-            .catch(function () {
-              return pageData;
-            });
-        },
-      });
-      if (extractedLinks.length > 0) {
-        logger.info(
-          `[PROCESS] Extracted ${extractedLinks.length} links from PDF: ${file.originalname}`
-        );
-      }
-    } catch (linkError) {
-      logger.error(
-        `[PROCESS] Link extraction error for ${file.originalname}:`,
-        linkError
-      );
-    }
-
-    // Add links to the text if any were found
-    if (extractedLinks.length > 0) {
-      extractedText += "\n\nLinks found in document:\n";
-      extractedLinks.forEach((link) => {
-        extractedText += `${link.text ? link.text + ": " : ""}${link.url}\n`;
-      });
-    }
-
-    // Extract structured data using OpenAI
-    const extractPromptText = extractPrompt(extractedText);
+    // --- Structured data extraction using file input ---
+    const extractPromptText = extractPrompt(
+      "a file has been uploaded of that candidate use that to extract the data"
+    );
     logger.info(`[OPENAI] Sending extraction prompt for: ${file.originalname}`);
     let response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [{ role: "user", content: extractPromptText }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "file", file: { file_id: uploadedFile.id } },
+            { type: "text", text: extractPromptText },
+          ],
+        },
+      ],
     });
     logger.info(
       `[OPENAI] Received extraction response for: ${file.originalname}`
     );
 
     let extractedData = response.choices[0].message.content?.trim();
-    console.log("extractedData", extractedData);
     if (!extractedData) throw new Error("Empty response from OpenAI");
 
     // Parse and validate the extracted data
@@ -135,9 +102,7 @@ async function processFile(
       /(\r\n|\n|\r)/gm,
       ""
     );
-    console.log("validJson", validJson);
     let parsedJson = JSON.parse(validJson);
-    console.log("parsedJson", parsedJson);
     let validation = resumeSchema.safeParse(parsedJson);
     if (!validation.success) {
       logger.info(
@@ -151,7 +116,15 @@ async function processFile(
       logger.info(`[OPENAI] Sending reformat prompt for: ${file.originalname}`);
       response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: reformatText }],
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "file", file: { file_id: uploadedFile.id } },
+              { type: "text", text: reformatText },
+            ],
+          },
+        ],
       });
       logger.info(
         `[OPENAI] Received reformatted response for: ${file.originalname}`
@@ -208,13 +181,23 @@ async function processFile(
     logger.info(`[DB] Creating user document for: ${file.originalname}`);
 
     // Get cultural fit
-    const cfPrompt = culturalFitPrompt(JSON.stringify(parsedJson));
+    const cfPrompt = culturalFitPrompt(
+      "a file has been uploaded of that candidate use that to extract the data"
+    );
     logger.info(
       `[OPENAI] Sending cultural fit prompt for: ${file.originalname}`
     );
     const cfRes = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [{ role: "user", content: cfPrompt }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "file", file: { file_id: uploadedFile.id } },
+            { type: "text", text: cfPrompt },
+          ],
+        },
+      ],
     });
     const cfText = cfRes.choices[0].message.content?.trim();
     if (!cfText) throw new Error("Empty cultural fit response");
@@ -231,12 +214,22 @@ async function processFile(
     );
 
     // Get skills
-    const skPrompt = skillsPromptNoCanon(JSON.stringify(validJson));
+    const skPrompt = skillsPromptNoCanon(
+      "a file has been uploaded of that candidate use that to extract the data"
+    );
     logger.info(`[SKILLS] Skills prompt: ${skPrompt}`);
     logger.info(`[OPENAI] Sending skills prompt for: ${file.originalname}`);
     const skRes = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [{ role: "user", content: skPrompt }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "file", file: { file_id: uploadedFile.id } },
+            { type: "text", text: skPrompt },
+          ],
+        },
+      ],
     });
     const skText = skRes.choices[0].message.content?.trim();
     if (!skText) throw new Error("Empty skills response");
@@ -251,18 +244,6 @@ async function processFile(
     logger.info(
       `[SKILLS] Skills before normalization : ${JSON.stringify(skParsed)}`
     );
-    // Normalize skill names using Pinecone
-    for (const skill of skParsed) {
-      skill.name = await normalizeSkillNameWithPinecone(
-        skill.name,
-        skill.summary
-      );
-    }
-    logger.info(`[VALIDATION] Skills validated for: ${file.originalname}`);
-    logger.info(
-      `[SKILLS] Skills after normalization for: ${JSON.stringify(skParsed)}`
-    );
-    // Save to database
     const session = await mongoose.startSession();
     try {
       session.startTransaction();
@@ -318,6 +299,34 @@ async function processFile(
       await session.commitTransaction();
       session.endSession();
       logger.info(`[DB] All documents saved for: ${file.originalname}`);
+
+      // --- Generate and store embedding ---
+      logger.info(`[EMBEDDING] Starting embedding generation for: ${uniqueId}`);
+      const resumeEmbeddingPromptText = resumeEmbeddingPrompt(
+        "a file has been uploaded of that candidate use that to extract the data"
+      );
+      const embeddingRes = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "file", file: { file_id: uploadedFile.id } },
+              { type: "text", text: resumeEmbeddingPromptText },
+            ],
+          },
+        ],
+      });
+      const embeddingText = embeddingRes.choices[0].message.content?.trim();
+
+      if (embeddingText) {
+        await createAndStoreEmbedding(uniqueId.toString(), embeddingText, namespace);
+      } else {
+        logger.warn(
+          `[EMBEDDING] Could not generate embedding text for user ${uniqueId}. Skipping storage.`
+        );
+      }
+
       return {
         success: true,
         data: {
@@ -408,8 +417,7 @@ resumeUploadRouter.post(
               email,
               organisation,
               displayName,
-              jobId ?? null,
-              organisation_id ?? null
+              jobId ?? null
             );
             results.push({
               filename: file.originalname,
@@ -638,16 +646,35 @@ resumeUploadRouter.post(
       if (!skillsSchema.safeParse(skParsed).success) {
         throw new Error("Skills validation failed");
       }
-      // Normalize skill names using Pinecone
-      for (const skill of skParsed) {
-        skill.name = await normalizeSkillNameWithPinecone(
-          skill.name,
-          skill.summary
-        );
-      }
+
       await Skills.create([{ skills: skParsed, userId: id }], {
         session: transaction,
       });
+
+      logger.info(
+        `[EMBEDDING] Starting embedding generation for re-analysed user: ${id}`
+      );
+      const embeddingTextResponse = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: resumeEmbeddingPrompt(
+              resumeText ? resumeText : JSON.stringify(parsedJson)
+            ),
+          },
+        ],
+      });
+
+      const embeddingTextReanalysis =
+        embeddingTextResponse.choices[0].message.content?.trim();
+      if (embeddingTextReanalysis) {
+        await createAndStoreEmbedding(id.toString(), embeddingTextReanalysis, namespace);
+      } else {
+        logger.warn(
+          `[EMBEDDING] Could not generate embedding text for re-analysed user ${id}. Skipping storage.`
+        );
+      }
 
       // Update user document with new resume_url and parsed fields if new file uploaded
       let updatedUser;

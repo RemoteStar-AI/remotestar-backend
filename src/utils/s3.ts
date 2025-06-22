@@ -27,9 +27,14 @@ export const uploadPDFToS3 = async (fileBuffer: Buffer, filename: string, mimety
 };
 
 export const getSignedUrlForResume = async (key: string, expiresIn = 3600) => {
+  let fileKey = key;
+  if (key.startsWith("https://")) {
+    const url = new URL(key);
+    fileKey = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
+  }
   const command = new GetObjectCommand({
     Bucket: process.env.AWS_BUCKET_NAME!,
-    Key: key,
+    Key: fileKey,
   });
   return await getSignedUrl(s3, command, { expiresIn });
 };

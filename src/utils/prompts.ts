@@ -1,4 +1,5 @@
 import { ScriptTarget } from "typescript";
+import { JobRequiredSkills } from "./db";
 
 export function extractPrompt(scrapedText: string): string {
   return `
@@ -319,7 +320,6 @@ const culturalFitSchema = new Schema({
 `;
 }
 
-
 export function expectedCulturalFitPrompt(schema: any): string {
   schema = JSON.stringify(schema);
   return `
@@ -376,7 +376,7 @@ const culturalFitSchema = new Schema({
 }
 
 export function skillsPrompt(schema: any, canonicalSkills: any): string {
-  const skillsList = canonicalSkills.map((s: any) => `"${s}"`).join(', ');
+  const skillsList = canonicalSkills.map((s: any) => `"${s}"`).join(", ");
   schema = JSON.stringify(schema);
 
   return `
@@ -493,8 +493,11 @@ const skillsSchema = new Schema({
 `;
 }
 
-export function expectedSkillsPrompt(schema: any, canonicalSkills: any): string {
-  const skillsList = canonicalSkills.map((s: any) => `"${s}"`).join(', ');
+export function expectedSkillsPrompt(
+  schema: any,
+  canonicalSkills: any
+): string {
+  const skillsList = canonicalSkills.map((s: any) => `"${s}"`).join(", ");
   schema = JSON.stringify(schema);
 
   return `
@@ -877,5 +880,154 @@ You are an advanced AI assistant.
 
 ### Instructions:
   - Do not include any comments, explanations, or additional text before, during, or after the JSON output.
+`;
+}
+
+export function resumeEmbeddingPrompt(text: string): string {
+  return `
+You are a highly skilled recruitment assistant specialized in semantic matching. Your task is to analyze the provided resume text and generate a dense, keyword-rich summary. This summary will be used to create a vector embedding for matching the candidate against job descriptions.
+
+### **Instructions:**
+1.  **Focus on Core Competencies:** Extract and emphasize the candidate's key skills, technologies, and areas of expertise.
+2.  **Highlight Experience:** Summarize the candidate's professional experience, mentioning roles, key responsibilities, and significant achievements. Quantify achievements where possible (e.g., "managed a team of 5," "increased efficiency by 15%").
+3.  **Include Education and Certifications:** Briefly mention the candidate's educational background and any relevant certifications.
+4.  **Be Concise and Factual:** The output should be a single, dense paragraph. Do not use bullet points or markdown. Stick to the information present in the resume.
+5.  **Optimize for Matching:** The language should be tailored for semantic comparison with job descriptions. Use industry-standard terminology.
+
+### **Resume Text:**
+\`\`\`
+${text}
+\`\`\`
+
+### **Expected Output:**
+A single paragraph of dense, keyword-rich text summarizing the candidate's profile. Do not include any other text or explanation.
+`;
+}
+
+export function jobEmbeddingPrompt(text: string): string {
+  return `
+You are an intelligent text analysis model. Your task is to extract key information from the following job description and structure it into a JSON object. Focus on identifying the core skills, required experience, and key responsibilities.
+
+### **Job Description:**
+[${text}]
+
+### **Instructions:**
+1.  Extract the essential skills, tools, and technologies mentioned.
+2.  Summarize the primary responsibilities and qualifications.
+3.  Structure the output as a clean, well-formed JSON object.
+`;
+}
+
+export async function jdCvMatchingPrompt(jdText: string, jobId: string) {
+  const jobRequiredSkills = await JobRequiredSkills.findOne({ jobId: jobId });
+  const skills = jobRequiredSkills?.skills || [];
+
+  let primaryInstructions: string;
+  let skillScoringInstructions: string;
+
+  if (skills.length > 0) {
+    const skillsString = skills.join(", ");
+    primaryInstructions = `
+1.  **Use Pre-defined Skills**: You have been given a specific list of skills to evaluate.
+2.  **Analyze the Resume**: Read the candidate's resume file to find evidence for the provided skills.
+3.  **Score and Calculate**: Perform the scoring and calculations as detailed below.
+4.  **Format Output**: Assemble the results into the required JSON structure.`;
+
+    skillScoringInstructions = `
+-   You have been provided with a pre-defined list of required technical skills for this job. **Your task is to score the candidate ONLY on these skills.**
+-   **Required Skills List**: [${skillsString}]
+-   For each skill in the list, you must find evidence in the candidate's resume and assign a score from 1 to 5.
+-   **Score 1-2**: The skill is mentioned but with little context, or in relation to education/minor projects.
+-   **Score 3-4**: The skill is clearly used in a professional context and is part of their regular responsibilities.
+-   **Score 5**: The skill is central to the candidate's major achievements and core responsibilities in their recent roles.
+-   If a skill from the provided list is **not found** in the resume, its score must be \`null\`.
+-   The "skill" name in the output array must be the skill from the provided list.`;
+  } else {
+    primaryInstructions = `
+1.  **Analyze the Job Description**: First, identify all the technical skills required by the job description. These skills will form the basis of your skill-based evaluation.
+2.  **Analyze the Resume**: Read the candidate's resume file to understand their experience, skills, and career history.
+3.  **Score and Calculate**: Perform the scoring and calculations as detailed in the sections below.
+4.  **Format Output**: Assemble the results into the required JSON structure.`;
+
+    skillScoringInstructions = `
+-   For each technical skill you identified in the JD, you must find evidence in the candidate's resume and assign a score from 1 to 5.
+-   **Score 1-2**: The skill is mentioned but with little context, or in relation to education/minor projects.
+-   **Score 3-4**: The skill is clearly used in a professional context and is part of their regular responsibilities.
+-   **Score 5**: The skill is central to the candidate's major achievements and core responsibilities in their recent roles.
+-   If a skill from the JD is **not found** in the resume, its score must be \`null\`.
+-   The "skill" name in the output array must be the skill from the JD.`;
+  }
+
+  return `
+You are a world-class AI recruitment assistant. Your task is to perform a deep analysis of a candidate's resume against a provided job description (JD). You will receive the JD as text and will be given access to the candidate's resume file.
+
+Your final output must be a single, valid JSON object and nothing else.
+
+---
+### **Primary Instructions**
+${primaryInstructions}
+---
+### **Step 1: Candidate Skill Scoring (\`perSkillMatch\`)**
+${skillScoringInstructions}
+---
+### **Step 2: Candidate Cultural Fit Scoring (\`perCulturalFitMatch\`)**
+
+-   Analyze the entire resume to score the candidate against the following 8 traits. Use the detailed descriptions below for your evaluation. The score for each trait must be between 1 and 5.
+
+*   **product_score**: Reflects experience in **product-based companies**.
+    *   **Description**: A lower score signifies minimal experience focused on product development. A higher score denotes extensive exposure to product company culture, evidenced by roles emphasizing product roadmaps and direct contribution to product success.
+*   **service_score**: Reflects experience in **service-based companies** (e.g., IT consulting, outsourcing).
+    *   **Description**: A lower score implies negligible experience in service delivery. A higher score indicates a career heavily embedded in service delivery culture, with extensive experience managing client relationships and project lifecycles.
+*   **startup_score**: Reflects experience in **startup environments** (fast-paced, ambiguous, broad responsibilities).
+    *   **Description**: A lower score means no explicit startup experience. A higher score points to strong, verifiable experience in startup environments, demonstrating comfort with rapid change.
+*   **mnc_score**: Reflects experience in **multinational corporations (MNCs)** with mature processes and global teams.
+    *   **Description**: A lower score signifies limited experience in large, global corporate settings. A higher score reflects extensive experience navigating the complexities of large-scale MNC organizations.
+*   **loyalty_score**: Represents **job stability**. Focus on recent roles. Consistent short stints (<1.5 years) in recent roles reduce this score.
+    *   **Description**: A lower score indicates frequent job switching. A higher score signifies consistent long tenures in recent professional history.
+*   **individual_contribution_score**: Reflects hands-on execution. This score measures the extent to which the individual is a "doer."
+    *   **Description**: A lower score is for roles focused on oversight, delegation, or pure management. A higher score is for a classic Individual Contributor (IC) whose resume shows consistent, active, and personal involvement in producing core work.
+*   **leadership_score**: Strictly reflects formal **people management** experience (performance reviews, hiring, career management).
+    *   **Description**: A lower score indicates no evidence of formal people management. A higher score is for candidates with clear, detailed experience as a true people manager.
+*   **architecture_score**: Assesses experience in guiding **technical direction and strategy**, distinct from people management.
+    *   **Description**: A lower score is for an implementer. A higher score is for a clear technical authority (e.g., Tech Lead, Principal Engineer) responsible for setting technical vision and making critical design decisions.
+
+---
+### **Step 3: Calculation of Percentages**
+
+-   **percentageSkillMatch**: Calculate this as: \`((Total of all candidateSkill scores) / (Number of skills * 5)) * 100\`. If a candidate's score for a skill is \`null\`, it contributes 0 to the total. The "Number of skills" is either the size of the provided list or the number of skills you identified from the JD.
+-   **percentageCulturalFitMatch**: Calculate this as: \`((Total of all candidate cultural fit scores) / (8 * 5)) * 100\`.
+-   **percentageMatchScore**: Calculate this as a weighted average: \`(percentageSkillMatch * 0.6) + (percentageCulturalFitMatch * 0.4)\`.
+
+---
+### **Job Description Text**
+\`\`\`
+${jdText}
+\`\`\`
+
+---
+### **Final Output Schema**
+
+-   Your main task is to generate *only* the analysis fields shown in the schema below.
+-   The final output must be a single JSON object containing only the specified analysis fields. Do not include candidate personal data like name, email, or location.
+
+\`\`\`json
+{
+    "percentageSkillMatch": "number",
+    "percentageCulturalFitMatch": "number",
+    "percentageMatchScore": "number",
+    "perSkillMatch": [
+        {
+            "skill": "string",
+            "candidateScore": "number | null"
+        }
+    ],
+    "perCulturalFitMatch": [
+        {
+            "trait": "string",
+            "candidateScore": "number"
+        }
+    ]
+}
+\`\`\`
 `;
 }

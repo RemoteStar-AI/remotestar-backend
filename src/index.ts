@@ -21,6 +21,10 @@ import {resumeUploadRouter as embedRouter3} from './routes/v3/embed';
 import { resumeUploadRouter as embedRouter4 } from './routes/v4/embed';
 import { jobRouter as jobRouter4 } from './routes/v4/job';
 import { resumeUploadRouter as embedRouter5 } from './routes/v5/embed';
+import { resumeUploadRouter as embedRouter6 } from './routes/v6/embed';
+import { jobRouter as jobRouter6 } from './routes/v6/job';
+import { searchRouter as searchRouter6 } from './routes/v6/search';
+import { userRouter as userRouter6 } from './routes/v6/user';
 dotenv.config();
 
 const app: Application = express();
@@ -61,6 +65,12 @@ app.use("/api/v4/job", jobRouter4);
 
 //v5 routes
 app.use("/api/v5/embed", embedRouter5);
+
+//v6 routes
+app.use("/api/v6/embed", embedRouter6);
+app.use("/api/v6/job", jobRouter6);
+app.use("/api/v6/search", searchRouter6);
+app.use("/api/v6/user", userRouter6);
 
 async function main(){
     try {

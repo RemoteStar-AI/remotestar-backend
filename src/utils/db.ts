@@ -193,6 +193,17 @@ const analysisSchema = new Schema({
   analysis: {type:String, default:""},
 },{timestamps:true})
 
+const jobRequiredSkillsSchema=new Schema({
+  jobId: {type: String, required: true},
+  skills: {type: [String], required: true},
+},{timestamps:true})
+
+const jobAnalysisOfCandidateSchema=new Schema({
+  jobId: {type: String, required: true},
+  userId: {type: String, required: true},
+  data: {type:Object, default:{}},
+},{timestamps:true})
+
 export const Job = mongoose.model("Job", jobSchema);
 export const Company = mongoose.model("Company", companySchema);
 export const CulturalFit = mongoose.model("CulturalFit", culturalFitSchema);
@@ -203,3 +214,5 @@ export const Bookmark = mongoose.model("Bookmark", bookmarkSchema);
 export const User = mongoose.model("User", userSchema);
 export const JobSearchResponse = mongoose.model("JobSearchResponse", jobSearchResposeSchema);
 export const Analysis = mongoose.model("Analysis", analysisSchema);
+export const JobRequiredSkills = mongoose.model("JobRequiredSkills", jobRequiredSkillsSchema);
+export const JobAnalysisOfCandidate = mongoose.model("JobAnalysisOfCandidate", jobAnalysisOfCandidateSchema);
