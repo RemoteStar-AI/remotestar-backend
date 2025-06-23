@@ -338,6 +338,15 @@ async function processFile(
       await session.abortTransaction();
       session.endSession();
       logger.error(`[DB] Transaction failed for: ${file.originalname}`, error);
+      // If S3 file was uploaded, delete it to avoid orphaned files
+      if (resume_url) {
+        try {
+          await import("../../utils/s3").then(mod => mod.deleteFileFromS3(resume_url!));
+          logger.info(`[S3] Deleted orphaned S3 file after DB transaction failure: ${resume_url}`);
+        } catch (deleteErr) {
+          logger.error(`[S3] Failed to delete orphaned S3 file: ${resume_url}`, deleteErr);
+        }
+      }
       throw error;
     }
   } catch (error: any) {

@@ -28,23 +28,29 @@ userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
       jobId: jobId,
       userId: userId,
     });
-    
+
+    let warning: string | undefined = undefined;
     if (!userAnalysis) {
-        logger.info(`[GET_USER] No existing analysis found for user ${userId} and job ${jobId}. Generating new one.`);
+      logger.info(`[GET_USER] No existing analysis found for user ${userId} and job ${jobId}. Generating new one.`);
+      try {
         await analyseJdWithCv(jobId, userId);
         userAnalysis = await JobAnalysisOfCandidate.findOne({
-            jobId: jobId,
-            userId: userId,
+          jobId: jobId,
+          userId: userId,
         });
+      } catch (error: any) {
+        logger.error(`[GET_USER] Error analyzing JD with CV for user ${userId} and job ${jobId}:`, error);
+        warning = "Failed to fetch resume for analysis. Please re-upload your resume or try again later.";
+      }
     }
 
     const [userSkills, userCulturalFit, userBookmarks] = await Promise.all([
-        Skills.find({ userId: userId }),
-        CulturalFit.find({ userId: userId }),
-        Bookmark.find({ userId: userId })
+      Skills.find({ userId: userId }),
+      CulturalFit.find({ userId: userId }),
+      Bookmark.find({ userId: userId })
     ]);
 
-    const userProfile = {
+    const userProfile: any = {
       ...user.toObject(),
       isBookmarked: userBookmarks.some(
         (bookmark: any) => bookmark.memberId === memberId
@@ -56,6 +62,9 @@ userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
       skills: userSkills.map((skill: any) => skill.skills),
       culturalFit: userCulturalFit.map((fit: any) => fit.culturalFit),
     };
+    if (warning) {
+      userProfile.warning = warning;
+    }
 
     logger.info(`[GET_USER] Successfully fetched profile for user: ${userId}`);
     return res.status(200).json(userProfile);

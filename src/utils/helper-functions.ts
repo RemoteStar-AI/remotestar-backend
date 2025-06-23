@@ -162,7 +162,7 @@ export async function analyseJdWithCv(jobId:string, userId:string){
   if (!job || !user) {
     throw new Error("Job or user not found");
   }
-
+  console.log("resume_url", user.resume_url);
   const resumeUrl = await getSignedUrlForResume(user.resume_url);
   if (!resumeUrl) {
     throw new Error("User resume not found");

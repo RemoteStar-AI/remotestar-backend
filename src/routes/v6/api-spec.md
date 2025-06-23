@@ -230,15 +230,18 @@ This API provides candidate search functionality based on job profiles.
 ### 3.1. Search Candidates for a Job
 
 -   **Endpoint:** `GET /:jobId`
--   **Description:** Finds and returns the top matching candidates for a specific job.
+-   **Description:** Finds and returns the top matching candidates for a specific job. Supports pagination with `start` and `limit` query parameters. The maximum number of results returned per request is capped at 50.
 -   **Request Parameters:**
     -   `jobId` (string): The ID of the job to find candidates for.
+    -   `start` (integer, query, optional): The starting index for pagination (default: 0).
+    -   `limit` (integer, query, optional): The number of results to return (default: 20, max: 50).
 -   **Success Response (200 OK):**
     ```json
     {
       "jobTitle": "Software Engineer",
       "jobId": "...",
-      "totalCandidates": 50,
+      "start": 0,
+      "limit": 20,
       "data": [
         {
           "userId": "...",
@@ -255,6 +258,9 @@ This API provides candidate search functionality based on job profiles.
       ]
     }
     ```
+-   **Notes:**
+    - The sum of `start + limit` cannot exceed 50. If a higher value is requested, only up to the 50th result will be returned.
+    - The `data` array contains the paginated user profiles for the job.
 -   **Error Responses:**
     -   **400 Bad Request:** If the `jobId` format is invalid.
     -   **404 Not Found:** If the job or its embedding is not found.

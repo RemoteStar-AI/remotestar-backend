@@ -26,6 +26,13 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     }
     const memberId = req.user.firebase_id;
 
+    // Pagination params
+    const start = parseInt(req.query.start) || 0;
+    let limit = parseInt(req.query.limit) || 20;
+    const MAX_TOP_K = 50;
+    if (limit > MAX_TOP_K) limit = MAX_TOP_K;
+    const fetchK = Math.min(start + limit, MAX_TOP_K);
+
     let job;
     try {
       job = await Job.findById(Id);
@@ -62,7 +69,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     try {
       topMatches = await pinecone.index(PINECONE_INDEX_NAME).namespace("talent-pool-v2").query({
         vector: jobEmbedding,
-        topK: topK,
+        topK: fetchK,
         includeMetadata: true,
         includeValues: false,
       });
@@ -73,7 +80,8 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       return res.status(500).json({ error: "Error finding matching candidates" });
     }
 
-    const userIds = topMatches.matches.map((record: any) => record.id);
+    const paginatedMatches = topMatches.matches.slice(start, start + limit);
+    const userIds = paginatedMatches.map((record: any) => record.id);
 
     // 3. Fetch user details
     let users;
@@ -117,7 +125,8 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       const finalResponse = {
         jobTitle: job.title,
         jobId: job._id,
-        totalCandidates: topMatches.matches.length,
+        start: start,
+        limit: limit,
         data: userProfiles,
       }
 
