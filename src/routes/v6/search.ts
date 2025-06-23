@@ -97,18 +97,22 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
 
     // 5. Prepare response
     try {
-      const userProfiles = users.map((user) => ({
-        userId: user._id,
-        name: user.name,
-        email: user.email,
-        years_of_experience: user.years_of_experience,
-        designation: user.designation,
-        uploader_email: user.firebase_email,
-        current_location: user.current_location,
-        isBookmarked: userBookmarks.some((bookmark: any) => bookmark.memberId === memberId),
-        total_bookmarks: user.total_bookmarks,
-        bookmarkedBy: userBookmarks.filter((bookmark: any) => bookmark.memberId === memberId).map((bookmark: any) => bookmark.userId),
-      }));
+      const userProfiles = users.map((user) => {
+        const bookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId);
+        return {
+          userId: user._id,
+          name: user.name,
+          email: user.email,
+          years_of_experience: user.years_of_experience,
+          designation: user.designation,
+          uploader_email: user.firebase_email,
+          current_location: user.current_location,
+          isBookmarked: !!bookmark,
+          bookmarkId: bookmark ? bookmark._id.toString() : null,
+          total_bookmarks: user.total_bookmarks,
+          bookmarkedBy: userBookmarks.filter((bookmark: any) => bookmark.memberId === memberId).map((bookmark: any) => bookmark.userId),
+        };
+      });
 
       const finalResponse = {
         jobTitle: job.title,

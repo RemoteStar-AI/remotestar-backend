@@ -31,6 +31,8 @@ userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
             jobId: jobId,
             userId: userId,
         });
+        console.log("userAnalysis", userAnalysis);
+        return res.status(200).json(userAnalysis);
     }
 
     const [userSkills, userCulturalFit, userBookmarks] = await Promise.all([

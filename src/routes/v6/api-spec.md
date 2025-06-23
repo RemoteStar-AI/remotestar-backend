@@ -259,3 +259,154 @@ This API provides candidate search functionality based on job profiles.
     -   **400 Bad Request:** If the `jobId` format is invalid.
     -   **404 Not Found:** If the job or its embedding is not found.
     -   **500 Internal Server Error:** For any other server-side errors during the search process.
+
+---
+
+## 4. User API (`/v6/user`)
+
+This API provides endpoints to fetch and delete user profiles, including detailed analysis and bookmark information.
+
+### 4.1. Get User Profile for a Job
+
+-   **Endpoint:** `GET /:jobId/:userId`
+-   **Description:** Returns a detailed user profile for a given job and user, including skills, cultural fit, analysis, and bookmark info.
+-   **Request Parameters:**
+    -   `jobId` (string): The job ID for which to fetch the analysis.
+    -   `userId` (string): The user ID whose profile is being fetched.
+-   **Success Response (200 OK):**
+    ```json
+    {
+      "_id": "user_id",
+      "name": "Jane Doe",
+      "email": "jane.doe@example.com",
+      "phone": "+1234567890",
+      "address": "123 Main St",
+      "current_location": "San Francisco, CA",
+      "summary": "Experienced frontend developer...",
+      "profile_completeness": 95,
+      "experience": [
+        {
+          "company": "Acme Corp",
+          "role": "Frontend Developer",
+          "start_date": "2020-01-01",
+          "end_date": "2022-01-01",
+          "description": ["Worked on UI components", "Led frontend team"]
+        }
+      ],
+      "education": [
+        {
+          "institution": "State University",
+          "degree": "BSc Computer Science",
+          "start_date": "2016-01-01",
+          "end_date": "2020-01-01"
+        }
+      ],
+      "skills": [
+        [
+          { "name": "React", "years_experience": 3, "score": 5 },
+          { "name": "TypeScript", "years_experience": 2, "score": 4 }
+        ]
+      ],
+      "projects": [
+        {
+          "name": "Portfolio Website",
+          "description": ["Personal site"],
+          "repository": "https://github.com/janedoe/portfolio",
+          "technologies_used": ["React", "Next.js"],
+          "features": ["SSR", "SEO"]
+        }
+      ],
+      "certifications": [
+        { "name": "AWS Certified Developer", "issuer": "Amazon", "date": "2021-06-01" }
+      ],
+      "languages": [
+        { "language": "English", "proficiency": "Native" }
+      ],
+      "social_links": {
+        "linkedin": "https://linkedin.com/in/janedoe",
+        "github": "https://github.com/janedoe",
+        "portfolio": "https://janedoe.dev"
+      },
+      "ai_interviews": [
+        {
+          "title": "Frontend Interview",
+          "date": "2023-01-01",
+          "score": 85,
+          "responses": {
+            "question_1": "Answered question 1",
+            "question_2": "Answered question 2"
+          },
+          "feedback": "Great communication skills"
+        }
+      ],
+      "job_preferences": {
+        "current_location": "San Francisco, CA",
+        "preferred_locations": ["Remote", "San Francisco"],
+        "salary_expectation": 120000,
+        "employment_type": ["full-time"],
+        "notice_period": 30,
+        "reason_for_switch": "Career growth",
+        "work_type": ["remote"]
+      },
+      "soft_skills": {
+        "communication": 5,
+        "teamwork": 4,
+        "problem_solving": 5,
+        "leadership": 4
+      },
+      "resume_url": "https://s3.amazonaws.com/bucket/resume.pdf",
+      "firebase_id": "firebase_uid",
+      "firebase_email": "uploader@example.com",
+      "organisation_id": "org_id",
+      "firebase_uploader_name": "Uploader Name",
+      "job": "job_id",
+      "isBookmarked": true,
+      "analysis": {
+        // Job-specific analysis data (structure may vary)
+      },
+      "bookmarkedBy": ["user_id_1", "user_id_2"],
+      "skills": [
+        [
+          { "name": "React", "years_experience": 3, "score": 5 },
+          { "name": "TypeScript", "years_experience": 2, "score": 4 }
+        ]
+      ],
+      "culturalFit": [
+        {
+          "product_score": 4,
+          "service_score": 5,
+          "startup_score": 3,
+          "mnc_score": 4,
+          "loyalty_score": 5,
+          "coding_score": 5,
+          "leadership_score": 4,
+          "architecture_score": 4
+        }
+      ]
+    }
+    ```
+    -   `skills` is an array of arrays (each inner array is a skill set from a Skills document).
+    -   `culturalFit` is an array of objects (each from a CulturalFit document).
+    -   `analysis` is job-specific and may vary in structure.
+    -   `isBookmarked` is true if the current user has bookmarked this profile.
+    -   `bookmarkedBy` is an array of user IDs who have bookmarked this profile.
+
+-   **Error Responses:**
+    -   **404 Not Found:** If the user is not found.
+    -   **500 Internal Server Error:** For any other server-side errors.
+
+### 4.2. Delete User
+
+-   **Endpoint:** `DELETE /:id`
+-   **Description:** Deletes a user and all related data (skills, cultural fit, bookmarks, job analyses, and S3 resume file).
+-   **Request Parameters:**
+    -   `id` (string): The user ID to delete.
+-   **Success Response (200 OK):**
+    ```json
+    {
+      "message": "User deleted successfully"
+    }
+    ```
+-   **Error Responses:**
+    -   **404 Not Found:** If the user is not found.
+    -   **500 Internal Server Error:** For any other server-side errors.

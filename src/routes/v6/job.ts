@@ -20,6 +20,8 @@ jobRouter.get("/", authenticate, async (req: any, res: any) => {
       res.status(500).json({ error: "Internal Server Error" });
       return;
     }
+    console.log("response", response);
+    console.log("Jobs fetched successfully");
     res.status(200).json({
       message: "Jobs fetched successfully",
       data: response,
@@ -43,7 +45,7 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
       }
       console.log("Request data validated successfully");
       const data = parsedBody.data;
-      data.organisation_id = organisation_id;
+      // data.organisation_id = organisation_id;
       // Generate job embedding
       let jobEmbeddingText;
       try {
