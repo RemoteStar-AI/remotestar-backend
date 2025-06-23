@@ -31,6 +31,7 @@ export const getSignedUrlForResume = async (key: string, expiresIn = 3600) => {
   if (key.startsWith("https://")) {
     const url = new URL(key);
     fileKey = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
+    fileKey = decodeURIComponent(fileKey);
   }
   const command = new GetObjectCommand({
     Bucket: process.env.AWS_BUCKET_NAME!,
