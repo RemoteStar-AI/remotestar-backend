@@ -10,7 +10,12 @@ export const userRouter = Router();
 
 userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
   const { jobId, userId } = req.params;
-  const memberId = req.user.firebase_id;
+  const memberId = req.user?.firebase_id;
+
+  if (!req.user || !memberId) {
+    logger.warn(`[GET_USER] Unauthorized access attempt.`);
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
   try {
     const user = await User.findById(userId);
@@ -31,8 +36,6 @@ userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
             jobId: jobId,
             userId: userId,
         });
-        console.log("userAnalysis", userAnalysis);
-        return res.status(200).json(userAnalysis);
     }
 
     const [userSkills, userCulturalFit, userBookmarks] = await Promise.all([
@@ -57,8 +60,8 @@ userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
     logger.info(`[GET_USER] Successfully fetched profile for user: ${userId}`);
     return res.status(200).json(userProfile);
 
-  } catch (error) {
-    logger.error(`[GET_USER] Error fetching user profile for user ${userId} and job ${jobId}:`, error);
+  } catch (error: any) {
+    logger.error(`[GET_USER] Error fetching user profile for user ${userId} and job ${jobId}:`, error?.stack || error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -85,20 +88,26 @@ userRouter.delete("/:id", authenticate, async (req: any, res: any) => {
       JobAnalysisOfCandidate.deleteMany({ userId: id }).session(session),
     ]);
 
+    await session.commitTransaction();
+
     if (user.resume_url) {
-      logger.info(`[DELETE_USER] Deleting resume from S3 for user ${id}.`);
-      await deleteFileFromS3(user.resume_url);
+      try {
+        logger.info(`[DELETE_USER] Deleting resume from S3 for user ${id}.`);
+        await deleteFileFromS3(user.resume_url);
+      } catch (s3Error) {
+        logger.error(`[DELETE_USER] Failed to delete resume from S3 for user ${id}:`, s3Error);
+        // Not throwing, as DB transaction is already committed
+      }
     }
 
-    await session.commitTransaction();
     logger.info(`[DELETE_USER] Successfully deleted user ${id}.`);
     return res.status(200).json({ message: "User deleted successfully" });
 
-  } catch (error) {
+  } catch (error: any) {
     await session.abortTransaction();
-    logger.error(`[DELETE_USER] Error deleting user ${id}:`, error);
+    logger.error(`[DELETE_USER] Error deleting user ${id}:`, error?.stack || error);
     return res.status(500).json({ error: "Internal Server Error" });
   } finally {
-    session.endSession();
+    await session.endSession();
   }
 });
