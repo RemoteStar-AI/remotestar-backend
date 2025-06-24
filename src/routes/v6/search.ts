@@ -104,8 +104,8 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       return res.status(500).json({ error: "Error retrieving bookmark details" });
     }
 
-    // 5. Fetch job analysis
-    let jobAnalysis;
+    // 5. Fetch job analysis (first pass)
+    let jobAnalysis = [];
     try {
       jobAnalysis = await JobAnalysisOfCandidate.find({ jobId: Id, userId: { $in: userIds } });
       logger.info(`[DB] Successfully fetched ${jobAnalysis.length} job analysis`);
@@ -114,7 +114,24 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       return res.status(500).json({ error: "Error retrieving job analysis" });
     }
 
-    // 5. Prepare response
+    // 6. Find missing analyses and run them in parallel
+    const analysedUserIds = new Set(jobAnalysis.map((a: any) => a.userId.toString()));
+    const missingUserIds = userIds.filter((id: string) => !analysedUserIds.has(id));
+    if (missingUserIds.length > 0) {
+      logger.info(`[ANALYSIS] Missing JobAnalysisOfCandidate for userIds: ${missingUserIds.join(", ")}`);
+      const { analyseJdWithCv } = require("../../utils/helper-functions");
+      await Promise.all(missingUserIds.map((userId: string) => analyseJdWithCv(Id, userId)));
+      // Re-fetch job analysis after running
+      try {
+        jobAnalysis = await JobAnalysisOfCandidate.find({ jobId: Id, userId: { $in: userIds } });
+        logger.info(`[DB] Re-fetched job analysis after running missing analyses. Now have ${jobAnalysis.length} analyses.`);
+      } catch (error) {
+        logger.error(`[DB] Error re-fetching job analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return res.status(500).json({ error: "Error retrieving job analysis after update" });
+      }
+    }
+
+    // 7. Prepare response
     try {
       const userProfiles = users.map((user) => {
         const bookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId);
