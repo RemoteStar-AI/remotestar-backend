@@ -115,8 +115,9 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     }
 
     // 6. Find missing analyses and run them in parallel
+    const existingUserIds = users.map((u: any) => u._id.toString());
     const analysedUserIds = new Set(jobAnalysis.map((a: any) => a.userId.toString()));
-    const missingUserIds = userIds.filter((id: string) => !analysedUserIds.has(id));
+    const missingUserIds = existingUserIds.filter((id: string) => !analysedUserIds.has(id));
     if (missingUserIds.length > 0) {
       logger.info(`[ANALYSIS] Missing JobAnalysisOfCandidate for userIds: ${missingUserIds.join(", ")}`);
       const { analyseJdWithCv } = require("../../utils/helper-functions");
