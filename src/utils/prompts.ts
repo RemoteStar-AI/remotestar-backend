@@ -84,6 +84,16 @@ You are an advanced AI assistant. Your task is to process the following scraped 
     "github": "string",
     "portfolio": "string"
   },
+  "culturalFit": {
+    "product_score": 0,
+    "service_score": 0,
+    "startup_score": 0,
+    "mnc_score": 0,
+    "loyalty_score": 0,
+    "coding_score": 0,
+    "leadership_score": 0,
+    "architecture_score": 0,
+  },
   "ai_interviews": [
     {
       "title": "string",
@@ -228,6 +238,16 @@ You are an advanced AI assistant. The JSON output you provided earlier does not 
     "linkedin": "string",
     "github": "string",
     "portfolio": "string"
+  },
+  "culturalFit": {
+    "product_score": 0,
+    "service_score": 0,
+    "startup_score": 0,
+    "mnc_score": 0,
+    "loyalty_score": 0,
+    "coding_score": 0,
+    "leadership_score": 0,
+    "architecture_score": 0,
   },
   "ai_interviews": [
     {

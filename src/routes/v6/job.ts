@@ -82,6 +82,38 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
         throw new Error("Failed to store job embedding");
       }
 
+      // Start background analysis for top 10 candidates
+      (async () => {
+        try {
+          const PINECONE_INDEX_NAME = 'remotestar';
+          // 1. Fetch job embedding
+          const jobEmbeddingResponse = await require("../../utils/pinecone").pinecone
+            .index(PINECONE_INDEX_NAME)
+            .namespace("job-pool-v2")
+            .fetch([jobResponse._id.toString()]);
+          const jobEmbedding = jobEmbeddingResponse.records[jobResponse._id.toString()]?.values;
+          if (!jobEmbedding) throw new Error("Job embedding not found");
+
+          // 2. Query Pinecone for top 10 candidates
+          const topMatches = await require("../../utils/pinecone").pinecone.index(PINECONE_INDEX_NAME).namespace("talent-pool-v2").query({
+            vector: jobEmbedding,
+            topK: 10,
+            includeMetadata: true,
+            includeValues: false,
+          });
+
+          // 3. Extract user IDs
+          const userIds = topMatches.matches.map((record: any) => record.id);
+
+          // 4. Analyse each user (in parallel)
+          const { analyseJdWithCv } = require("../../utils/helper-functions");
+          await Promise.all(userIds.map((userId: string) => analyseJdWithCv(jobResponse._id.toString(), userId)));
+          console.log("Background analysis for top 10 candidates completed");
+        } catch (err) {
+          console.error("Background analysis for top 10 candidates failed:", err);
+        }
+      })();
+
       return res.status(200).json({
         message: "Job created successfully",
         data: jobResponse,

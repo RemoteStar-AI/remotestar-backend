@@ -59,8 +59,7 @@ userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
       bookmarkedBy: userBookmarks
         .filter((bookmark: any) => bookmark.memberId === memberId)
         .map((bookmark: any) => bookmark.userId),
-      skills: userSkills.map((skill: any) => skill.skills),
-      culturalFit: userCulturalFit.map((fit: any) => fit.culturalFit),
+      skills: userSkills.map((skill: any) => skill.skills)
     };
     if (warning) {
       userProfile.warning = warning;
