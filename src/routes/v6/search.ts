@@ -6,6 +6,7 @@ import {
   User,
   Bookmark,
   JobSearchResponse,
+  JobAnalysisOfCandidate
 } from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
 import admin from '../../utils/firebase';
@@ -29,7 +30,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     // Pagination params
     const start = parseInt(req.query.start) || 0;
     let limit = parseInt(req.query.limit) || 20;
-    const MAX_TOP_K = 50;
+    const MAX_TOP_K = topK;
     if (limit > MAX_TOP_K) limit = MAX_TOP_K;
     const fetchK = Math.min(start + limit, MAX_TOP_K);
 
@@ -103,6 +104,16 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       return res.status(500).json({ error: "Error retrieving bookmark details" });
     }
 
+    // 5. Fetch job analysis
+    let jobAnalysis;
+    try {
+      jobAnalysis = await JobAnalysisOfCandidate.find({ jobId: Id, userId: { $in: userIds } });
+      logger.info(`[DB] Successfully fetched ${jobAnalysis.length} job analysis`);
+    } catch (error) {
+      logger.error(`[DB] Error finding job analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return res.status(500).json({ error: "Error retrieving job analysis" });
+    }
+
     // 5. Prepare response
     try {
       const userProfiles = users.map((user) => {
@@ -119,6 +130,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
           bookmarkId: bookmark ? bookmark._id.toString() : null,
           total_bookmarks: user.total_bookmarks,
           bookmarkedBy: userBookmarks.filter((bookmark: any) => bookmark.memberId === memberId).map((bookmark: any) => bookmark.userId),
+          analysis: jobAnalysis.find((analysis: any) => analysis.userId === user._id.toString())?.data,
         };
       });
 
