@@ -1135,6 +1135,9 @@ Output in the following format
   - Do not include any comments, explanations, or additional text before, during, or after the JSON output.
   - The output must be a single JSON object.
   - The output must be in the format specified above.
+  - The output should be a valide JSON and not a markdown.
+  - The output should not contain \`\`\`json or \`\`\`
+  - The output should not contain any other text or explanation.
 `;
 }
 

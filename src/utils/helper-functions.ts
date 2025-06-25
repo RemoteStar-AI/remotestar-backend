@@ -199,7 +199,10 @@ export async function analyseJdWithCv(jobId:string, userId:string){
   if (!analysisText) {
     throw new Error("Analysis text not found");
   }
-  const analysisJson = JSON.parse(extractJsonFromMarkdown(analysisText));
+  console.log("[DEBUG] Raw analysisText from OpenAI:", analysisText);
+  const extractedJsonString = extractJsonFromMarkdown(analysisText);
+  console.log("[DEBUG] Extracted JSON string:", extractedJsonString);
+  const analysisJson = JSON.parse(extractedJsonString);
   const analysis = await JobAnalysisOfCandidate.create({ jobId: jobId, userId: userId, data: analysisJson });
   console.log("Analysis created", JSON.stringify(analysis));
   if (!analysis) {
