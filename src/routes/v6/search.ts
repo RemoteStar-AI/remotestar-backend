@@ -14,7 +14,7 @@ import { pinecone } from "../../utils/pinecone";
 import mongoose from 'mongoose';
 import logger from "../../utils/loggers";
 const PINECONE_INDEX_NAME = 'remotestar';
-const topK = 50;
+const MAX_TOP_K = 50;
 
 
 export const searchRouter = Router();
@@ -30,9 +30,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     // Pagination params
     const start = parseInt(req.query.start) || 0;
     let limit = parseInt(req.query.limit) || 20;
-    const MAX_TOP_K = topK;
-    if (limit > MAX_TOP_K) limit = MAX_TOP_K;
-    const fetchK = Math.min(start + limit, MAX_TOP_K);
+    const fetchK = MAX_TOP_K;
 
     let job;
     try {
@@ -81,6 +79,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       return res.status(500).json({ error: "Error finding matching candidates" });
     }
 
+    const totalCandidates = topMatches.matches.length;
     const paginatedMatches = topMatches.matches.slice(start, start + limit);
     const userIds = paginatedMatches.map((record: any) => record.id);
 
@@ -163,7 +162,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         jobId: job._id,
         start: start,
         limit: limit,
-        totalCandidates: topMatches.matches.length,
+        totalCandidates: totalCandidates,
         data: userProfiles,
       }
 

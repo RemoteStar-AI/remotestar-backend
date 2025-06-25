@@ -1051,3 +1051,85 @@ ${jdText}
 \`\`\`
 `;
 }
+
+export function jdCvMatchingPromptUpdated(jdText:string): string{
+
+  return  `You are an AI recruiter. Compare the following Job Description (JD) and Candidate's CV.
+Instructions:
+Extract the key skills, tools, and experience requirements from the JD.
+For each skill or requirement, check whether it is addressed in the CV.
+Score each skill on a scale of 0% to 100% based on how well the candidate matches it.
+Assign a weight (%) to each skill based on its importance as indicated in the JD.
+Calculate an overall percentage match using weighted average of all skill matches.
+
+For Cultural and Leadership Parameters:
+Based on the JD and the candidate's CV, score the following parameters on a scale of 0% to 100%.
+Reflects the degree to which the role is centered within a **product-based company**, where the primary focus is on a proprietary product (e.g., SaaS, consumer app).
+* product_score: How much experience is required as per the JD and match % as per the candidate CV in product-based companies where revenue is primarily from a product (e.g., SaaS, consumer apps), emphasizing product development and contribution to product success.
+* service_score: How much experience is required as per the JD and match % as per the candidate CVin service-based companies (e.g., IT consulting, managed services), involving client projects, delivery models, SLAs, and multi-client handling.
+* startup_score: How much experience is required as per the JD and match % as per the candidate CVin fast-paced, ambiguous startup environments with small teams and broad responsibilities.
+* mnc_score: How much experience is required as per the JD and match % as per the candidate CVin large, global multinational corporations with mature processes, distributed teams, and hierarchical structures.
+* loyalty_score: Job stability and retention behavior, especially in recent roles (longer tenures indicate higher loyalty).
+* individual_contributor: Direct, hands-on execution of core job functions, indicating a "doer" rather than primarily a delegator or strategist.
+* people_management_score: Formal people management experience, including responsibilities for direct reports' careers, performance reviews, hiring, and firing.
+* technical_leadership_score: Experience in guiding technical direction, strategy, and quality for a team or project (e.g., system design, technical mentorship), distinct from people management.
+
+
+Output in the following format
+\`\`\`json
+{
+    "percentageMatchScore": "number", //out of 100
+    "percentageSkillMatch": "number", //out of 100
+    "percentageCulturalFitMatch": "number", // out of 100
+    "perSkillMatch": [
+      {
+        "skill": "Skill Name 1",
+        "candidateScore": "number | null",
+        "weight": 50
+      },
+      {
+        "skill": "Skill Name 2",
+        "candidateScore": "number | null",
+        "weight": 10
+      }
+    ]
+  },
+  "perCulturalFitMatch": [
+    {
+      "trait": "product_score",
+      "candidateScore": 0
+    },
+    {
+      "trait": "service_score", 
+      "candidateScore": 0
+    },
+    {
+      "trait": "startup_score",
+      "candidateScore": 0
+    },
+    {
+      "trait": "mnc_score",
+      "candidateScore": 0
+    },
+    {
+      "trait": "loyalty_score",
+      "candidateScore": 0
+    },
+    {
+      "trait": "individual_contributor",
+      "candidateScore": 0
+    },
+    {
+      "trait": "people_management_score",
+      "candidateScore": 0
+    },
+    {
+      "trait": "technical_leadership_score",
+      "candidateScore": 0
+    }
+  }
+\`\`\`
+`;
+}
+
+

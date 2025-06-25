@@ -3,7 +3,7 @@ import { pinecone } from "./pinecone";
 import { openai } from "./openai";
 import {pineconeLogger as logger} from "./pinecone-logger";
 import { getSignedUrlForResume } from "./s3";
-import { jdCvMatchingPrompt } from "./prompts";
+import { jdCvMatchingPromptUpdated as jdCvMatchingPrompt } from "./prompts";
 import "isomorphic-fetch";
 
 const PINECONE_INDEX_NAME = 'remotestar';
@@ -184,7 +184,7 @@ export async function analyseJdWithCv(jobId:string, userId:string){
     }),
     purpose: "user_data",
   });
-  const promptText = await jdCvMatchingPrompt(job.description, jobId);
+  const promptText = jdCvMatchingPrompt(job.description);
   const analysisResponse = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
