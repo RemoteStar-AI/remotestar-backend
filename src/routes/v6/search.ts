@@ -84,6 +84,12 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     const paginatedMatches = topMatches.matches.slice(start, start + limit);
     const userIds = paginatedMatches.map((record: any) => record.id);
 
+    // Log similarity percentage for each candidate being sent
+    paginatedMatches.forEach((match: any) => {
+      const similarity = match.score !== undefined ? (match.score * 100).toFixed(2) : 'N/A';
+      logger.info(`[SIMILARITY] Candidate userId: ${match.id}, similarity: ${similarity}%`);
+    });
+
     // 3. Fetch user details
     let users;
     try {
@@ -157,6 +163,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         jobId: job._id,
         start: start,
         limit: limit,
+        totalCandidates: topMatches.matches.length,
         data: userProfiles,
       }
 
