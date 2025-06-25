@@ -1074,6 +1074,8 @@ Reflects the degree to which the role is centered within a **product-based compa
 * people_management_score: Formal people management experience, including responsibilities for direct reports' careers, performance reviews, hiring, and firing.
 * technical_leadership_score: Experience in guiding technical direction, strategy, and quality for a team or project (e.g., system design, technical mentorship), distinct from people management.
 
+// JD Text
+${jdText}
 
 Output in the following format
 \`\`\`json
