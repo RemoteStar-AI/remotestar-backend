@@ -1130,7 +1130,11 @@ Output in the following format
       "candidateScore": 0
     }
   }
-\`\`\`
+
+  #Instructions
+  - Do not include any comments, explanations, or additional text before, during, or after the JSON output.
+  - The output must be a single JSON object.
+  - The output must be in the format specified above.
 `;
 }
 
