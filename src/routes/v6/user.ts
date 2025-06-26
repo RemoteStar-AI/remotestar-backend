@@ -50,14 +50,12 @@ userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
       Bookmark.find({ userId: userId })
     ]);
 
-    let signed_url: string | null = null;
     if (user.resume_url) {
-      signed_url = await getSignedUrlForResume(user.resume_url);
+      user.resume_url = await getSignedUrlForResume(user.resume_url);
     }
 
     const userProfile: any = {
       ...user.toObject(),
-      link: signed_url,
       isBookmarked: userBookmarks.some(
         (bookmark: any) => bookmark.memberId === memberId
       ),
