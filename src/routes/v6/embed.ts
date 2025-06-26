@@ -5,7 +5,7 @@ import { z } from "zod";
 import {
   extractPrompt,
   reformatPrompt,
-  culturalFitPrompt,
+  updatedCulturalFitPrompt as culturalFitPrompt,
   skillsPromptNoCanon,
   resumeEmbeddingPrompt,
 } from "../../utils/prompts";

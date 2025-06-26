@@ -848,60 +848,60 @@ For each skill, you must generate the following three fields:
 `;
 }
 
-export function updatedCulturalFitPrompt(schema: any): string {
-  schema = JSON.stringify(schema);
-  return `
-You are an advanced AI assistant.
-  Your task is to analyze the provided resume content and assign a score from 1 to 5 for each of the specified fields. These scores should reflect your objective judgment of the candidate's cultural alignment and experience depth *solely based on the information present in the resume*.
-  You must only return the result in the specified JSON format. Do not include any comments, explanations, or additional text before, during, or after the JSON output.
-  ## SCORING PARAMETERS:
-  -   **product_score**: Reflects how much time the individual has spent working **within product-based companies**. This includes companies where the core revenue comes from a product (e.g., SaaS platforms, consumer apps), and not just from services or client work.
-      * **Description**: Evaluate the candidate's career trajectory. A lower score signifies minimal to no experience focused on product development within product-based organizations. A mid-range score indicates some involvement in product environments, possibly alongside significant service-based roles, or limited direct product impact. A higher score denotes extensive and deep exposure to product company culture, evidenced by consistent roles emphasizing product roadmaps, cross-functional collaboration, and direct contribution to product success.
-  -   **service_score**: Reflects experience in **service-based companies**, such as IT consulting, managed services, outsourcing firms, or professional services. This includes experience working on client projects, delivery models, SLAs, and multi-client handling.
-      * **Description**: Assess the candidate's background in service-oriented roles. A lower score implies negligible experience in service delivery. A mid-range score suggests a blend of service and other experiences, or a moderate engagement with client projects and delivery models. A higher score indicates a career heavily embedded in service delivery culture, with extensive experience managing client relationships, project lifecycles, and adherence to SLAs.
-  -   **startup_score**: Reflects experience working in **startup environments**, characterized by fast-paced work, small teams, ambiguity, broad responsibilities, and building from scratch. It does not include just working in a small team inside a big company.
-      * **Description**: Determine the candidate's exposure to startup culture. A lower score means no explicit or clear startup experience. A mid-range score might suggest indirect exposure or roles within larger entities that possessed some startup-like characteristics. A higher score points to strong, verifiable experience in multiple startup environments, demonstrating comfort with rapid change, broad responsibilities, and building solutions from the ground up.
-  -   **mnc_score**: Reflects experience in **multinational corporations (MNCs)** — large, global companies with mature processes, regulatory compliance, distributed teams, and layered hierarchies.
-      * **Description**: Gauge the candidate's familiarity with MNC structures. A lower score signifies limited to no experience in large, global corporate settings. A mid-range score suggests some exposure to MNCs, possibly in more localized roles or for shorter durations. A higher score reflects extensive and consistent experience navigating the complexities of large-scale MNC organizations, including mature processes, global collaboration, and compliance.
-  -   **loyalty_score**: Represents **job stability and retention behavior (job switch)**. Focus especially on **recent roles**. Early-career frequent switches are acceptable, but consistent short stints (e.g., <1.5 years) in recent roles reduce this score.
-      * **Description**: Evaluate the candidate's job tenure patterns, particularly in recent years. A lower score indicates frequent job switching, with consistently short tenures. A higher score signifies consistent long tenures in recent professional history, demonstrating predictability and dependability in commitment to roles.
-  -   **coding_score**: Reflects the degree of the candidate's direct, hands-on execution of the core functions of their role. This score measures the extent to which the individual is a "doer," personally creating the tangible outputs and deliverables central to their job, regardless of the field (e.g., writing code for an engineer, creating campaigns for a marketer, closing deals for a salesperson). This score is inversely related to time spent on delegation, high-level strategy, or management.
-  Description: Assess the candidate's role as a direct, hands-on contributor.
-  Lower Score: Reserved for roles that are predominantly focused on oversight, delegation, strategy, or management. The candidate is primarily responsible for directing the work of others with minimal personal execution of core tasks.
-  Mid-Range Score: Indicates a hybrid role where the candidate performs some hands-on work but also has significant responsibilities in management, coordination, or strategy.
-  Higher Score: Assigned to a classic Individual Contributor (IC). The candidate's primary responsibility is the direct creation of tangible deliverables, and their resume shows consistent, active, and personal involvement in producing the core work of their function.
-  -   **leadership_score**: Strictly reflects formal people management experience. This involves explicit responsibilities for the careers and performance of direct reports, such as conducting performance reviews, managing compensation, hiring and firing, approving time off, and being formally responsible for team members' career growth and mentorship. This score is only awarded when there is clear evidence of these specific duties.
-  Description: Determine the depth of the candidate's formal people management experience.
-  Lower Score: No evidence of formal people management. The candidate is an individual contributor, a project lead, or a technical lead without formal HR-related authority over team members.
-  Mid-Range Score: Some supervisory duties are mentioned (e.g., "managed a team of 5," "had direct reports"), but there are no specific details about performance reviews, hiring, or other core people management functions. The role may be supervisory without full managerial authority.
-  Higher Score: Assigned to candidates with clear, repeated, and detailed experience as a true people manager. The resume explicitly mentions responsibilities like conducting performance reviews, managing career development, and direct involvement in hiring/firing decisions for their team.
+// export function updatedCulturalFitPrompt(schema: any): string {
+//   schema = JSON.stringify(schema);
+//   return `
+// You are an advanced AI assistant.
+//   Your task is to analyze the provided resume content and assign a score from 1 to 5 for each of the specified fields. These scores should reflect your objective judgment of the candidate's cultural alignment and experience depth *solely based on the information present in the resume*.
+//   You must only return the result in the specified JSON format. Do not include any comments, explanations, or additional text before, during, or after the JSON output.
+//   ## SCORING PARAMETERS:
+//   -   **product_score**: Reflects how much time the individual has spent working **within product-based companies**. This includes companies where the core revenue comes from a product (e.g., SaaS platforms, consumer apps), and not just from services or client work.
+//       * **Description**: Evaluate the candidate's career trajectory. A lower score signifies minimal to no experience focused on product development within product-based organizations. A mid-range score indicates some involvement in product environments, possibly alongside significant service-based roles, or limited direct product impact. A higher score denotes extensive and deep exposure to product company culture, evidenced by consistent roles emphasizing product roadmaps, cross-functional collaboration, and direct contribution to product success.
+//   -   **service_score**: Reflects experience in **service-based companies**, such as IT consulting, managed services, outsourcing firms, or professional services. This includes experience working on client projects, delivery models, SLAs, and multi-client handling.
+//       * **Description**: Assess the candidate's background in service-oriented roles. A lower score implies negligible experience in service delivery. A mid-range score suggests a blend of service and other experiences, or a moderate engagement with client projects and delivery models. A higher score indicates a career heavily embedded in service delivery culture, with extensive experience managing client relationships, project lifecycles, and adherence to SLAs.
+//   -   **startup_score**: Reflects experience working in **startup environments**, characterized by fast-paced work, small teams, ambiguity, broad responsibilities, and building from scratch. It does not include just working in a small team inside a big company.
+//       * **Description**: Determine the candidate's exposure to startup culture. A lower score means no explicit or clear startup experience. A mid-range score might suggest indirect exposure or roles within larger entities that possessed some startup-like characteristics. A higher score points to strong, verifiable experience in multiple startup environments, demonstrating comfort with rapid change, broad responsibilities, and building solutions from the ground up.
+//   -   **mnc_score**: Reflects experience in **multinational corporations (MNCs)** — large, global companies with mature processes, regulatory compliance, distributed teams, and layered hierarchies.
+//       * **Description**: Gauge the candidate's familiarity with MNC structures. A lower score signifies limited to no experience in large, global corporate settings. A mid-range score suggests some exposure to MNCs, possibly in more localized roles or for shorter durations. A higher score reflects extensive and consistent experience navigating the complexities of large-scale MNC organizations, including mature processes, global collaboration, and compliance.
+//   -   **loyalty_score**: Represents **job stability and retention behavior (job switch)**. Focus especially on **recent roles**. Early-career frequent switches are acceptable, but consistent short stints (e.g., <1.5 years) in recent roles reduce this score.
+//       * **Description**: Evaluate the candidate's job tenure patterns, particularly in recent years. A lower score indicates frequent job switching, with consistently short tenures. A higher score signifies consistent long tenures in recent professional history, demonstrating predictability and dependability in commitment to roles.
+//   -   **coding_score**: Reflects the degree of the candidate's direct, hands-on execution of the core functions of their role. This score measures the extent to which the individual is a "doer," personally creating the tangible outputs and deliverables central to their job, regardless of the field (e.g., writing code for an engineer, creating campaigns for a marketer, closing deals for a salesperson). This score is inversely related to time spent on delegation, high-level strategy, or management.
+//   Description: Assess the candidate's role as a direct, hands-on contributor.
+//   Lower Score: Reserved for roles that are predominantly focused on oversight, delegation, strategy, or management. The candidate is primarily responsible for directing the work of others with minimal personal execution of core tasks.
+//   Mid-Range Score: Indicates a hybrid role where the candidate performs some hands-on work but also has significant responsibilities in management, coordination, or strategy.
+//   Higher Score: Assigned to a classic Individual Contributor (IC). The candidate's primary responsibility is the direct creation of tangible deliverables, and their resume shows consistent, active, and personal involvement in producing the core work of their function.
+//   -   **leadership_score**: Strictly reflects formal people management experience. This involves explicit responsibilities for the careers and performance of direct reports, such as conducting performance reviews, managing compensation, hiring and firing, approving time off, and being formally responsible for team members' career growth and mentorship. This score is only awarded when there is clear evidence of these specific duties.
+//   Description: Determine the depth of the candidate's formal people management experience.
+//   Lower Score: No evidence of formal people management. The candidate is an individual contributor, a project lead, or a technical lead without formal HR-related authority over team members.
+//   Mid-Range Score: Some supervisory duties are mentioned (e.g., "managed a team of 5," "had direct reports"), but there are no specific details about performance reviews, hiring, or other core people management functions. The role may be supervisory without full managerial authority.
+//   Higher Score: Assigned to candidates with clear, repeated, and detailed experience as a true people manager. The resume explicitly mentions responsibilities like conducting performance reviews, managing career development, and direct involvement in hiring/firing decisions for their team.
 
-  -   **architecture_score**: 
-  Assesses the candidate's experience in guiding the technical direction, strategy, and quality for a team or project, distinct from people management. This includes making key technical decisions, establishing best practices, leading system design, mentoring engineers on technical skills, and taking ownership of the overall technical execution and health of a project or system. This is the realm of a Technical Lead, Staff/Principal Engineer, or Architect who guides the "how" of the work.
-  Description: Gauge the candidate's influence over technical direction and execution.
-  Lower Score: The candidate is primarily an implementer who executes assigned tasks. There is no evidence of influencing technical decisions, mentoring others, or setting technical direction.
-  Mid-Range Score: Indicates emerging technical leadership. The candidate may have led a small project, been the "go-to" person for a specific domain, actively participated in code reviews, or mentored junior team members on technical tasks.
-  Higher Score: Assigned to candidates who are a clear technical authority. They are responsible for setting the technical vision for their team, making critical architecture and design decisions, enforcing technical standards, and are ultimately accountable for the technical success of their projects, even if they don't manage the people directly.
+//   -   **architecture_score**: 
+//   Assesses the candidate's experience in guiding the technical direction, strategy, and quality for a team or project, distinct from people management. This includes making key technical decisions, establishing best practices, leading system design, mentoring engineers on technical skills, and taking ownership of the overall technical execution and health of a project or system. This is the realm of a Technical Lead, Staff/Principal Engineer, or Architect who guides the "how" of the work.
+//   Description: Gauge the candidate's influence over technical direction and execution.
+//   Lower Score: The candidate is primarily an implementer who executes assigned tasks. There is no evidence of influencing technical decisions, mentoring others, or setting technical direction.
+//   Mid-Range Score: Indicates emerging technical leadership. The candidate may have led a small project, been the "go-to" person for a specific domain, actively participated in code reviews, or mentored junior team members on technical tasks.
+//   Higher Score: Assigned to candidates who are a clear technical authority. They are responsible for setting the technical vision for their team, making critical architecture and design decisions, enforcing technical standards, and are ultimately accountable for the technical success of their projects, even if they don't manage the people directly.
 
-  ### resume content:
-  [${schema}]
+//   ### resume content:
+//   [${schema}]
 
-  ### Expected Output Format:
-  {
-    "product_score": Number,
-    "service_score": Number,
-    "startup_score": Number,
-    "mnc_score": Number,
-    "loyalty_score": Number,
-    "coding_score": Number,
-    "leadership_score": Number,
-    "architecture_score": Number
-  }
+//   ### Expected Output Format:
+//   {
+//     "product_score": Number,
+//     "service_score": Number,
+//     "startup_score": Number,
+//     "mnc_score": Number,
+//     "loyalty_score": Number,
+//     "coding_score": Number,
+//     "leadership_score": Number,
+//     "architecture_score": Number
+//   }
 
-### Instructions:
-  - Do not include any comments, explanations, or additional text before, during, or after the JSON output.
-`;
-}
+// ### Instructions:
+//   - Do not include any comments, explanations, or additional text before, during, or after the JSON output.
+// `;
+// }
 
 export function resumeEmbeddingPrompt(text: string): string {
   return `
@@ -1064,93 +1064,158 @@ ${jdText}
 `;
 }
 
-export function jdCvMatchingPromptUpdated(jdText:string): string{
+// export function jdCvMatchingPromptUpdated(jdText:string): string{
 
-  return  `You are an AI recruiter. Compare the following Job Description (JD) and Candidate's CV.
-Instructions:
-Extract the key skills, tools, and experience requirements from the JD.
-For each skill or requirement, check whether it is addressed in the CV.
-Score each skill on a scale of 0% to 100% based on how well the candidate matches it.
-Assign a weight (%) to each skill based on its importance as indicated in the JD.
-Calculate an overall percentage match using weighted average of all skill matches.
+//   return  `You are an AI recruiter. Compare the following Job Description (JD) and Candidate's CV.
+// Instructions:
+// Extract the key skills, tools, and experience requirements from the JD.
+// For each skill or requirement, check whether it is addressed in the CV.
+// Score each skill on a scale of 0% to 100% based on how well the candidate matches it.
+// Assign a weight (%) to each skill based on its importance as indicated in the JD.
+// Calculate an overall percentage match using weighted average of all skill matches.
 
-For Cultural and Leadership Parameters:
-Based on the JD and the candidate's CV, score the following parameters on a scale of 0% to 100%.
-Reflects the degree to which the role is centered within a **product-based company**, where the primary focus is on a proprietary product (e.g., SaaS, consumer app).
-* product_score: How much experience is required as per the JD and match % as per the candidate CV in product-based companies where revenue is primarily from a product (e.g., SaaS, consumer apps), emphasizing product development and contribution to product success.
-* service_score: How much experience is required as per the JD and match % as per the candidate CVin service-based companies (e.g., IT consulting, managed services), involving client projects, delivery models, SLAs, and multi-client handling.
-* startup_score: How much experience is required as per the JD and match % as per the candidate CVin fast-paced, ambiguous startup environments with small teams and broad responsibilities.
-* mnc_score: How much experience is required as per the JD and match % as per the candidate CVin large, global multinational corporations with mature processes, distributed teams, and hierarchical structures.
-* loyalty_score: Job stability and retention behavior, especially in recent roles (longer tenures indicate higher loyalty).
-* individual_contributor: Direct, hands-on execution of core job functions, indicating a "doer" rather than primarily a delegator or strategist.
-* people_management_score: Formal people management experience, including responsibilities for direct reports' careers, performance reviews, hiring, and firing.
-* technical_leadership_score: Experience in guiding technical direction, strategy, and quality for a team or project (e.g., system design, technical mentorship), distinct from people management.
+// For Cultural and Leadership Parameters:
+// Based on the JD and the candidate's CV, score the following parameters on a scale of 0% to 100%.
+// Reflects the degree to which the role is centered within a **product-based company**, where the primary focus is on a proprietary product (e.g., SaaS, consumer app).
+// * product_score: How much experience is required as per the JD and match % as per the candidate CV in product-based companies where revenue is primarily from a product (e.g., SaaS, consumer apps), emphasizing product development and contribution to product success.
+// * service_score: How much experience is required as per the JD and match % as per the candidate CVin service-based companies (e.g., IT consulting, managed services), involving client projects, delivery models, SLAs, and multi-client handling.
+// * startup_score: How much experience is required as per the JD and match % as per the candidate CVin fast-paced, ambiguous startup environments with small teams and broad responsibilities.
+// * mnc_score: How much experience is required as per the JD and match % as per the candidate CVin large, global multinational corporations with mature processes, distributed teams, and hierarchical structures.
+// * loyalty_score: Job stability and retention behavior, especially in recent roles (longer tenures indicate higher loyalty).
+// * individual_contributor: Direct, hands-on execution of core job functions, indicating a "doer" rather than primarily a delegator or strategist.
+// * people_management_score: Formal people management experience, including responsibilities for direct reports' careers, performance reviews, hiring, and firing.
+// * technical_leadership_score: Experience in guiding technical direction, strategy, and quality for a team or project (e.g., system design, technical mentorship), distinct from people management.
 
-// JD Text
-${jdText}
+// // JD Text
+// ${jdText}
 
-Output in the following format
+// Output in the following format
+// \`\`\`json
+// {
+//     "percentageMatchScore": "number", //out of 100
+//     "percentageSkillMatch": "number", //out of 100
+//     "percentageCulturalFitMatch": "number", // out of 100
+//     "perSkillMatch": [
+//       {
+//         "skill": "Skill Name 1",
+//         "candidateScore": "number | null",
+//         "weight": 50
+//       },
+//       {
+//         "skill": "Skill Name 2",
+//         "candidateScore": "number | null",
+//         "weight": 10
+//       }
+//     ]
+//   },
+//   "perCulturalFitMatch": [
+//     {
+//       "trait": "product_score",
+//       "candidateScore": 0
+//     },
+//     {
+//       "trait": "service_score", 
+//       "candidateScore": 0
+//     },
+//     {
+//       "trait": "startup_score",
+//       "candidateScore": 0
+//     },
+//     {
+//       "trait": "mnc_score",
+//       "candidateScore": 0
+//     },
+//     {
+//       "trait": "loyalty_score",
+//       "candidateScore": 0
+//     },
+//     {
+//       "trait": "individual_contributor",
+//       "candidateScore": 0
+//     },
+//     {
+//       "trait": "people_management_score",
+//       "candidateScore": 0
+//     },
+//     {
+//       "trait": "technical_leadership_score",
+//       "candidateScore": 0
+//     }
+//   }
+
+//   #Instructions
+//   - Do not include any comments, explanations, or additional text before, during, or after the JSON output.
+//   - The output must be a single JSON object.
+//   - The output must be in the format specified above.
+//   - The output should be a valide JSON and not a markdown.
+//   - The output should not contain \`\`\`json or \`\`\`
+//   - The output should not contain any other text or explanation.
+// `;
+// }
+
+export function updatedCulturalFitPrompt(schema: any): string {
+  schema = JSON.stringify(schema);
+  return `
+  You are an advanced AI assistant.
+  You are given a job description and a user data.
+  You need to score the user data against the job description.
+  You need to score the user data against the following criteria:
+
+-   Analyze the entire resume to score the candidate against the following 8 traits. Use the detailed descriptions below for your evaluation.
+-   For each trait, assign a score between 1 and 5.
+*   **product_score**: Reflects experience in **product-based companies**.
+    *   **Description**: A lower score signifies minimal experience focused on product development. A higher score denotes extensive exposure to product company culture, evidenced by roles emphasizing product roadmaps and direct contribution to product success.
+*   **service_score**: Reflects experience in **service-based companies** (e.g., IT consulting, outsourcing).
+    *   **Description**: A lower score implies negligible experience in service delivery. A higher score indicates a career heavily embedded in service delivery culture, with extensive experience managing client relationships and project lifecycles.
+*   **startup_score**: Reflects experience in **startup environments** (fast-paced, ambiguous, broad responsibilities).
+    *   **Description**: A lower score means no explicit startup experience. A higher score points to strong, verifiable experience in startup environments, demonstrating comfort with rapid change.
+*   **mnc_score**: Reflects experience in **multinational corporations (MNCs)** with mature processes and global teams.
+    *   **Description**: A lower score signifies limited experience in large, global corporate settings. A higher score reflects extensive experience navigating the complexities of large-scale MNC organizations.
+*   **loyalty_score**: Represents **job stability**. Focus on recent roles. Consistent short stints (<1.5 years) in recent roles reduce this score.
+    *   **Description**: A lower score indicates frequent job switching. A higher score signifies consistent long tenures in recent professional history.
+*   **individual_contribution_score**: Reflects hands-on execution. This score measures the extent to which the individual is a "doer."
+    *   **Description**: A lower score is for roles focused on oversight, delegation, or pure management. A higher score is for a classic Individual Contributor (IC) whose resume shows consistent, active, and personal involvement in producing core work.
+*   **leadership_score**: Strictly reflects formal **people management** experience (performance reviews, hiring, career management).
+    *   **Description**: A lower score indicates no evidence of formal people management. A higher score is for candidates with clear, detailed experience as a true people manager.
+*   **architecture_score**: Assesses experience in guiding **technical direction and strategy**, distinct from people management.
+    *   **Description**: A lower score is for an implementer. A higher score is for a clear technical authority (e.g., Tech Lead, Principal Engineer) responsible for setting technical vision and making critical design decisions.
+
+  ### **Schema:**
 \`\`\`json
-{
-    "percentageMatchScore": "number", //out of 100
-    "percentageSkillMatch": "number", //out of 100
-    "percentageCulturalFitMatch": "number", // out of 100
-    "perSkillMatch": [
-      {
-        "skill": "Skill Name 1",
-        "candidateScore": "number | null",
-        "weight": 50
-      },
-      {
-        "skill": "Skill Name 2",
-        "candidateScore": "number | null",
-        "weight": 10
-      }
-    ]
-  },
-  "perCulturalFitMatch": [
-    {
-      "trait": "product_score",
-      "candidateScore": 0
-    },
-    {
-      "trait": "service_score", 
-      "candidateScore": 0
-    },
-    {
-      "trait": "startup_score",
-      "candidateScore": 0
-    },
-    {
-      "trait": "mnc_score",
-      "candidateScore": 0
-    },
-    {
-      "trait": "loyalty_score",
-      "candidateScore": 0
-    },
-    {
-      "trait": "individual_contributor",
-      "candidateScore": 0
-    },
-    {
-      "trait": "people_management_score",
-      "candidateScore": 0
-    },
-    {
-      "trait": "technical_leadership_score",
-      "candidateScore": 0
-    }
-  }
+const culturalFitSchema = new Schema({
+  product_score: { type: Number, min: 0, max: 5},
+  service_score: { type: Number, min: 0, max: 5},
+  startup_score: { type: Number, min: 0, max: 5},
+  mnc_score: { type: Number, min: 0, max: 5},
+  loyalty_score: { type: Number, min: 0, max: 5},
+  coding_score: { type: Number, min: 0, max: 5},
+  leadership_score: { type: Number, min: 0, max: 5},
+  architecture_score: { type: Number, min: 0, max: 5},
+})
+\`\`\`
 
-  #Instructions
-  - Do not include any comments, explanations, or additional text before, during, or after the JSON output.
-  - The output must be a single JSON object.
-  - The output must be in the format specified above.
-  - The output should be a valide JSON and not a markdown.
-  - The output should not contain \`\`\`json or \`\`\`
-  - The output should not contain any other text or explanation.
+### **User Data:**
+[${schema}]
+
+## **Instructions:**
+- give each of the fields a score between 1 and 5.
+- give the score based on the user data and the criteria given above.
+- give the score according to mongoose format above.
+- make sure to follow the output format strictly.
+- all the scores are a number and not a string.
+- do not add any extra text or comments in the output.
+
+### **Expected Output Format:**
+
+{
+  "product_score": 0,
+  "service_score": 0,
+  "startup_score": 0,
+  "mnc_score": 0,
+  "loyalty_score": 0,
+  "coding_score": 0,
+  "leadership_score": 0,
+  "architecture_score": 0
+}
 `;
 }
-
-
