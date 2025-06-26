@@ -938,45 +938,45 @@ You are an intelligent text analysis model. Your task is to extract key informat
 `;
 }
 
-export async function jdCvMatchingPrompt(jdText: string, jobId: string) {
-  const jobRequiredSkills = await JobRequiredSkills.findOne({ jobId: jobId });
-  const skills = jobRequiredSkills?.skills || [];
+export function jdCvMatchingPrompt(jdText: string) {
+  // const jobRequiredSkills = await JobRequiredSkills.findOne({ jobId: jobId });
+  // const skills = jobRequiredSkills?.skills || [];
 
-  let primaryInstructions: string;
-  let skillScoringInstructions: string;
+//   let primaryInstructions: string;
+//   let skillScoringInstructions: string;
 
-  if (skills.length > 0) {
-    const skillsString = skills.join(", ");
-    primaryInstructions = `
-1.  **Use Pre-defined Skills**: You have been given a specific list of skills to evaluate.
-2.  **Analyze the Resume**: Read the candidate's resume file to find evidence for the provided skills.
-3.  **Score and Calculate**: Perform the scoring and calculations as detailed below.
-4.  **Format Output**: Assemble the results into the required JSON structure.`;
+//   if (skills.length > 0) {
+//     const skillsString = skills.join(", ");
+//     primaryInstructions = `
+// 1.  **Use Pre-defined Skills**: You have been given a specific list of skills to evaluate.
+// 2.  **Analyze the Resume**: Read the candidate's resume file to find evidence for the provided skills.
+// 3.  **Score and Calculate**: Perform the scoring and calculations as detailed below.
+// 4.  **Format Output**: Assemble the results into the required JSON structure.`;
 
-    skillScoringInstructions = `
--   You have been provided with a pre-defined list of required technical skills for this job. **Your task is to score the candidate ONLY on these skills.**
--   **Required Skills List**: [${skillsString}]
--   For each skill in the list, you must find evidence in the candidate's resume and assign a score from 1 to 5.
--   **Score 1-2**: The skill is mentioned but with little context, or in relation to education/minor projects.
--   **Score 3-4**: The skill is clearly used in a professional context and is part of their regular responsibilities.
--   **Score 5**: The skill is central to the candidate's major achievements and core responsibilities in their recent roles.
--   If a skill from the provided list is **not found** in the resume, its score must be \`null\`.
--   The "skill" name in the output array must be the skill from the provided list.`;
-  } else {
-    primaryInstructions = `
-1.  **Analyze the Job Description**: First, identify all the technical skills required by the job description. These skills will form the basis of your skill-based evaluation.
-2.  **Analyze the Resume**: Read the candidate's resume file to understand their experience, skills, and career history.
-3.  **Score and Calculate**: Perform the scoring and calculations as detailed in the sections below.
-4.  **Format Output**: Assemble the results into the required JSON structure.`;
+//     skillScoringInstructions = `
+// -   You have been provided with a pre-defined list of required technical skills for this job. **Your task is to score the candidate ONLY on these skills.**
+// -   **Required Skills List**: [${skillsString}]
+// -   For each skill in the list, you must find evidence in the candidate's resume and assign a score from 1 to 5.
+// -   **Score 1-2**: The skill is mentioned but with little context, or in relation to education/minor projects.
+// -   **Score 3-4**: The skill is clearly used in a professional context and is part of their regular responsibilities.
+// -   **Score 5**: The skill is central to the candidate's major achievements and core responsibilities in their recent roles.
+// -   If a skill from the provided list is **not found** in the resume, its score must be \`null\`.
+// -   The "skill" name in the output array must be the skill from the provided list.`;
+//   } else {
+//     primaryInstructions = `
+// 1.  **Analyze the Job Description**: First, identify all the technical skills required by the job description. These skills will form the basis of your skill-based evaluation.
+// 2.  **Analyze the Resume**: Read the candidate's resume file to understand their experience, skills, and career history.
+// 3.  **Score and Calculate**: Perform the scoring and calculations as detailed in the sections below.
+// 4.  **Format Output**: Assemble the results into the required JSON structure.`;
 
-    skillScoringInstructions = `
--   For each technical skill you identified in the JD, you must find evidence in the candidate's resume and assign a score from 1 to 5.
--   **Score 1-2**: The skill is mentioned but with little context, or in relation to education/minor projects.
--   **Score 3-4**: The skill is clearly used in a professional context and is part of their regular responsibilities.
--   **Score 5**: The skill is central to the candidate's major achievements and core responsibilities in their recent roles.
--   If a skill from the JD is **not found** in the resume, its score must be \`null\`.
--   The "skill" name in the output array must be the skill from the JD.`;
-  }
+//     skillScoringInstructions = `
+// -   For each technical skill you identified in the JD, you must find evidence in the candidate's resume and assign a score from 1 to 5.
+// -   **Score 1-2**: The skill is mentioned but with little context, or in relation to education/minor projects.
+// -   **Score 3-4**: The skill is clearly used in a professional context and is part of their regular responsibilities.
+// -   **Score 5**: The skill is central to the candidate's major achievements and core responsibilities in their recent roles.
+// -   If a skill from the JD is **not found** in the resume, its score must be \`null\`.
+// -   The "skill" name in the output array must be the skill from the JD.`;
+//   }
 
   return `
 You are a world-class AI recruitment assistant. Your task is to perform a deep analysis of a candidate's resume against a provided job description (JD). You will receive the JD as text and will be given access to the candidate's resume file.
@@ -985,14 +985,26 @@ Your final output must be a single, valid JSON object and nothing else.
 
 ---
 ### **Primary Instructions**
-${primaryInstructions}
+1.  **Analyze the Job Description**: First, identify all the technical skills required by the job description. These skills will form the basis of your skill-based evaluation.
+2.  **Analyze the Resume**: Read the candidate's resume file to understand their experience, skills, and career history.
+3.  **Score and Calculate**: Perform the scoring and calculations as detailed in the sections below.
+4.  **Format Output**: Assemble the results into the required JSON structure.
 ---
 ### **Step 1: Candidate Skill Scoring (\`perSkillMatch\`)**
-${skillScoringInstructions}
+-   For each technical skill you identified in the JD, you must find evidence in the candidate's resume and assign a score from 1 to 5.
+-   **Score 1-2**: The skill is mentioned but with little context, or in relation to education/minor projects.
+-   **Score 3-4**: The skill is clearly used in a professional context and is part of their regular responsibilities.
+-   **Score 5**: The skill is central to the candidate's major achievements and core responsibilities in their recent roles.
+-   If a skill from the JD is **not found** in the resume, its score must be \`null\`.
+-   The "skill" name in the output array must be the skill from the JD.
 ---
 ### **Step 2: Candidate Cultural Fit Scoring (\`perCulturalFitMatch\`)**
 
--   Analyze the entire resume to score the candidate against the following 8 traits. Use the detailed descriptions below for your evaluation. The score for each trait must be between 1 and 5.
+-   Analyze the entire resume to score the candidate against the following 8 traits. Use the detailed descriptions below for your evaluation.
+-   For each trait, assign a score between 0 and 100.
+-   Assume 100 is the score that a perfect-fit candidate would receive for that specific job, based on what is required for that trait.
+-   If the job requires only an average level of ability in a particular trait, and the candidate meets that average level, then the candidate should receive a full 100 for that trait.
+-   Your scoring should be based on alignment with the job's actual needs, not on general excellence.
 
 *   **product_score**: Reflects experience in **product-based companies**.
     *   **Description**: A lower score signifies minimal experience focused on product development. A higher score denotes extensive exposure to product company culture, evidenced by roles emphasizing product roadmaps and direct contribution to product success.

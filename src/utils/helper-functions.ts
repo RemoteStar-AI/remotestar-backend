@@ -3,7 +3,7 @@ import { pinecone } from "./pinecone";
 import { openai } from "./openai";
 import {pineconeLogger as logger} from "./pinecone-logger";
 import { getSignedUrlForResume } from "./s3";
-import { jdCvMatchingPromptUpdated as jdCvMatchingPrompt } from "./prompts";
+import { jdCvMatchingPrompt } from "./prompts";
 import "isomorphic-fetch";
 
 const PINECONE_INDEX_NAME = 'remotestar';
