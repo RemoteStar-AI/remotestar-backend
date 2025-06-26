@@ -163,7 +163,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         start: start,
         limit: limit,
         totalCandidates: totalCandidates,
-        data: userProfiles,
+        data: userProfiles.sort((a: any, b: any) => b.analysis.percentageMatchScore - a.analysis.percentageMatchScore),
       }
 
       logger.info(`[RESPONSE] Successfully prepared response with ${userProfiles.length} profiles`);
