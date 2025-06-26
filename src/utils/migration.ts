@@ -22,7 +22,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
 
-import { User, Company, Job } from "./db";
+import { User, Company, Job, JobAnalysisOfCandidate } from "./db";
 
 const ORG_ID = "6835782f4ec996c8f13dca2d";
 
@@ -47,5 +47,26 @@ export async function addOrganisationId(MongoURI: string) {
   }
 }
 
+export async function deleteRecentJobAnalyses(MongoURI: string) {
+  try {
+    await mongoose.connect(MongoURI);
+    const minutes = 40;
+    const minutesAgo = new Date(Date.now() - minutes * 60 * 1000);
+    const result = await JobAnalysisOfCandidate.deleteMany({
+      createdAt: { $gte: minutesAgo },
+    });
+    console.log(
+      `Deleted ${result.deletedCount} documents from JobAnalysisOfCandidate created in the last ${minutes} minutes.`
+    );
+  } catch (err) {
+    console.error(err);
+  } finally {
+    await mongoose.disconnect();
+  }
+}
+
 // Uncomment the following line to run the script
 // addOrganisationId();
+// deleteRecentJobAnalyses(process.env.MONGO_URI!);
+
+

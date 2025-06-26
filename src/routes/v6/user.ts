@@ -2,7 +2,7 @@ import { Router } from "express";
 import { Bookmark, JobAnalysisOfCandidate, User, CulturalFit, Skills } from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
 import { analyseJdWithCv } from "../../utils/helper-functions";
-import { deleteFileFromS3 } from "../../utils/s3";
+import { deleteFileFromS3, getSignedUrlForResume } from "../../utils/s3";
 import mongoose from "mongoose";
 import logger from "../../utils/loggers";
 
@@ -50,8 +50,14 @@ userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
       Bookmark.find({ userId: userId })
     ]);
 
+    let signed_url: string | null = null;
+    if (user.resume_url) {
+      signed_url = await getSignedUrlForResume(user.resume_url);
+    }
+
     const userProfile: any = {
       ...user.toObject(),
+      link: signed_url,
       isBookmarked: userBookmarks.some(
         (bookmark: any) => bookmark.memberId === memberId
       ),

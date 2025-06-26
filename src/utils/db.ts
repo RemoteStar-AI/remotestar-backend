@@ -204,6 +204,12 @@ const jobAnalysisOfCandidateSchema=new Schema({
   data: {type:Object, default:{}},
 },{timestamps:true})
 
+const sortedJobAnalysisIndexOfCandidateSchema=new Schema({
+  jobId: {type: String, required: true},
+  userId: {type: String, required: true},
+  index: {type: Number, required: true},
+},{timestamps:true})
+
 export const Job = mongoose.model("Job", jobSchema);
 export const Company = mongoose.model("Company", companySchema);
 export const CulturalFit = mongoose.model("CulturalFit", culturalFitSchema);
@@ -216,3 +222,4 @@ export const JobSearchResponse = mongoose.model("JobSearchResponse", jobSearchRe
 export const Analysis = mongoose.model("Analysis", analysisSchema);
 export const JobRequiredSkills = mongoose.model("JobRequiredSkills", jobRequiredSkillsSchema);
 export const JobAnalysisOfCandidate = mongoose.model("JobAnalysisOfCandidate", jobAnalysisOfCandidateSchema);
+export const SortedJobAnalysisIndexOfCandidate = mongoose.model("SortedJobAnalysisIndexOfCandidate", sortedJobAnalysisIndexOfCandidateSchema);
