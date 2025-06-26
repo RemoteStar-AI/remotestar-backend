@@ -1162,7 +1162,7 @@ export function updatedCulturalFitPrompt(schema: any): string {
   You need to score the user data against the following criteria:
 
 -   Analyze the entire resume to score the candidate against the following 8 traits. Use the detailed descriptions below for your evaluation.
--   For each trait, assign a score between 1 and 5.
+-   For each trait, assign a score between 0 to 100.
 *   **product_score**: Reflects experience in **product-based companies**.
     *   **Description**: A lower score signifies minimal experience focused on product development. A higher score denotes extensive exposure to product company culture, evidenced by roles emphasizing product roadmaps and direct contribution to product success.
 *   **service_score**: Reflects experience in **service-based companies** (e.g., IT consulting, outsourcing).
@@ -1183,14 +1183,14 @@ export function updatedCulturalFitPrompt(schema: any): string {
   ### **Schema:**
 \`\`\`json
 const culturalFitSchema = new Schema({
-  product_score: { type: Number, min: 0, max: 5},
-  service_score: { type: Number, min: 0, max: 5},
-  startup_score: { type: Number, min: 0, max: 5},
-  mnc_score: { type: Number, min: 0, max: 5},
-  loyalty_score: { type: Number, min: 0, max: 5},
-  coding_score: { type: Number, min: 0, max: 5},
-  leadership_score: { type: Number, min: 0, max: 5},
-  architecture_score: { type: Number, min: 0, max: 5},
+  product_score: { type: Number, min: 0, max: 100},
+  service_score: { type: Number, min: 0, max: 100},
+  startup_score: { type: Number, min: 0, max: 100},
+  mnc_score: { type: Number, min: 0, max: 100},
+  loyalty_score: { type: Number, min: 0, max: 100},
+  coding_score: { type: Number, min: 0, max: 100},
+  leadership_score: { type: Number, min: 0, max: 100},
+  architecture_score: { type: Number, min: 0, max: 100},
 })
 \`\`\`
 
@@ -1198,7 +1198,7 @@ const culturalFitSchema = new Schema({
 [${schema}]
 
 ## **Instructions:**
-- give each of the fields a score between 1 and 5.
+- give each of the fields a score between 0 to 100.
 - give the score based on the user data and the criteria given above.
 - give the score according to mongoose format above.
 - make sure to follow the output format strictly.

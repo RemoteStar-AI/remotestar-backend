@@ -95,26 +95,26 @@ const userSchema = new Schema({
 
 const culturalFitSchema = new Schema({
   userId: { type: String, required: true },
-  product_score: { type: Number, min: 0, max: 5},
-  service_score: { type: Number, min: 0, max: 5},
-  startup_score: { type: Number, min: 0, max: 5},
-  mnc_score: { type: Number, min: 0, max: 5},
-  loyalty_score: { type: Number, min: 0, max: 5},
-  coding_score: { type: Number, min: 0, max: 5},
-  leadership_score: { type: Number, min: 0, max: 5},
-  architecture_score: { type: Number, min: 0, max: 5},
+  product_score: { type: Number, min: 0, max: 100},
+  service_score: { type: Number, min: 0, max: 100},
+  startup_score: { type: Number, min: 0, max: 100},
+  mnc_score: { type: Number, min: 0, max: 100},
+  loyalty_score: { type: Number, min: 0, max: 100},
+  coding_score: { type: Number, min: 0, max: 100},
+  leadership_score: { type: Number, min: 0, max: 100},
+  architecture_score: { type: Number, min: 0, max: 100},
 }, { timestamps: true });
 
 const culturalFitSchema2 = new Schema({
   userId: { type: String, optional: true },
-  product_score: { type: Number, min: 0, max: 5},
-  service_score: { type: Number, min: 0, max: 5},
-  startup_score: { type: Number, min: 0, max: 5},
-  mnc_score: { type: Number, min: 0, max: 5},
-  loyalty_score: { type: Number, min: 0, max: 5},
-  coding_score: { type: Number, min: 0, max: 5},
-  leadership_score: { type: Number, min: 0, max: 5},
-  architecture_score: { type: Number, min: 0, max: 5},
+  product_score: { type: Number, min: 0, max: 100},
+  service_score: { type: Number, min: 0, max: 100},
+  startup_score: { type: Number, min: 0, max: 100},
+  mnc_score: { type: Number, min: 0, max: 100},
+  loyalty_score: { type: Number, min: 0, max: 100},
+  coding_score: { type: Number, min: 0, max: 100},
+  leadership_score: { type: Number, min: 0, max: 100},
+  architecture_score: { type: Number, min: 0, max: 100},
 }, { timestamps: true });
 
 const skillsSchema = new Schema({
