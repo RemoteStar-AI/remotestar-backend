@@ -50,7 +50,7 @@ export async function addOrganisationId(MongoURI: string) {
 export async function deleteRecentJobAnalyses(MongoURI: string) {
   try {
     await mongoose.connect(MongoURI);
-    const minutes = 40;
+    const minutes = 60;
     const minutesAgo = new Date(Date.now() - minutes * 60 * 1000);
     const result = await JobAnalysisOfCandidate.deleteMany({
       createdAt: { $gte: minutesAgo },

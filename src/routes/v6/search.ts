@@ -63,7 +63,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       // Fetch user details
       let users = [];
       try {
-        users = await User.find({ _id: { $in: userIds } });
+        users = await User.find({ _id: { $in: userIds },organisation_id: job.organisation_id });
       } catch (error) {
         logger.error(`[DB] Error finding users: ${error instanceof Error ? error.message : 'Unknown error'}`);
         return res.status(500).json({ error: "Error retrieving user details" });
@@ -138,12 +138,22 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     // Query for matching candidates
     let topMatches;
     try {
+      // topMatches = await pinecone.index(PINECONE_INDEX_NAME).namespace("talent-pool-v2").query({
       topMatches = await pinecone.index(PINECONE_INDEX_NAME).namespace("talent-pool-v2").query({
+        filter: {
+          organisation_id: job.organisation_id,
+        },
         vector: jobEmbedding,
         topK: fetchK,
         includeMetadata: true,
         includeValues: false,
-      });
+      })  ;
+      // topMatches = await pinecone.index(PINECONE_INDEX_NAME).namespace("talent-pool-v2").query({
+      //   vector: jobEmbedding,
+      //   topK: fetchK,
+      //   includeMetadata: true,
+      //   includeValues: false,
+      // });
       logger.info(`[PINECONE] Successfully queried for matching candidates. Found ${topMatches.matches.length} matches`);
     } catch (error) {
       logger.error(`[PINECONE] Error querying for matches: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -186,7 +196,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     // Fetch user details
     let users = [];
     try {
-      users = await User.find({ _id: { $in: userIds } });
+      users = await User.find({ _id: { $in: userIds },organisation_id: job.organisation_id });
     } catch (error) {
       logger.error(`[DB] Error finding users: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return res.status(500).json({ error: "Error retrieving user details" });
@@ -195,7 +205,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     // Fetch bookmarks
     let userBookmarks = [];
     try {
-      userBookmarks = await Bookmark.find({ userId: { $in: userIds } });
+      userBookmarks = await Bookmark.find({ userId: { $in: userIds }});
     } catch (error) {
       logger.error(`[DB] Error finding bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return res.status(500).json({ error: "Error retrieving bookmark details" });

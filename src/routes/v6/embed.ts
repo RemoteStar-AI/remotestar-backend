@@ -55,7 +55,7 @@ async function processFile(
   file: Express.Multer.File,
   firebase_id: string,
   email: string,
-  organisation: string,
+  organisation_id: string,
   displayName: string,
   jobId: string | null
 ) {
@@ -150,11 +150,11 @@ async function processFile(
     // Duplicate check: email + organisation_id
     const existingUser = await User.findOne({
       email: parsedJson.email,
-      organisation_id: organisation,
+      organisation_id: organisation_id,
     });
     if (existingUser) {
       logger.warn(
-        `[DUPLICATE] User with email ${parsedJson.email} already exists in organisation ${organisation}. Skipping file: ${file.originalname}`
+        `[DUPLICATE] User with email ${parsedJson.email} already exists in organisation ${organisation_id}. Skipping file: ${file.originalname}`
       );
       return {
         success: false,
@@ -254,7 +254,7 @@ async function processFile(
             _id: uniqueId,
             firebase_id,
             firebase_email: email,
-            organisation_id: organisation,
+            organisation_id: organisation_id,
             firebase_uploader_name: displayName,
             job: jobId,
             resume_url,
@@ -289,11 +289,11 @@ async function processFile(
         logger.info(`[DB] Job revaluation set for jobId: ${jobId}`);
       } else {
         await Job.updateMany(
-          { organisation_id: organisation },
+          { organisation_id: organisation_id },
           { needRevaluation: true }
         );
         logger.info(
-          `[DB] Organisation revaluation set for organisation: ${organisation}`
+          `[DB] Organisation revaluation set for organisation: ${organisation_id}`
         );
       }
       await session.commitTransaction();
@@ -320,7 +320,7 @@ async function processFile(
       const embeddingText = embeddingRes.choices[0].message.content?.trim();
 
       if (embeddingText) {
-        await createAndStoreEmbedding(uniqueId.toString(), embeddingText, namespace);
+        await createAndStoreEmbedding(uniqueId.toString(), embeddingText, namespace, organisation_id, jobId ?? "");
       } else {
         logger.warn(
           `[EMBEDDING] Could not generate embedding text for user ${uniqueId}. Skipping storage.`
@@ -391,12 +391,13 @@ resumeUploadRouter.post(
         logger.error(`[ROUTE] Validation error:`, validation.error.format());
         return res.status(400).json({ error: validation.error.format() });
       }
-      const { jobId, organisation_id, webhook_url } = validation.data;
+      const { jobId, webhook_url } = validation.data;
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
         logger.error(`[ROUTE] No files provided.`);
         return res.status(400).json({ error: "No files provided" });
       }
+      const organisation_id = req.user.organisation;
       // Generate a unique processing ID
       const processingId = uuidv4();
       // Initialize processing status
@@ -412,7 +413,7 @@ resumeUploadRouter.post(
             progress: 0,
           });
           const results = [];
-          const { firebase_id, email, organisation, displayName } = req.user;
+          const { firebase_id, email, displayName } = req.user;
           for (let i = 0; i < files.length; i++) {
             logger.info(
               `[ROUTE] Processing file ${i + 1}/${files.length}: ${
@@ -424,7 +425,7 @@ resumeUploadRouter.post(
               file,
               firebase_id,
               email,
-              organisation,
+              organisation_id,
               displayName,
               jobId ?? null
             );
@@ -502,16 +503,19 @@ resumeUploadRouter.post(
 resumeUploadRouter.post(
   "/reanalyse/:id",
   upload.single("file"),
+  authenticate,
   async (req: any, res: any) => {
     logger.info(
       `[REANALYSE] Starting reanalysis for user ID: ${req.params.id}`
     );
     const { id } = req.params;
+    const organisation_id = req.user.organisation;
     const user = await User.findById(id);
     if (!user) {
       logger.info(`[REANALYSE] User not found with ID: ${id}`);
       return res.status(404).json({ error: "User not found" });
     }
+    const jobId = user.job;
     const transaction = await mongoose.startSession();
     transaction.startTransaction();
     logger.info(`[REANALYSE] Started transaction for user ID: ${id}`);
@@ -678,7 +682,7 @@ resumeUploadRouter.post(
       const embeddingTextReanalysis =
         embeddingTextResponse.choices[0].message.content?.trim();
       if (embeddingTextReanalysis) {
-        await createAndStoreEmbedding(id.toString(), embeddingTextReanalysis, namespace);
+        await createAndStoreEmbedding(id.toString(), embeddingTextReanalysis, namespace, organisation_id, jobId ?? null);
       } else {
         logger.warn(
           `[EMBEDDING] Could not generate embedding text for re-analysed user ${id}. Skipping storage.`

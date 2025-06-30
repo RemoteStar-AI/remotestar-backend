@@ -75,7 +75,7 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
 
       // Store embedding
       try {
-        await createAndStoreEmbedding(jobResponse._id.toString(), jobEmbeddingText || '', namespace);
+        await createAndStoreEmbedding(jobResponse._id.toString(), jobEmbeddingText || '', namespace, organisation_id, jobResponse._id.toString());
         console.log("Job embedding stored successfully");
       } catch (error) {
         console.error("Embedding Storage Error:", error);

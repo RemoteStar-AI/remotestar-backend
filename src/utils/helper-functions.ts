@@ -121,7 +121,7 @@ export function extractJsonFromMarkdown(text:string) {
  * @param userId The ID of the user, which will be used as the vector ID.
  * @param embeddingText The text to create an embedding from (e.g., a resume summary).
  */
-export async function createAndStoreEmbedding(id: string, embeddingText: string, namespace: string): Promise<void> {
+export async function createAndStoreEmbedding(id: string, embeddingText: string, namespace: string, organisation_id: string, job_id: string): Promise<void> {
   const type = namespace === 'jobs' ? 'job' : 'user';
   logger.info(`[PINECONE_EMBED] Starting embedding generation for ${type}: ${id}`);
 
@@ -143,10 +143,16 @@ export async function createAndStoreEmbedding(id: string, embeddingText: string,
     // 2. Upsert to Pinecone
     logger.info(`[PINECONE_EMBED] Upserting embedding to Pinecone for ${type}: ${id}`);
     const index = pinecone.index(PINECONE_INDEX_NAME);
+    console.log("organisation_id", organisation_id);
+    console.log("job_id", job_id);
     await index.namespace(namespace).upsert([
       {
         id: id,
-        values: embedding,
+        values: embedding,  
+        metadata: {
+          organisation_id: organisation_id,
+          job_id: job_id
+        }
       },
     ]);
     logger.info(`[PINECONE_EMBED] Successfully stored embedding in Pinecone for ${type}: ${id}`);
@@ -177,7 +183,6 @@ export async function analyseJdWithCv(jobId:string, userId:string){
   const fileName = user.resume_url.split('/').pop() || 'resume.pdf';
   const contentType = response.headers.get('content-type') || 'application/pdf';
 
-
   const uploadedFile = await openai.files.create({
     file: new File([new Uint8Array(resumeBuffer)], fileName, {
       type: contentType,
@@ -203,7 +208,22 @@ export async function analyseJdWithCv(jobId:string, userId:string){
   const extractedJsonString = extractJsonFromMarkdown(analysisText);
   console.log("[DEBUG] Extracted JSON string:", extractedJsonString);
   const analysisJson = JSON.parse(extractedJsonString);
-  const analysis = await JobAnalysisOfCandidate.create({ jobId: jobId, userId: userId, data: analysisJson, newlyAnalysed: true });
+
+  // Compute rank
+  let rank = 1;
+  if (typeof analysisJson.percentageMatchScore === 'number') {
+    // Get all existing analyses for this job
+    const existingAnalyses = await JobAnalysisOfCandidate.find({ jobId });
+    // Count how many have a higher percentageMatchScore
+    const higherRankCount = existingAnalyses.filter(a => (a.data?.percentageMatchScore || 0) > analysisJson.percentageMatchScore).length;
+    rank = higherRankCount + 1;
+  } else {
+    // If no score, append to end
+    const existingCount = await JobAnalysisOfCandidate.countDocuments({ jobId });
+    rank = existingCount + 1;
+  }
+
+  const analysis = await JobAnalysisOfCandidate.create({ jobId: jobId, userId: userId, data: analysisJson, newlyAnalysed: true, rank });
   console.log("Analysis created", JSON.stringify(analysis));
   if (!analysis) {
     throw new Error("Analysis not found");
