@@ -201,7 +201,9 @@ const jobRequiredSkillsSchema=new Schema({
 const jobAnalysisOfCandidateSchema=new Schema({
   jobId: {type: String, required: true},
   userId: {type: String, required: true},
+  rank: {type: Number, required: true},
   data: {type:Object, default:{}},
+  newlyAnalysed: {type: Boolean, default: true},
 },{timestamps:true})
 
 

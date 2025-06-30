@@ -203,9 +203,13 @@ export async function analyseJdWithCv(jobId:string, userId:string){
   const extractedJsonString = extractJsonFromMarkdown(analysisText);
   console.log("[DEBUG] Extracted JSON string:", extractedJsonString);
   const analysisJson = JSON.parse(extractedJsonString);
-  const analysis = await JobAnalysisOfCandidate.create({ jobId: jobId, userId: userId, data: analysisJson });
+  const analysis = await JobAnalysisOfCandidate.create({ jobId: jobId, userId: userId, data: analysisJson, newlyAnalysed: true });
   console.log("Analysis created", JSON.stringify(analysis));
   if (!analysis) {
     throw new Error("Analysis not found");
   }
+}
+
+export async function markAnalysisAsNotNew(jobId: string, userId: string) {
+  await JobAnalysisOfCandidate.updateOne({ jobId, userId }, { $set: { newlyAnalysed: false } });
 }

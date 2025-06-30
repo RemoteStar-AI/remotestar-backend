@@ -13,6 +13,7 @@ import admin from '../../utils/firebase';
 import { pinecone } from "../../utils/pinecone";
 import mongoose from 'mongoose';
 import logger from "../../utils/loggers";
+import { markAnalysisAsNotNew } from "../../utils/helper-functions";
 const PINECONE_INDEX_NAME = 'remotestar';
 const MAX_TOP_K = 50;
 
@@ -78,9 +79,14 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       }
 
       // Prepare userProfiles
-      const userProfiles = users.map((user) => {
+      const userProfiles = await Promise.all(users.map(async (user) => {
         const bookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId);
         const analysis = paginatedAnalyses.find((a: any) => a.userId === user._id.toString());
+        let isNewlyAnalysed = false;
+        if (analysis?.newlyAnalysed) {
+          isNewlyAnalysed = true;
+          await markAnalysisAsNotNew(job._id.toString(), user._id.toString());
+        }
         return {
           userId: user._id,
           name: user.name,
@@ -94,8 +100,9 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
           total_bookmarks: user.total_bookmarks,
           bookmarkedBy: userBookmarks.filter((bookmark: any) => bookmark.memberId === memberId).map((bookmark: any) => bookmark.userId),
           analysis: analysis?.data,
+          isNewlyAnalysed,
         };
-      });
+      }));
 
       const finalResponse = {
         jobTitle: job.title,
@@ -155,7 +162,11 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     if (toAnalyseUserIds.length > 0) {
       logger.info(`[ANALYSIS] Running analyseJdWithCv for userIds: ${toAnalyseUserIds.join(", ")}`);
       const { analyseJdWithCv } = require("../../utils/helper-functions");
-      await Promise.all(toAnalyseUserIds.map((userId: string) => analyseJdWithCv(Id, userId)));
+      // Filter out userIds that do not exist in User collection
+      const existingUsers = await User.find({ _id: { $in: toAnalyseUserIds } });
+      const existingUserIds = new Set(existingUsers.map((u: any) => u._id.toString()));
+      const validToAnalyseUserIds = toAnalyseUserIds.filter((id: string) => existingUserIds.has(id));
+      await Promise.all(validToAnalyseUserIds.map((userId: string) => analyseJdWithCv(Id, userId)));
     }
 
     // Re-fetch all analyses for this job
@@ -191,9 +202,14 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     }
 
     // Prepare userProfiles
-    const userProfiles = users.map((user) => {
+    const userProfiles = await Promise.all(users.map(async (user) => {
       const bookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId);
       const analysis = paginatedAnalyses.find((a: any) => a.userId === user._id.toString());
+      let isNewlyAnalysed = false;
+      if (analysis?.newlyAnalysed) {
+        isNewlyAnalysed = true;
+        await markAnalysisAsNotNew(job._id.toString(), user._id.toString());
+      }
       return {
         userId: user._id,
         name: user.name,
@@ -207,8 +223,9 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         total_bookmarks: user.total_bookmarks,
         bookmarkedBy: userBookmarks.filter((bookmark: any) => bookmark.memberId === memberId).map((bookmark: any) => bookmark.userId),
         analysis: analysis?.data,
+        isNewlyAnalysed,
       };
-    });
+    }));
 
     const finalResponse = {
       jobTitle: job.title,
