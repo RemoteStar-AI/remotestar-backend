@@ -138,22 +138,16 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     // Query for matching candidates
     let topMatches;
     try {
-      // topMatches = await pinecone.index(PINECONE_INDEX_NAME).namespace("talent-pool-v2").query({
       topMatches = await pinecone.index(PINECONE_INDEX_NAME).namespace("talent-pool-v2").query({
         filter: {
           organisation_id: job.organisation_id,
+          job_id: { $in: [job._id.toString(), ""] }
         },
         vector: jobEmbedding,
         topK: fetchK,
         includeMetadata: true,
         includeValues: false,
-      })  ;
-      // topMatches = await pinecone.index(PINECONE_INDEX_NAME).namespace("talent-pool-v2").query({
-      //   vector: jobEmbedding,
-      //   topK: fetchK,
-      //   includeMetadata: true,
-      //   includeValues: false,
-      // });
+      });
       logger.info(`[PINECONE] Successfully queried for matching candidates. Found ${topMatches.matches.length} matches`);
     } catch (error) {
       logger.error(`[PINECONE] Error querying for matches: ${error instanceof Error ? error.message : 'Unknown error'}`);

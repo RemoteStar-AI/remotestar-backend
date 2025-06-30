@@ -235,6 +235,13 @@ async function processFile(
     if (!skText) throw new Error("Empty skills response");
     const skJson = extractJsonFromMarkdown(skText).replace(/[\r\n]/g, "");
     let skParsed = JSON.parse(skJson);
+    // Sanitize years_experience: ensure it's a number, set to 0 if not
+    skParsed = skParsed.map((skill: any) => ({
+      ...skill,
+      years_experience: typeof skill.years_experience === 'number' && !isNaN(skill.years_experience)
+        ? skill.years_experience
+        : 0,
+    }));
     if (!skillsSchema.safeParse(skParsed).success) {
       logger.error(
         `[VALIDATION] Skills validation failed for: ${file.originalname}`
@@ -655,7 +662,14 @@ resumeUploadRouter.post(
       const skText = skRes.choices[0].message.content?.trim();
       if (!skText) throw new Error("Empty skills response");
       const skJson = extractJsonFromMarkdown(skText).replace(/[\r\n]/g, "");
-      const skParsed = JSON.parse(skJson);
+      let skParsed = JSON.parse(skJson);
+      // Sanitize years_experience: ensure it's a number, set to 0 if not
+      skParsed = skParsed.map((skill: any) => ({
+        ...skill,
+        years_experience: typeof skill.years_experience === 'number' && !isNaN(skill.years_experience)
+          ? skill.years_experience
+          : 0,
+      }));
       if (!skillsSchema.safeParse(skParsed).success) {
         throw new Error("Skills validation failed");
       }
