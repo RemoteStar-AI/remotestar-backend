@@ -43,104 +43,44 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       return res.status(500).json({ error: "Error retrieving job details" });
     }
 
-    // 1. Fetch job embedding
-    let jobEmbedding;
+    // 1. Fetch all analyses for this job
+    let jobAnalyses = [];
     try {
-      const jobEmbeddingResponse = await pinecone
-        .index(PINECONE_INDEX_NAME)
-        .namespace("job-pool-v2")
-        .fetch([Id]);
-      logger.info(`[PINECONE] Successfully fetched job embedding for job ${Id}`);
-      logger.debug(`[PINECONE] Job embedding response: ${JSON.stringify(jobEmbeddingResponse)}`);
-      
-      jobEmbedding = jobEmbeddingResponse.records[Id]?.values;
-      if (!jobEmbedding) {
-        logger.error(`[PINECONE] Job embedding not found for job ${Id}`);
-        return res.status(404).json({ error: "Job embedding not found" });
-      }
+      jobAnalyses = await JobAnalysisOfCandidate.find({ jobId: Id });
     } catch (error) {
-      logger.error(`[PINECONE] Error fetching job embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return res.status(500).json({ error: "Error fetching job embedding" });
+      logger.error(`[DB] Error finding job analyses: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return res.status(500).json({ error: "Error retrieving job analyses" });
     }
 
-    // 2. Query for matching candidates
-    let topMatches;
-    try {
-      topMatches = await pinecone.index(PINECONE_INDEX_NAME).namespace("talent-pool-v2").query({
-        vector: jobEmbedding,
-        topK: fetchK,
-        includeMetadata: true,
-        includeValues: false,
-      });
-      logger.info(`[PINECONE] Successfully queried for matching candidates. Found ${topMatches.matches.length} matches`);
-      logger.debug(`[PINECONE] Top matches: ${JSON.stringify(topMatches)}`);
-    } catch (error) {
-      logger.error(`[PINECONE] Error querying for matches: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return res.status(500).json({ error: "Error finding matching candidates" });
-    }
+    // 2. If enough analyses, return top 'limit' sorted by percentageMatchScore
+    if (jobAnalyses.length >= start + limit) {
+      // Get userIds for the top candidates
+      const sortedAnalyses = jobAnalyses.sort((a: any, b: any) => (b.data?.percentageMatchScore || 0) - (a.data?.percentageMatchScore || 0));
+      const paginatedAnalyses = sortedAnalyses.slice(start, start + limit);
+      const userIds = paginatedAnalyses.map((a: any) => a.userId);
 
-    const totalCandidates = topMatches.matches.length;
-    const paginatedMatches = topMatches.matches.slice(start, start + limit);
-    const userIds = paginatedMatches.map((record: any) => record.id);
-
-    // Log similarity percentage for each candidate being sent
-    paginatedMatches.forEach((match: any) => {
-      const similarity = match.score !== undefined ? (match.score * 100).toFixed(2) : 'N/A';
-      logger.info(`[SIMILARITY] Candidate userId: ${match.id}, similarity: ${similarity}%`);
-    });
-
-    // 3. Fetch user details
-    let users;
-    try {
-      users = await User.find({ _id: { $in: userIds } });
-      logger.info(`[DB] Successfully fetched ${users.length} user details`);
-    } catch (error) {
-      logger.error(`[DB] Error finding users: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return res.status(500).json({ error: "Error retrieving user details" });
-    }
-
-    // 4. Fetch bookmarks
-    let userBookmarks;
-    try {
-      userBookmarks = await Bookmark.find({ userId: { $in: userIds } });
-      logger.info(`[DB] Successfully fetched ${userBookmarks.length} bookmarks`);
-    } catch (error) {
-      logger.error(`[DB] Error finding bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return res.status(500).json({ error: "Error retrieving bookmark details" });
-    }
-
-    // 5. Fetch job analysis (first pass)
-    let jobAnalysis = [];
-    try {
-      jobAnalysis = await JobAnalysisOfCandidate.find({ jobId: Id, userId: { $in: userIds } });
-      logger.info(`[DB] Successfully fetched ${jobAnalysis.length} job analysis`);
-    } catch (error) {
-      logger.error(`[DB] Error finding job analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return res.status(500).json({ error: "Error retrieving job analysis" });
-    }
-
-    // 6. Find missing analyses and run them in parallel
-    const existingUserIds = users.map((u: any) => u._id.toString());
-    const analysedUserIds = new Set(jobAnalysis.map((a: any) => a.userId.toString()));
-    const missingUserIds = existingUserIds.filter((id: string) => !analysedUserIds.has(id));
-    if (missingUserIds.length > 0) {
-      logger.info(`[ANALYSIS] Missing JobAnalysisOfCandidate for userIds: ${missingUserIds.join(", ")}`);
-      const { analyseJdWithCv } = require("../../utils/helper-functions");
-      await Promise.all(missingUserIds.map((userId: string) => analyseJdWithCv(Id, userId)));
-      // Re-fetch job analysis after running
+      // Fetch user details
+      let users = [];
       try {
-        jobAnalysis = await JobAnalysisOfCandidate.find({ jobId: Id, userId: { $in: userIds } });
-        logger.info(`[DB] Re-fetched job analysis after running missing analyses. Now have ${jobAnalysis.length} analyses.`);
+        users = await User.find({ _id: { $in: userIds } });
       } catch (error) {
-        logger.error(`[DB] Error re-fetching job analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        return res.status(500).json({ error: "Error retrieving job analysis after update" });
+        logger.error(`[DB] Error finding users: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return res.status(500).json({ error: "Error retrieving user details" });
       }
-    }
 
-    // 7. Prepare response
-    try {
+      // Fetch bookmarks
+      let userBookmarks = [];
+      try {
+        userBookmarks = await Bookmark.find({ userId: { $in: userIds } });
+      } catch (error) {
+        logger.error(`[DB] Error finding bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return res.status(500).json({ error: "Error retrieving bookmark details" });
+      }
+
+      // Prepare userProfiles
       const userProfiles = users.map((user) => {
         const bookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId);
+        const analysis = paginatedAnalyses.find((a: any) => a.userId === user._id.toString());
         return {
           userId: user._id,
           name: user.name,
@@ -153,7 +93,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
           bookmarkId: bookmark ? bookmark._id.toString() : null,
           total_bookmarks: user.total_bookmarks,
           bookmarkedBy: userBookmarks.filter((bookmark: any) => bookmark.memberId === memberId).map((bookmark: any) => bookmark.userId),
-          analysis: jobAnalysis.find((analysis: any) => analysis.userId === user._id.toString())?.data,
+          analysis: analysis?.data,
         };
       });
 
@@ -162,17 +102,124 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         jobId: job._id,
         start: start,
         limit: limit,
-        totalCandidates: totalCandidates,
-        data: userProfiles.sort((a: any, b: any) => b.analysis.percentageMatchScore - a.analysis.percentageMatchScore),
-      }
-
-      logger.info(`[RESPONSE] Successfully prepared response with ${userProfiles.length} profiles`);
+        totalCandidates: jobAnalyses.length,
+        data: userProfiles,
+      };
+      logger.info(`[RESPONSE] Successfully prepared response with ${userProfiles.length} profiles (from analyses only)`);
       return res.status(200).json(finalResponse);
-    } catch (error) {
-      logger.error(`[RESPONSE] Error preparing response: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return res.status(500).json({ error: "Error preparing response" });
     }
 
+    // 3. Not enough analyses, fetch more candidates from Pinecone
+    // Fetch job embedding
+    let jobEmbedding;
+    try {
+      const jobEmbeddingResponse = await pinecone
+        .index(PINECONE_INDEX_NAME)
+        .namespace("job-pool-v2")
+        .fetch([Id]);
+      logger.info(`[PINECONE] Successfully fetched job embedding for job ${Id}`);
+      jobEmbedding = jobEmbeddingResponse.records[Id]?.values;
+      if (!jobEmbedding) {
+        logger.error(`[PINECONE] Job embedding not found for job ${Id}`);
+        return res.status(404).json({ error: "Job embedding not found" });
+      }
+    } catch (error) {
+      logger.error(`[PINECONE] Error fetching job embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return res.status(500).json({ error: "Error fetching job embedding" });
+    }
+
+    // Query for matching candidates
+    let topMatches;
+    try {
+      topMatches = await pinecone.index(PINECONE_INDEX_NAME).namespace("talent-pool-v2").query({
+        vector: jobEmbedding,
+        topK: fetchK,
+        includeMetadata: true,
+        includeValues: false,
+      });
+      logger.info(`[PINECONE] Successfully queried for matching candidates. Found ${topMatches.matches.length} matches`);
+    } catch (error) {
+      logger.error(`[PINECONE] Error querying for matches: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return res.status(500).json({ error: "Error finding matching candidates" });
+    }
+
+    // Exclude already analysed userIds
+    const analysedUserIds = new Set(jobAnalyses.map((a: any) => a.userId.toString()));
+    const newMatches = topMatches.matches.filter((match: any) => !analysedUserIds.has(match.id));
+    // Only fetch as many as needed (or batch of 10)
+    const needed = (start + limit) - jobAnalyses.length;
+    const toAnalyse = newMatches.slice(0, Math.max(needed, 10));
+    const toAnalyseUserIds = toAnalyse.map((m: any) => m.id);
+
+    // Run analyseJdWithCv for each new candidate
+    if (toAnalyseUserIds.length > 0) {
+      logger.info(`[ANALYSIS] Running analyseJdWithCv for userIds: ${toAnalyseUserIds.join(", ")}`);
+      const { analyseJdWithCv } = require("../../utils/helper-functions");
+      await Promise.all(toAnalyseUserIds.map((userId: string) => analyseJdWithCv(Id, userId)));
+    }
+
+    // Re-fetch all analyses for this job
+    let allAnalyses = [];
+    try {
+      allAnalyses = await JobAnalysisOfCandidate.find({ jobId: Id });
+    } catch (error) {
+      logger.error(`[DB] Error re-fetching job analyses: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return res.status(500).json({ error: "Error retrieving job analyses after update" });
+    }
+
+    // Sort and paginate
+    const sortedAnalyses = allAnalyses.sort((a: any, b: any) => (b.data?.percentageMatchScore || 0) - (a.data?.percentageMatchScore || 0));
+    const paginatedAnalyses = sortedAnalyses.slice(start, start + limit);
+    const userIds = paginatedAnalyses.map((a: any) => a.userId);
+
+    // Fetch user details
+    let users = [];
+    try {
+      users = await User.find({ _id: { $in: userIds } });
+    } catch (error) {
+      logger.error(`[DB] Error finding users: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return res.status(500).json({ error: "Error retrieving user details" });
+    }
+
+    // Fetch bookmarks
+    let userBookmarks = [];
+    try {
+      userBookmarks = await Bookmark.find({ userId: { $in: userIds } });
+    } catch (error) {
+      logger.error(`[DB] Error finding bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return res.status(500).json({ error: "Error retrieving bookmark details" });
+    }
+
+    // Prepare userProfiles
+    const userProfiles = users.map((user) => {
+      const bookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId);
+      const analysis = paginatedAnalyses.find((a: any) => a.userId === user._id.toString());
+      return {
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        years_of_experience: user.years_of_experience,
+        designation: user.designation,
+        uploader_email: user.firebase_email,
+        current_location: user.current_location,
+        isBookmarked: !!bookmark,
+        bookmarkId: bookmark ? bookmark._id.toString() : null,
+        total_bookmarks: user.total_bookmarks,
+        bookmarkedBy: userBookmarks.filter((bookmark: any) => bookmark.memberId === memberId).map((bookmark: any) => bookmark.userId),
+        analysis: analysis?.data,
+      };
+    });
+
+    const finalResponse = {
+      jobTitle: job.title,
+      jobId: job._id,
+      start: start,
+      limit: limit,
+      totalCandidates: allAnalyses.length,
+      data: userProfiles,
+    };
+    logger.info(`[RESPONSE] Successfully prepared response with ${userProfiles.length} profiles (after new analyses)`);
+    return res.status(200).json(finalResponse);
   } catch (error) {
     console.error("Unexpected error in search route:", error);
     return res.status(500).json({ error: "An unexpected error occurred" });
