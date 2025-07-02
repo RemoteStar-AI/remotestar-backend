@@ -39,6 +39,13 @@ app.use(cors());
 app.get('/', (req: Request, res: Response) => {
     res.send('Health Check: Server is running');
 });
+app.get('/health', (req: Request, res: Response) => {
+    res.send('Health Check: Server is running');
+});
+app.get('/health-check', async (req: Request, res: Response) => {
+    res.send('Health Check: Server is running');
+});
+
 //v1 routes 
 app.use("/api/v1/extract", extractRouter);
 app.use("/api/v1/embed", embedRouter);
