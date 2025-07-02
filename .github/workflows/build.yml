@@ -55,6 +55,7 @@ jobs:
             - name: Test Docker container health endpoint
               run: |
                 echo "Starting Docker container for health check..."
+                echo "Using image: test-image:ci"
                 docker run -d -p 3000:3000 --name test_container \
                   -e NEXT_PUBLIC_FIREBASE_API_KEY="${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}" \
                   -e NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}" \
