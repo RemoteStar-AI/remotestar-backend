@@ -74,6 +74,7 @@ jobs:
                   -e WEBSITE_URL="${{ secrets.WEBSITE_URL }}" \
                   test-image:ci
                 echo "Waiting for the app to start..."
+                docker logs test_container
                 sleep 30
                 echo "Checking / endpoint for HTTP 200..."
                 docker logs test_container
