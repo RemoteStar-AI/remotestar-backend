@@ -75,6 +75,7 @@ jobs:
                 echo "Waiting for the app to start..."
                 sleep 30
                 echo "Checking / endpoint for HTTP 200..."
+                docker logs test_container
                 STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/)
                 if [ "$STATUS" != "200" ]; then
                   echo "/ endpoint did not return 200 (got $STATUS)"
@@ -85,5 +86,6 @@ jobs:
                   exit 1
                 fi
                 echo "Health check passed! Stopping and removing container."
+                docker logs test_container
                 docker stop test_container
                 docker rm test_container
