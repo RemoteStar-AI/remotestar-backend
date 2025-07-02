@@ -79,7 +79,7 @@ async function main(){
         console.log("Connected to MongoDB with database name: " + process.env.MONGODB_URI!.split('/').pop());
             // deleteRecentJobAnalyses(process.env.MONGODB_URI!);
             // console.log("Deleted recent job analyses");
-        app.listen(PORT, () => {
+        app.listen(PORT,'0.0.0.0', () => {
             console.log(`Server is running on port ${PORT}`);
         });
     } catch (error) {
