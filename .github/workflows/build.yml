@@ -4,6 +4,12 @@ on:
     push:
         branches:
             - main
+        paths:
+          - 'src/**'
+          - 'package.json'
+          - 'tsconfig.json'
+          - 'Dockerfile'
+          - 'docker-compose.yml'
     workflow_dispatch:
 jobs:
     build:
