@@ -54,16 +54,20 @@ jobs:
               run: docker build -t test-image:ci .
             - name: Test Docker container health endpoint
               run: |
+                echo "Starting Docker container for health check..."
                 docker run -d -p 3000:3000 --name test_container test-image:ci
-                # Wait for the app to start
+                echo "Waiting for the app to start..."
                 sleep 10
+                echo "Checking / endpoint for HTTP 200..."
                 STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/)
                 if [ "$STATUS" != "200" ]; then
                   echo "/ endpoint did not return 200 (got $STATUS)"
+                  echo "Container logs:"
                   docker logs test_container
                   docker stop test_container
                   docker rm test_container
                   exit 1
                 fi
+                echo "Health check passed! Stopping and removing container."
                 docker stop test_container
                 docker rm test_container
