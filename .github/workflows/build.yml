@@ -55,7 +55,23 @@ jobs:
             - name: Test Docker container health endpoint
               run: |
                 echo "Starting Docker container for health check..."
-                docker run -d -p 3000:3000 --name test_container test-image:ci
+                docker run -d -p 3000:3000 --name test_container \
+                  -e NEXT_PUBLIC_FIREBASE_API_KEY="${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}" \
+                  -e NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}" \
+                  -e NEXT_PUBLIC_FIREBASE_PROJECT_ID="${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}" \
+                  -e NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}" \
+                  -e NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}" \
+                  -e NEXT_PUBLIC_FIREBASE_APP_ID="${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}" \
+                  -e NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="${{ secrets.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID }}" \
+                  -e PINECONE_API_KEY="${{ secrets.PINECONE_API_KEY }}" \
+                  -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+                  -e PORT="${{ secrets.PORT }}" \
+                  -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+                  -e FIREBASE_SERVICE_ACCOUNT="${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" \
+                  -e EMAIL_USER="${{ secrets.EMAIL_USER }}" \
+                  -e EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}" \
+                  -e WEBSITE_URL="${{ secrets.WEBSITE_URL }}" \
+                  test-image:ci
                 echo "Waiting for the app to start..."
                 sleep 30
                 echo "Checking / endpoint for HTTP 200..."
