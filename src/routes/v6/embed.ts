@@ -419,58 +419,43 @@ resumeUploadRouter.post(
             status: "processing",
             progress: 0,
           });
-          const results = [];
           const { firebase_id, email, displayName } = req.user;
-          for (let i = 0; i < files.length; i++) {
-            logger.info(
-              `[ROUTE] Processing file ${i + 1}/${files.length}: ${
-                files[i].originalname
-              }`
-            );
-            const file = files[i];
-            const result = await processFile(
+          // Process files in parallel and preserve order
+          const fileProcessPromises = files.map((file, i) =>
+            processFile(
               file,
               firebase_id,
               email,
               organisation_id,
               displayName,
               jobId ?? null
-            );
-            results.push({
-              filename: file.originalname,
-              ...result,
-            });
-            // Update progress
-            const progress = Math.round(((i + 1) / files.length) * 100);
+            ).then(result => {
+              // Always return an object with _index, filename, and the result
+              return { _index: i, filename: file.originalname, ...result };
+            })
+          );
+          // Use Promise.all to process all files in parallel
+          let results = await Promise.all(fileProcessPromises);
+          // Sort results to maintain original file order (keep _index for now)
+          results = results.sort((a, b) => a._index - b._index);
+          // Update progress and send webhook updates as if files were processed serially
+          for (let i = 0; i < results.length; i++) {
+            const progress = Math.round(((i + 1) / results.length) * 100);
+            // Remove _index only when slicing for output
+            const outputResults = results.slice(0, i + 1).map(({ _index, ...rest }) => rest);
             processingStatus.set(processingId, {
-              status: "processing",
+              status: i === results.length - 1 ? "completed" : "processing",
               progress,
-              results,
+              results: outputResults,
             });
-            // Send progress update if webhook URL is provided
             if (webhook_url) {
               await sendWebhookNotification(webhook_url, {
                 processingId,
-                status: "processing",
+                status: i === results.length - 1 ? "completed" : "processing",
                 progress,
-                results,
+                results: outputResults,
               });
             }
-          }
-          // Mark as completed
-          processingStatus.set(processingId, {
-            status: "completed",
-            progress: 100,
-            results,
-          });
-          // Send final webhook notification
-          if (webhook_url) {
-            await sendWebhookNotification(webhook_url, {
-              processingId,
-              status: "completed",
-              progress: 100,
-              results,
-            });
           }
           logger.info(
             `[ROUTE] All files processed for processingId: ${processingId}`

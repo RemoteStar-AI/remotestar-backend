@@ -109,7 +109,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         jobId: job._id,
         start: start,
         limit: limit,
-        totalCandidates: jobAnalyses.length,
+        totalCandidates: 50,
         data: userProfiles,
       };
       logger.info(`[RESPONSE] Successfully prepared response with ${userProfiles.length} profiles (from analyses only)`);
@@ -236,7 +236,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       jobId: job._id,
       start: start,
       limit: limit,
-      totalCandidates: allAnalyses.length,
+      totalCandidates:50,
       data: userProfiles,
     };
     logger.info(`[RESPONSE] Successfully prepared response with ${userProfiles.length} profiles (after new analyses)`);
