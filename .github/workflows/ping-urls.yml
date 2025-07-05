@@ -2,7 +2,7 @@ name: Ping Render URLs
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/5 * * * *'  # every 5 minutes
   workflow_dispatch:
 
 jobs:
@@ -10,16 +10,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Install dependencies
+      - name: Ping all Render URLs
         run: |
-          echo "Installing dependencies..."
-          npm install
-     
+          echo "[$(date)] Starting ping..."
 
-      - name: Ping all URLs
-        run: |
-          echo "Pinging Render URLs..."
-          node ping.js
+          URLS=(
+            "https://remotestar-backend.onrender.com/"
+            "https://remotestar-backend-7unh.onrender.com"
+            "https://remotestar-backend-testing.onrender.com"
+          )
+
+          for url in "${URLS[@]}"; do
+            echo "Pinging $url"
+            curl --silent --show-error --fail "$url" || echo "Error pinging $url"
+          done
+
+          echo "[$(date)] Ping complete."
