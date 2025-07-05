@@ -22,7 +22,13 @@ jobs:
 
           for url in "${URLS[@]}"; do
             echo "Pinging $url"
-            curl --silent --show-error --fail "$url" || echo "Error pinging $url"
+            response=$(curl --silent --show-error --fail "$url" 2>&1)
+            exit_code=$?
+            if [ $exit_code -eq 0 ]; then
+              echo "Response from $url: $response"
+            else
+              echo "Error pinging $url: $response"
+            fi
           done
 
           echo "[$(date)] Ping complete."
