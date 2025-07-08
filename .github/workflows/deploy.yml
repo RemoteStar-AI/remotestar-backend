@@ -8,16 +8,19 @@ on:
     branches:
       - main
 
-env:
-  AWS_REGION: ap-south-1
-  ECR_REPO: 162288433251.dkr.ecr.ap-south-1.amazonaws.com/remotestar-backend
-  ECS_CLUSTER: remotestar-backend-cluster
-  ECS_SERVICE: remotestar-backend-service
-
 jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [main, staging, demo]  # Deploy to all environments; adjust as needed
+
+    env:
+      AWS_REGION: ap-south-1
+      ECR_REPO: 162288433251.dkr.ecr.ap-south-1.amazonaws.com/remotestar-backend-${{ matrix.environment }}
+      ECS_CLUSTER: remotestar-backend-${{ matrix.environment }}-cluster
+      ECS_SERVICE: remotestar-backend-${{ matrix.environment }}-service
 
     steps:
       - name: Checkout code
