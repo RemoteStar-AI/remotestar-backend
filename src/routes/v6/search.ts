@@ -10,7 +10,7 @@ import {
 } from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
 import admin from '../../utils/firebase';
-import { pinecone } from "../../utils/pinecone";
+import { getPineconeVectorCount, pinecone } from "../../utils/pinecone";
 import mongoose from 'mongoose';
 import logger from "../../utils/loggers";
 import { markAnalysisAsNotNew } from "../../utils/helper-functions";
@@ -52,6 +52,9 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       logger.error(`[DB] Error finding job analyses: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return res.status(500).json({ error: "Error retrieving job analyses" });
     }
+    
+    const totalCandidatesResponse = await getPineconeVectorCount(PINECONE_INDEX_NAME, "talent-pool-v2");
+    const totalCandidates = Math.min(50,totalCandidatesResponse);
 
     // 2. If enough analyses, return top 'limit' sorted by percentageMatchScore
     if (jobAnalyses.length >= start + limit) {
@@ -109,7 +112,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         jobId: job._id,
         start: start,
         limit: limit,
-        totalCandidates: 50,
+        totalCandidates: totalCandidates,
         data: userProfiles,
       };
       logger.info(`[RESPONSE] Successfully prepared response with ${userProfiles.length} profiles (from analyses only)`);
@@ -236,7 +239,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       jobId: job._id,
       start: start,
       limit: limit,
-      totalCandidates:50,
+      totalCandidates: totalCandidates,
       data: userProfiles,
     };
     logger.info(`[RESPONSE] Successfully prepared response with ${userProfiles.length} profiles (after new analyses)`);

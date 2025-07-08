@@ -37,13 +37,13 @@ app.use(cors());
 
 // Test route
 app.get('/', (req: Request, res: Response) => {
-    res.send('Health Check: Server is running');
+    res.send('Health Check: Server is running on db: ' + process.env.MONGODB_URI!.split('/').pop());
 });
 app.get('/health', (req: Request, res: Response) => {
-    res.send('Health Check: Server is running');
+    res.send('Health Check: Server is running on db: ' + process.env.MONGODB_URI!.split('/').pop());
 });
 app.get('/health-check', async (req: Request, res: Response) => {
-    res.send('Health Check: Server is running');
+    res.send('Health Check: Server is running on db: ' + process.env.MONGODB_URI!.split('/').pop());
 });
 
 //v1 routes 
