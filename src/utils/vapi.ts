@@ -63,6 +63,31 @@ export async function makeOutboundCall(assistantId: string, phoneNumber: string,
   }
 }
 
+export async function scheduleOutboundCall(
+  assistantId: string,
+  phoneNumber: string,
+  phoneNumberId: string,
+  scheduledTime: string // ISO 8601 timestamp
+) {
+  try {
+    const call = await vapi.calls.create({
+      assistantId,
+      phoneNumberId,
+      customer: {
+        number: phoneNumber,
+      },
+      // @ts-ignore - 'scheduledTime' is supported by Vapi API but not in current SDK types
+      scheduledTime,
+    });
+
+    // @ts-ignore - SDK response should have id based on docs
+    return call.id;
+  } catch (error) {
+    console.error('Error scheduling outbound call:', error);
+    throw error;
+  }
+}
+
 export async function getCallDetails(callId: string) {
   const call = await vapi.calls.get(callId);
   return call;

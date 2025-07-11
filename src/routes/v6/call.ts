@@ -1,12 +1,17 @@
 import { Router } from "express";
 import { z } from "zod";
-import { createSupportAssistant, getCallDetails, makeOutboundCall } from "../../utils/vapi";
+import { createSupportAssistant, getCallDetails, makeOutboundCall, scheduleOutboundCall } from "../../utils/vapi";
 import { authenticate } from "../../middleware/firebase-auth";
 import { DefaultAssistant, CallDetails, User, Job } from "../../utils/db";
 import { openai } from "../../utils/openai";
 import { VapiSystemPrompt } from "../../utils/prompts";
 
 const chatgptModel = "gpt-3.5-turbo";
+
+function processPhoneNumber(phoneNumber: string) {
+    // Trim spaces from sides and remove any - or em dashes in between
+    return phoneNumber.trim().replace(/[\u002D\u2013\u2014\s]/g, '')
+}
 
 const callSchema = z.object({
     phoneNumber: z.string().min(1),
@@ -15,6 +20,9 @@ const callSchema = z.object({
    systemPrompt: z.string().min(1),
    jobId: z.string().min(1),
    candidateId: z.string().min(1),
+   type: z.enum(["outbound", "scheduled"]),
+   date: z.string().min(1).optional(),
+   time: z.string().min(1).optional()
 });
 export const callRouter = Router();
 
@@ -65,8 +73,8 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
         const userId = req.user.firebase_id;
         const organisationId = req.user.organisation;
         const parsedBody = callSchema.parse(req.body);
-        const { phoneNumber, firstMessage, systemPrompt, jobId, candidateId } = parsedBody;
-
+        const { phoneNumber, firstMessage, systemPrompt, jobId, candidateId, type, date, time } = parsedBody;
+        const processedPhoneNumber = processPhoneNumber(phoneNumber);
         const existingAssistant = await DefaultAssistant.findOne({
             userId,
             jobId,
@@ -92,8 +100,9 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
                 { upsert: true }
             );
         }
+        if(type === "outbound"){
 
-        const call = await makeOutboundCall(assistantId, phoneNumber, process.env.VAPI_PHONE_NUMBER_ID!);
+        const call = await makeOutboundCall(assistantId, processedPhoneNumber, process.env.VAPI_PHONE_NUMBER_ID!);
         console.log(call);
         await CallDetails.create({
             jobId,
@@ -110,6 +119,31 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
             // @ts-ignore
             callId: call.id
         });
+    }
+    if(type === "scheduled"){
+        if (!date || !time) {
+            throw new Error('Date and time are required for scheduled calls');
+        }
+        //date in ISO 8601 timestamp
+        const scheduledTime = new Date(`${date}T${time}`).toISOString();
+        const call = await scheduleOutboundCall(assistantId, processedPhoneNumber, process.env.VAPI_PHONE_NUMBER_ID!, scheduledTime);
+        console.log(call);
+        await CallDetails.create({
+            jobId,
+            candidateId,
+            organisation_id: organisationId,
+            assistantId,
+            // @ts-ignore
+            callId: call.id,
+            callDetails: call
+        });
+        res.json({
+            success: true,
+            assistantId: assistantId,
+            // @ts-ignore
+            callId: call.id
+        });
+    }
     } catch (error) {
         console.error('Error in call route:', error);
         res.status(500).json({ 
