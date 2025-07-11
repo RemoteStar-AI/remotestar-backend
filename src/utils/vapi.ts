@@ -12,7 +12,7 @@ export const systemPrompt = `You are Alex, a customer service voice assistant fo
 - Speak with confidence but remain humble when you don'\''t know something
 - Demonstrate genuine concern for customer issues`;
 
-export async function createSupportAssistant(systemPrompt:string, voiceId:string, firstMessage:string) {
+export async function createSupportAssistant(systemPrompt:string, firstMessage:string) {
   try {
     const assistant = await vapi.assistants.create({
       name: 'Customer Support Assistant',
@@ -29,8 +29,8 @@ export async function createSupportAssistant(systemPrompt:string, voiceId:string
       },
       // Configure the voice
       voice: {
-        provider: 'playht',
-        voiceId: voiceId,
+        provider: 'vapi',
+        voiceId: 'Elliot',
       },
       // Set the first message
       firstMessage: firstMessage,
@@ -45,13 +45,10 @@ export async function createSupportAssistant(systemPrompt:string, voiceId:string
 }
 
 
-async function makeOutboundCall(assistantId: string, phoneNumber: string, phoneNumberId: string) {
+export async function makeOutboundCall(assistantId: string, phoneNumber: string, phoneNumberId: string) {
   try {
     const call = await vapi.calls.create({
-      assistant: {
-      // @ts-ignore
-        assistantId: assistantId,
-      },
+      assistantId: assistantId,
       phoneNumberId: phoneNumberId, // Your Vapi phone number ID
       customer: {
         number: phoneNumber, // Target phone number
@@ -66,5 +63,11 @@ async function makeOutboundCall(assistantId: string, phoneNumber: string, phoneN
   }
 }
 
+export async function getCallDetails(callId: string) {
+  const call = await vapi.calls.get(callId);
+  return call;
+}
+
+
 // Make a call to your own number for testing
-makeOutboundCall('your-assistant-id', '+1234567890','');
+//makeOutboundCall('your-assistant-id', '+1234567890','');

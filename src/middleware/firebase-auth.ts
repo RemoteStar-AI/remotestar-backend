@@ -21,6 +21,7 @@ export async function authenticate(req:Request,res:Response,next:NextFunction){
         const organisation = await Organisation.findOne({ members: { $in: [decodedToken.email] } });
         if (organisation) {
             req.user.organisation = organisation._id;
+            req.user.organisationName = organisation.name;
         }
         else {
             req.user.organisation = "";

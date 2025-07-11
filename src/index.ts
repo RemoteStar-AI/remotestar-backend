@@ -26,6 +26,7 @@ import { jobRouter as jobRouter6 } from './routes/v6/job';
 import { searchRouter as searchRouter6 } from './routes/v6/search';
 import { userRouter as userRouter6 } from './routes/v6/user';
 import { deleteRecentJobAnalyses } from './utils/migration';
+import { callRouter } from './routes/v6/call';
 dotenv.config();
 
 const app: Application = express();
@@ -79,6 +80,7 @@ app.use("/api/v6/embed", embedRouter6);
 app.use("/api/v6/job", jobRouter6);
 app.use("/api/v6/search", searchRouter6);
 app.use("/api/v6/user", userRouter6);
+app.use("/api/v6/call", callRouter);
 
 async function main(){
     try {

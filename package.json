@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": " node dist/index.js",
-    "dev": "npm run build && npm run start",
+    "dev": "nodemon",
     "validate": "ts-node src/validate-env.ts",
     "build": "tsc -b"
   },

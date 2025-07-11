@@ -206,6 +206,23 @@ const jobAnalysisOfCandidateSchema=new Schema({
   newlyAnalysed: {type: Boolean, default: true},
 },{timestamps:true})
 
+const defaultAssistantSchema=new Schema({
+  userId: {type: String, required: true},
+  jobId: {type: String, required: true},
+  candidateId: {type: String, required: true},
+  organisation_id: {type: String, required: true},
+  firstMessage: {type: String, required: true},
+  systemPrompt: {type: String, required: true},
+  assistantId: {type: String, required: true},
+},{timestamps:true})
+
+const callDetailsSchema=new Schema({
+  jobId: {type: String, required: true},
+  candidateId: {type: String, required: true},
+  organisation_id: {type: String, required: true},
+  callId: {type: String, required: true},
+  callDetails: {type: Object, default: {}},
+},{timestamps:true})
 
 export const Job = mongoose.model("Job", jobSchema);
 export const Company = mongoose.model("Company", companySchema);
@@ -219,3 +236,5 @@ export const JobSearchResponse = mongoose.model("JobSearchResponse", jobSearchRe
 export const Analysis = mongoose.model("Analysis", analysisSchema);
 export const JobRequiredSkills = mongoose.model("JobRequiredSkills", jobRequiredSkillsSchema);
 export const JobAnalysisOfCandidate = mongoose.model("JobAnalysisOfCandidate", jobAnalysisOfCandidateSchema);
+export const DefaultAssistant = mongoose.model("DefaultAssistant", defaultAssistantSchema);
+export const CallDetails = mongoose.model("CallDetails", callDetailsSchema);
