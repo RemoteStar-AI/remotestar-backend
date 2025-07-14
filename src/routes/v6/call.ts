@@ -2,11 +2,12 @@ import { Router } from "express";
 import { z } from "zod";
 import { createSupportAssistant, getCallDetails, makeOutboundCall, scheduleOutboundCall } from "../../utils/vapi";
 import { authenticate } from "../../middleware/firebase-auth";
-import { DefaultAssistant, CallDetails, User, Job } from "../../utils/db";
+import { DefaultAssistant, CallDetails, User, Job, ScheduledCalls } from "../../utils/db";
 import { openai } from "../../utils/openai";
 import { VapiSystemPrompt } from "../../utils/prompts";
 
 const chatgptModel = "gpt-3.5-turbo";
+const assumedCallDuration = 10;
 
 function processPhoneNumber(phoneNumber: string) {
     // Trim spaces from sides and remove any - or em dashes in between
@@ -16,6 +17,19 @@ function processPhoneNumber(phoneNumber: string) {
         throw new Error('Phone number must include a country code and be between 8 and 15 digits (e.g., +123456789)');
     }
     return number;
+}
+
+// Helper to find the next available X-minute slot with <5 concurrent calls
+async function findNextAvailableSlot(start = new Date()) {
+    let slot = new Date(start);
+    while (true) {
+        const concurrent = await ScheduledCalls.countDocuments({
+            startTime: { $lt: new Date(slot.getTime() + assumedCallDuration * 60 * 1000) },
+            endTime: { $gt: slot }
+        });
+        if (concurrent < 5) return slot;
+        slot = new Date(slot.getTime() + 10 * 60 * 1000);
+    }
 }
 
 const callSchema = z.object({
@@ -106,49 +120,55 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
             );
         }
         if(type === "outbound"){
-
-        const call = await makeOutboundCall(assistantId, processedPhoneNumber, process.env.VAPI_PHONE_NUMBER_ID!);
-        console.log(call);
-        await CallDetails.create({
-            jobId,
-            candidateId,
-            organisation_id: organisationId,
-            assistantId,
-            // @ts-ignore
-            callId: call.id,
-            callDetails: call
-        });
-        res.json({
-            success: true,
-            assistantId: assistantId,
-            // @ts-ignore
-            callId: call.id
-        });
-    }
-    if(type === "scheduled"){
-        if (!date || !time) {
-            throw new Error('Date and time are required for scheduled calls');
+            const call = await makeOutboundCall(assistantId, processedPhoneNumber, process.env.VAPI_PHONE_NUMBER_ID!);
+            console.log(call);
+            await CallDetails.create({
+                jobId,
+                candidateId,
+                organisation_id: organisationId,
+                assistantId,
+                // @ts-ignore
+                callId: call.id,
+                callDetails: call
+            });
+            res.json({
+                success: true,
+                assistantId: assistantId,
+                // @ts-ignore
+                callId: call.id
+            });
         }
-        //date in ISO 8601 timestamp
-        const scheduledTime = new Date(`${date}T${time}`).toISOString();
-        const call = await scheduleOutboundCall(assistantId, processedPhoneNumber, process.env.VAPI_PHONE_NUMBER_ID!, scheduledTime);
-        console.log(call);
-        await CallDetails.create({
-            jobId,
-            candidateId,
-            organisation_id: organisationId,
-            assistantId,
-            // @ts-ignore
-            callId: call.id,
-            callDetails: call
-        });
-        res.json({
-            success: true,
-            assistantId: assistantId,
-            // @ts-ignore
-            callId: call.id
-        });
-    }
+        if(type === "scheduled"){
+            if (!date || !time) {
+                throw new Error('Date and time are required for scheduled calls');
+            }
+            const startTime = new Date(`${date}T${time}`);
+            const endTime = new Date(startTime.getTime() + 10 * 60 * 1000);
+            const concurrentCalls = await ScheduledCalls.countDocuments({
+                startTime: { $lt: endTime },
+                endTime: { $gt: startTime }
+            });
+            if (concurrentCalls >= 5) {
+                const nextAvailable = await findNextAvailableSlot(startTime);
+                return res.status(409).json({
+                    success: false,
+                    message: "Max concurrent calls reached",
+                    nextAvailableSlot: nextAvailable
+                });
+            }
+            await ScheduledCalls.create({
+                startTime,
+                endTime,
+                data: {
+                    jobId,
+                    candidateId,
+                    assistantId,
+                    phoneNumber: processedPhoneNumber
+                },
+                executed: false
+            });
+            res.json({ success: true, scheduledTime: startTime });
+        }
     } catch (error) {
         console.error('Error in call route:', error);
         res.status(500).json({ 
@@ -224,3 +244,45 @@ callRouter.get('/system-prompt/:jobId/:candidateId', authenticate, async (req: a
         });
     }
 });
+
+// Cron job to execute due scheduled calls every minute
+setInterval(async () => {
+    const now = new Date();
+    try {
+        const dueCalls = await ScheduledCalls.find({
+            startTime: { $lte: now },
+            executed: false
+        });
+        for (const call of dueCalls) {
+            if (!call.data || !call.data.assistantId || !call.data.phoneNumber || !call.data.jobId || !call.data.candidateId) {
+                console.error('Scheduled call missing required data:', call);
+                continue;
+            }
+            try {
+                const result = await makeOutboundCall(
+                    call.data.assistantId,
+                    call.data.phoneNumber,
+                    process.env.VAPI_PHONE_NUMBER_ID || ''
+                );
+                // Type guard for result.id
+                let callId = '';
+                if (result && typeof result === 'object' && 'id' in result && typeof result.id === 'string') {
+                    callId = result.id;
+                }
+                await CallDetails.create({
+                    jobId: call.data.jobId,
+                    candidateId: call.data.candidateId,
+                    organisation_id: '',
+                    assistantId: call.data.assistantId,
+                    callId: callId,
+                    callDetails: result
+                });
+                await ScheduledCalls.updateOne({ _id: call._id }, { executed: true });
+            } catch (err) {
+                console.error('Error executing scheduled call:', err);
+            }
+        }
+    } catch (err) {
+        console.error('Error in scheduled call cron:', err);
+    }
+}, 60 * 1000); // Every minute

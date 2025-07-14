@@ -224,6 +224,18 @@ const callDetailsSchema=new Schema({
   callDetails: {type: Object, default: {}},
 },{timestamps:true})
 
+const scheduledCallSchema = new Schema({
+  startTime: { type: Date, required: true, index: true },
+  endTime: { type: Date, required: true, index: true },
+  data: {
+    jobId: { type: String, required: true },
+    candidateId: { type: String, required: true },
+    assistantId: { type: String, required: true },
+    phoneNumber: { type: String, required: true }
+  },
+  executed: { type: Boolean, default: false, index: true }
+}, { timestamps: true });
+
 export const Job = mongoose.model("Job", jobSchema);
 export const Company = mongoose.model("Company", companySchema);
 export const CulturalFit = mongoose.model("CulturalFit", culturalFitSchema);
@@ -238,3 +250,4 @@ export const JobRequiredSkills = mongoose.model("JobRequiredSkills", jobRequired
 export const JobAnalysisOfCandidate = mongoose.model("JobAnalysisOfCandidate", jobAnalysisOfCandidateSchema);
 export const DefaultAssistant = mongoose.model("DefaultAssistant", defaultAssistantSchema);
 export const CallDetails = mongoose.model("CallDetails", callDetailsSchema);
+export const ScheduledCalls = mongoose.model("ScheduledCalls", scheduledCallSchema);
