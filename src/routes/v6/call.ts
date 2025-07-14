@@ -10,7 +10,12 @@ const chatgptModel = "gpt-3.5-turbo";
 
 function processPhoneNumber(phoneNumber: string) {
     // Trim spaces from sides and remove any - or em dashes in between
-    return phoneNumber.trim().replace(/[\u002D\u2013\u2014\s]/g,'').replace('(','').replace(')','');
+    const number = phoneNumber.trim().replace(/[  -]/g, '').replace('(', '').replace(')', '');
+    // Check for country code (starts with '+', followed by 8 to 15 digits, E.164 standard)
+    if (!/^\+\d{8,15}$/.test(number)) {
+        throw new Error('Phone number must include a country code and be between 8 and 15 digits (e.g., +123456789)');
+    }
+    return number;
 }
 
 const callSchema = z.object({
