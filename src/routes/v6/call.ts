@@ -10,7 +10,7 @@ const chatgptModel = "gpt-3.5-turbo";
 
 function processPhoneNumber(phoneNumber: string) {
     // Trim spaces from sides and remove any - or em dashes in between
-    return phoneNumber.trim().replace(/[\u002D\u2013\u2014\s]/g, '')
+    return phoneNumber.trim().replace(/[\u002D\u2013\u2014\s]/g,'').replace('(','').replace(')','');
 }
 
 const callSchema = z.object({
