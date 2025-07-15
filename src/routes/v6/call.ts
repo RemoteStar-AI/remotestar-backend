@@ -165,7 +165,7 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
                     assistantId,
                     phoneNumber: processedPhoneNumber
                 },
-                executed: false
+                isCalled: false
             });
             res.json({ success: true, scheduledTime: startTime });
         }
@@ -256,21 +256,18 @@ setInterval(async () => {
     const now = new Date();
     try {
         while (true) {
-            // Atomically find and lock the oldest due call
+            // Atomically find and lock the oldest due call (isCalled: false)
             const call = await ScheduledCalls.findOneAndUpdate(
                 {
                     startTime: { $lte: now },
-                    executed: false,
-                    processing: false,
-                    callId: { $exists: false }
+                    isCalled: false
                 },
-                { $set: { processing: true } },
-                { new: true, sort: { startTime: 1 } } // Sort by startTime ascending (oldest first)
+                { $set: { isCalled: true } },
+                { new: true, sort: { startTime: 1 } }
             );
             if (!call) break; // No more due calls to process
             if (!call.data || !call.data.assistantId || !call.data.phoneNumber || !call.data.jobId || !call.data.candidateId) {
                 console.error('Scheduled call missing required data:', call);
-                await ScheduledCalls.updateOne({ _id: call._id }, { processing: false });
                 continue;
             }
             try {
@@ -292,10 +289,9 @@ setInterval(async () => {
                     callId: callId,
                     callDetails: result
                 });
-                await ScheduledCalls.updateOne({ _id: call._id }, { executed: true, processing: false, callId: callId });
+                await ScheduledCalls.updateOne({ _id: call._id }, { callId: callId });
             } catch (err) {
                 console.error('Error executing scheduled call:', err);
-                await ScheduledCalls.updateOne({ _id: call._id }, { processing: false });
             }
         }
     } catch (err) {

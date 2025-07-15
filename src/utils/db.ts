@@ -233,8 +233,7 @@ const scheduledCallSchema = new Schema({
     assistantId: { type: String, required: true },
     phoneNumber: { type: String, required: true }
   },
-  executed: { type: Boolean, default: false, index: true },
-  processing: { type: Boolean, default: false, index: true },
+  isCalled: { type: Boolean, default: false, index: true },
   callId: { type: String, index: true }
 }, { timestamps: true });
 
