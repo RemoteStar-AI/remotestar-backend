@@ -1,7 +1,7 @@
 # Call API Documentation
 
 ## Overview
-The Call API provides endpoints for managing voice calls using Vapi integration. It supports both immediate outbound calls and scheduled calls, with assistant management and call history tracking.
+The Call API provides endpoints for managing voice calls using Vapi integration. It supports both immediate outbound calls and scheduled calls, with assistant management and call history tracking. **Scheduled calls are limited to 5 concurrent active calls per 10-minute window.**
 
 ## Base URL
 ```
@@ -71,7 +71,7 @@ Creates either an immediate outbound call or schedules a call for a future time.
   "candidateId": "string",           // Required: Candidate identifier
   "type": "outbound" | "scheduled",  // Required: Call type
   "date": "string",                  // Optional: Date for scheduled calls (YYYY-MM-DD)
-  "time": "string"                   // Optional: Time for scheduled calls (HH:MM)
+  "time": "string"                   // Optional: Time for scheduled calls (see below for format)
 }
 ```
 
@@ -81,18 +81,55 @@ The API automatically processes phone numbers to:
 - Remove hyphens (-), en dashes (–), and em dashes (—)
 - Remove internal spaces
 - Preserve the + sign
+- Require a country code (must start with + and 8-15 digits, E.164 format)
 
 **Examples:**
 - `+91-93510-44614` → `+919351044614`
 - `  +91 93510 44614  ` → `+919351044614`
+
+#### Scheduled Call Logic
+- **Assumed Duration:** Each scheduled call is assumed to last 10 minutes.
+- **Max Concurrent Calls:** No more than 5 calls can overlap in any 10-minute window.
+- **Slot Conflict:** If the requested slot is full, the API will respond with the next available slot.
+- **Automatic Execution:** Calls are automatically executed at the scheduled time by the backend.
+
+#### Time Format and Time Zone Support
+- **date:** `YYYY-MM-DD` (e.g., `2024-06-10`)
+- **time:**
+  - Preferred: `HH:mm:ss±HH:MM` (ISO 8601, with timezone offset, e.g., `17:00:00+05:30` for 5pm IST)
+  - Also accepted: `HH:mm` (interpreted as server local time)
+- **How it works:** The backend combines `date` and `time` as `${date}T${time}` and parses it as an ISO 8601 string.
+- **To schedule in a specific timezone:** Use the appropriate offset in the `time` field.
+
+**Example for 5pm IST (UTC+5:30):**
+```json
+{
+  "phoneNumber": "+919876543210",
+  "firstMessage": "Hello!",
+  "systemPrompt": "Prompt here",
+  "jobId": "job123",
+  "candidateId": "cand456",
+  "type": "scheduled",
+  "date": "2024-06-10",
+  "time": "17:00:00+05:30"
+}
+```
 
 #### Response
 **Success (200)**
 ```json
 {
   "success": true,
-  "assistantId": "string",
-  "callId": "string"
+  "scheduledTime": "2024-06-10T17:00:00.000+05:30"
+}
+```
+
+**Slot Full (409)**
+```json
+{
+  "success": false,
+  "message": "Max concurrent calls reached",
+  "nextAvailableSlot": "2024-06-10T18:10:00.000+05:30"
 }
 ```
 
@@ -142,14 +179,14 @@ Generates a customized system prompt and first message using OpenAI based on job
 ### Call Schema
 ```typescript
 {
-  phoneNumber: string;           // Processed phone number
+  phoneNumber: string;           // Processed phone number (E.164, must include country code)
   firstMessage: string;          // Assistant's first message
   systemPrompt: string;          // Assistant's system prompt
   jobId: string;                 // Job identifier
   candidateId: string;           // Candidate identifier
   type: "outbound" | "scheduled"; // Call type
   date?: string;                 // Date for scheduled calls
-  time?: string;                 // Time for scheduled calls
+  time?: string;                 // Time for scheduled calls (with optional timezone offset)
 }
 ```
 
@@ -178,12 +215,28 @@ Generates a customized system prompt and first message using OpenAI based on job
 }
 ```
 
+### ScheduledCalls Model
+```typescript
+{
+  startTime: Date;               // Scheduled start time (with timezone)
+  endTime: Date;                 // Scheduled end time (10 minutes after startTime)
+  data: {
+    jobId: string;
+    candidateId: string;
+    assistantId: string;
+    phoneNumber: string;
+  };
+  executed: boolean;             // Whether the call has been executed
+}
+```
+
 ## Error Handling
 
 ### Common Error Codes
 - **400**: Bad Request - Invalid request body or missing required fields
 - **401**: Unauthorized - Missing or invalid authentication
 - **404**: Not Found - Job or candidate not found
+- **409**: Slot Full - Max concurrent calls reached for requested time
 - **500**: Internal Server Error - Server-side error
 
 ### Error Response Format
@@ -216,7 +269,7 @@ curl -X POST /v6/call \
   }'
 ```
 
-### Scheduled Call
+### Scheduled Call (with Timezone)
 ```bash
 curl -X POST /v6/call \
   -H "Authorization: Bearer <firebase-token>" \
@@ -229,7 +282,7 @@ curl -X POST /v6/call \
     "candidateId": "candidate456",
     "type": "scheduled",
     "date": "2024-10-15",
-    "time": "14:30"
+    "time": "17:00:00+05:30"
   }'
 ```
 
