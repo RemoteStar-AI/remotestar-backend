@@ -4,7 +4,7 @@ import { createSupportAssistant, getCallDetails, makeOutboundCall, scheduleOutbo
 import { authenticate } from "../../middleware/firebase-auth";
 import { DefaultAssistant, CallDetails, User, Job, ScheduledCalls } from "../../utils/db";
 import { openai } from "../../utils/openai";
-import { VapiSystemPrompt } from "../../utils/prompts";
+import { VapiSystemPrompt2 as VapiSystemPrompt } from "../../utils/prompts";
 
 const chatgptModel = "gpt-3.5-turbo";
 const assumedCallDuration = 10;
@@ -245,17 +245,32 @@ callRouter.get('/system-prompt/:jobId/:candidateId', authenticate, async (req: a
     }
 });
 
+let isCronRunning = false;
 // Cron job to execute due scheduled calls every minute
 setInterval(async () => {
+    if (isCronRunning) {
+        console.log('Cron is already running, skipping this interval');
+        return;
+    }
+    isCronRunning = true;
     const now = new Date();
     try {
-        const dueCalls = await ScheduledCalls.find({
-            startTime: { $lte: now },
-            executed: false
-        });
-        for (const call of dueCalls) {
+        while (true) {
+            // Atomically find and lock the oldest due call
+            const call = await ScheduledCalls.findOneAndUpdate(
+                {
+                    startTime: { $lte: now },
+                    executed: false,
+                    processing: false,
+                    callId: { $exists: false }
+                },
+                { $set: { processing: true } },
+                { new: true, sort: { startTime: 1 } } // Sort by startTime ascending (oldest first)
+            );
+            if (!call) break; // No more due calls to process
             if (!call.data || !call.data.assistantId || !call.data.phoneNumber || !call.data.jobId || !call.data.candidateId) {
                 console.error('Scheduled call missing required data:', call);
+                await ScheduledCalls.updateOne({ _id: call._id }, { processing: false });
                 continue;
             }
             try {
@@ -277,12 +292,15 @@ setInterval(async () => {
                     callId: callId,
                     callDetails: result
                 });
-                await ScheduledCalls.updateOne({ _id: call._id }, { executed: true });
+                await ScheduledCalls.updateOne({ _id: call._id }, { executed: true, processing: false, callId: callId });
             } catch (err) {
                 console.error('Error executing scheduled call:', err);
+                await ScheduledCalls.updateOne({ _id: call._id }, { processing: false });
             }
         }
     } catch (err) {
         console.error('Error in scheduled call cron:', err);
+    } finally {
+        isCronRunning = false;
     }
 }, 60 * 1000); // Every minute
