@@ -1523,6 +1523,8 @@ return `
   - Identify Top skills from the job description and add them to the system prompt and questions to be asked for those skills in the safe format as per given example below
   - add <wait for candidate to respond> after each question in the final prompt for Vapi AI
   - add a section where the prompt asks the ai to exaplain the candidate about the job role and with description pasted by you.
+  - add proper line breaks in the system prompt for Vapi AI i.e "\\n".
+  - make sure the final prompt is as big and as descriptive like the given example below.
 
   Given below is an example of a prompt which is fit for Vapi AI voice assistant for a recruitment call.
 
@@ -1630,11 +1632,6 @@ RemoteStar, a CTO-led tech hiring service, is designed to connect businesses wit
 
 
 // prompt ends here
-
-
-
-
-
 
 `;
 }
