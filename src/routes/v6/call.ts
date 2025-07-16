@@ -4,7 +4,7 @@ import { createSupportAssistant, getCallDetails, makeOutboundCall, scheduleOutbo
 import { authenticate } from "../../middleware/firebase-auth";
 import { DefaultAssistant, CallDetails, User, Job, ScheduledCalls } from "../../utils/db";
 import { openai } from "../../utils/openai";
-import { VapiSystemPrompt2 as VapiSystemPrompt } from "../../utils/prompts";
+import { VapiSystemPrompt3 as VapiSystemPrompt } from "../../utils/prompts";
 
 const chatgptModel = "gpt-3.5-turbo";
 const assumedCallDuration = 10;
