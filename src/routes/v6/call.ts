@@ -196,7 +196,6 @@ callRouter.get('/system-prompt/:jobId/:candidateId', authenticate, async (req: a
 
             const firstMessageAndSystemPromptPrompt = VapiSystemPrompt(
                 JSON.stringify(job.description),
-                JSON.stringify(user),
                 req.user.organisationName
             );
 

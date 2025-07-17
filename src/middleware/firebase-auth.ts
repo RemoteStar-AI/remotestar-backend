@@ -25,6 +25,7 @@ export async function authenticate(req:Request,res:Response,next:NextFunction){
         }
         else {
             req.user.organisation = "";
+            req.user.organisationName = "";
         }
         // Log the decoded token for debugging
         // console.log('Decoded token:', decodedToken);

@@ -1497,14 +1497,13 @@ RemoteStar, a CTO-led tech hiring service, is designed to connect businesses wit
 `;
 }
 
-export function VapiSystemPrompt3(jobDescription: string, userData: string, organisationName: string): string {
+export function VapiSystemPrompt3(jobDescription: string, organisationName: string): string {
 
   
 return `
   You are an expert AI Prompt Engineer who is an expert in creating prompts for Vapi AI voice assistants for recruitment calls.
-  You are given a job description and a user data : ${jobDescription}.
+  You are given a job description : ${jobDescription}.
   You are given a organisation name : ${organisationName}.
-  You are given a user data : ${userData}.
   Your task is to create a prompt for Vapi AI voice assistant for a recruitment call.
 
   your job is to create a system prompt and first message for Vapi AI voice assistant for a recruitment call.
