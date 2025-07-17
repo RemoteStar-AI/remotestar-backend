@@ -1634,3 +1634,42 @@ RemoteStar, a CTO-led tech hiring service, is designed to connect businesses wit
 
 `;
 }
+
+export function VapiAnalysisPrompt():string{
+  return `
+  You are an expert at analysing call trascript and rating candidates based on that transcript.
+
+  Transcript: {{transcript}}
+
+  analyse the entire call transcript and give me these results in JSON format with following fields
+  overall_technical_skills: <analyse the candidate's response and give a rating out of 100 to the candidate based upon his overall technical skills and response,it is also mentioned in the transcript>,
+  overall_communication: <analyse the candidate's response and give a rating out of 100 to the candidate based upon his overall communication skills and response, it is also mentioned in the transcript>,
+  technical_skills: [{
+    skill_name: <name of the skill>,
+    skill_rating: <rating of the skill>,
+    skill_assessment: <based upon the candidate's response, give me a short assessment of his knowledge on the skill>,
+  },{
+    skill_name: <name of the skill>,
+    skill_rating: <rating of the skill>,
+    skill_assessment: <based upon the candidate's response, give me a short assessment of his knowledge on the skill>,
+  }]
+
+  response format:
+  {
+    overall_technical_skills: number,
+    overall_communication: number,
+    technical_skills: [{
+      skill_name: string,
+      skill_rating: number,
+      skill_assessment: string,
+    }]
+  }
+  INSTRUCTIONS:
+  - IT should be a JSON object with the fields mentioned above.
+  - No markdown formatting.
+  - No extra text.
+  - No extra spaces.
+  - No extra lines.
+  - Only return the JSON object, no other text.
+  `
+}

@@ -4,7 +4,7 @@ import { createSupportAssistant, getCallDetails, makeOutboundCall, scheduleOutbo
 import { authenticate } from "../../middleware/firebase-auth";
 import { DefaultAssistant, CallDetails, User, Job, ScheduledCalls } from "../../utils/db";
 import { openai } from "../../utils/openai";
-import { VapiSystemPrompt3 as VapiSystemPrompt } from "../../utils/prompts";
+import { VapiSystemPrompt3 as VapiSystemPrompt, VapiAnalysisPrompt } from "../../utils/prompts";
 
 const chatgptModel = "gpt-3.5-turbo";
 const assumedCallDuration = 10;
@@ -103,7 +103,8 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
         if (existingAssistant && existingAssistant.systemPrompt === systemPrompt && existingAssistant.firstMessage === firstMessage) {
             assistantId = existingAssistant.assistantId;
         } else {
-            const assistant = await createSupportAssistant(systemPrompt, firstMessage);
+            const analysisPrompt = VapiAnalysisPrompt();
+            const assistant = await createSupportAssistant(systemPrompt, firstMessage, analysisPrompt);
             assistantId = assistant.id;
             await DefaultAssistant.updateOne(
                 { userId, jobId, candidateId, organisation_id: organisationId },

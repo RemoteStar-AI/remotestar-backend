@@ -1,4 +1,5 @@
 import { VapiClient } from '@vapi-ai/server-sdk';
+import { VapiAnalysisPrompt } from './prompts';
 
 // Initialize the Vapi client
 const vapi = new VapiClient({
@@ -12,11 +13,56 @@ export const systemPrompt = `You are Alex, a customer service voice assistant fo
 - Speak with confidence but remain humble when you don'\''t know something
 - Demonstrate genuine concern for customer issues`;
 
-export async function createSupportAssistant(systemPrompt:string, firstMessage:string) {
+export async function createSupportAssistant(systemPrompt: string, firstMessage: string, VapiAnalysisPrompt: string) {
   try {
+    const defaultAnalysisPlan: object = {
+      summaryPlan: {
+        enabled: true,
+        timeoutSeconds: 60,
+        messages: [
+          { role: "system", content: VapiAnalysisPrompt },
+          { role: "user", content: "Here is the transcript:\n\n{{transcript}}\n\n" }
+        ]
+      },
+      structuredDataPlan: {
+        enabled: true,
+        timeoutSeconds: 60,
+        messages: [
+          { role: "system", content: VapiAnalysisPrompt }
+        ],
+        schema: {
+          type: "object",
+          properties: {
+            overall_technical_skills: { type: "number" },
+            overall_communication: { type: "number" },
+            technical_skills: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  skill_name: { type: "string" },
+                  skill_rating: { type: "number" },
+                  skill_assessment: { type: "string" }
+                },
+                required: ["skill_name", "skill_rating", "skill_assessment"],
+                additionalProperties: false
+              }
+            }
+          },
+          required: ["overall_technical_skills", "overall_communication", "technical_skills"],
+          additionalProperties: false
+        }
+      },
+      successEvaluationPlan: {
+        enabled: true,
+        timeoutSeconds: 60,
+        messages: [
+          { role: "system", content: VapiAnalysisPrompt },
+        ]
+      }
+    };
     const assistant = await vapi.assistants.create({
       name: 'Customer Support Assistant',
-      // Configure the AI model
       model: {
         provider: 'openai',
         model: 'gpt-4o',
@@ -27,13 +73,12 @@ export async function createSupportAssistant(systemPrompt:string, firstMessage:s
           },
         ],
       },
-      // Configure the voice
       voice: {
         provider: 'vapi',
         voiceId: 'Elliot',
       },
-      // Set the first message
       firstMessage: firstMessage,
+      analysisPlan: defaultAnalysisPlan,
     });
     
     console.log('Assistant created:', assistant.id);
