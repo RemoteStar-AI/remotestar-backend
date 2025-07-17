@@ -197,6 +197,149 @@ jobRouter.get("/:id/regenerate-prompt", authenticate, async (req: any, res: any)
   }
 });
 
+jobRouter.put("/", authenticate, async (req: any, res: any) => {
+  const body = req.body;
+  const parsedBody = jobSchema.safeParse(body);
+  if (!parsedBody.success) {
+    return res.status(400).json({ error: parsedBody.error.format() });
+  }
+  const data = parsedBody.data;
+  if (!data._id) {
+    return res.status(400).json({ error: "Missing job _id for update" });
+  }
+  try {
+    let updatedJob: any;
+    // Fetch the existing job
+    const existingJob = await Job.findById(data._id);
+    if (!existingJob) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+    // Check if description changed
+    const descriptionChanged = data.description !== existingJob.description;
+    if (descriptionChanged) {
+      // Delete old embedding
+      try {
+        const { deleteEmbedding } = require("../../utils/helper-functions");
+        await deleteEmbedding(
+          existingJob._id.toString(),
+          namespace,
+          req.user.organisation
+        );
+      } catch (error) {
+        console.error("Failed to delete old embedding:", error);
+        // Not a hard failure, continue
+      }
+      // Generate new embedding
+      let jobEmbeddingText;
+      try {
+        const jobEmbeddingPromptText = jobEmbeddingPrompt(data.description);
+        const jobEmbedding = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: jobEmbeddingPromptText }],
+        });
+        jobEmbeddingText = jobEmbedding.choices[0].message.content;
+      } catch (error) {
+        console.error("OpenAI API Error (PUT):", error);
+        return res.status(500).json({ error: "Failed to generate job embedding" });
+      }
+      // Update job record (all fields)
+      updatedJob = await Job.findByIdAndUpdate(
+        data._id,
+        { $set: data },
+        { new: true }
+      );
+      if (!updatedJob) {
+        return res.status(404).json({ error: "Job not found after update" });
+      }
+      // Store new embedding
+      try {
+        await createAndStoreEmbedding(
+          updatedJob._id.toString(),
+          jobEmbeddingText || "",
+          namespace,
+          req.user.organisation,
+          updatedJob._id.toString()
+        );
+      } catch (error) {
+        console.error("Embedding Storage Error (PUT):", error);
+        return res.status(500).json({ error: "Failed to store job embedding" });
+      }
+      // Generate new prompt
+      try {
+        const openaiPrompt = VapiSystemPrompt(
+          data.description,
+          req.user.organisationName
+        );
+        const openaiResponse = await openai.chat.completions.create({
+          model: "gpt-3.5-turbo",
+          messages: [{ role: "user", content: openaiPrompt }],
+          response_format: { type: "json_object" }
+        });
+        const prompt = openaiResponse.choices[0].message.content;
+        if (prompt && prompt !== "null") {
+          updatedJob.prompt = prompt;
+          await updatedJob.save();
+        }
+      } catch (error) {
+        console.error("Prompt Generation Error (PUT):", error);
+        return res.status(500).json({ error: "Failed to generate prompt" });
+      }
+      // Re-analyse top 10 candidates
+      (async () => {
+        try {
+          const PINECONE_INDEX_NAME = "remotestar";
+          // 1. Fetch job embedding
+          const jobEmbeddingResponse = await require("../../utils/pinecone")
+            .pinecone.index(PINECONE_INDEX_NAME)
+            .namespace("job-pool-v2")
+            .fetch([updatedJob._id.toString()]);
+          const jobEmbedding =
+            jobEmbeddingResponse.records[updatedJob._id.toString()]?.values;
+          if (!jobEmbedding) throw new Error("Job embedding not found");
+          // 2. Query Pinecone for top 10 candidates
+          const topMatches = await require("../../utils/pinecone")
+            .pinecone.index(PINECONE_INDEX_NAME)
+            .namespace("talent-pool-v2")
+            .query({
+              vector: jobEmbedding,
+              topK: 10,
+              includeMetadata: true,
+              includeValues: false,
+            });
+          // 3. Extract user IDs
+          const userIds = topMatches.matches.map((record: any) => record.id);
+          // 4. Analyse each user (in parallel)
+          const { analyseJdWithCv } = require("../../utils/helper-functions");
+          await Promise.all(
+            userIds.map((userId: string) =>
+              analyseJdWithCv(updatedJob._id.toString(), userId)
+            )
+          );
+        } catch (err) {
+          console.error(
+            "Background analysis for top 10 candidates failed (PUT):",
+            err
+          );
+        }
+      })();
+    } else {
+      // Just update the fields as usual
+      updatedJob = await Job.findByIdAndUpdate(
+        data._id,
+        { $set: data },
+        { new: true }
+      );
+      if (!updatedJob) {
+        return res.status(404).json({ error: "Job not found after update" });
+      }
+    }
+    return res.status(200).json({ message: "Job updated successfully", data: updatedJob });
+  } catch (error) {
+    console.error("Job update error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 jobRouter.delete("/:id", authenticate, async (req: any, res: any) => {
   try {
     const id = req.params.id;

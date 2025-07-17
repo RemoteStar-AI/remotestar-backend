@@ -146,6 +146,7 @@ export const jobSchema = z.object({
   useRanges: z.boolean(),
   minSalary: z.string().optional(),
   maxSalary: z.string().optional(),
+  prompt: z.string().optional(),
   applicationProcess: z.enum(["interview", "assessment", "direct"]),
   yearsOfExperience: z.object({
     min: z.string(),
