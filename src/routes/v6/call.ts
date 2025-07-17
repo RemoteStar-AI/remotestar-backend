@@ -50,10 +50,9 @@ callRouter.get('/:jobId/:candidateId',authenticate, async (req:any, res:any) => 
     const userId = req.user.firebase_id;
     const organisationId = req.user.organisation;
     const assistant = await DefaultAssistant.findOne({
-        userId,
         organisation_id: organisationId,
+        candidateId,
         jobId,
-        candidateId
     });
     const previousCalls = await CallDetails.find({
         jobId,
@@ -95,7 +94,6 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
         const { phoneNumber, firstMessage, systemPrompt, jobId, candidateId, type, date, time } = parsedBody;
         const processedPhoneNumber = processPhoneNumber(phoneNumber);
         const existingAssistant = await DefaultAssistant.findOne({
-            userId,
             jobId,
             candidateId,
             organisation_id: organisationId
@@ -163,7 +161,8 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
                     jobId,
                     candidateId,
                     assistantId,
-                    phoneNumber: processedPhoneNumber
+                    phoneNumber: processedPhoneNumber,
+                    organisation_id: organisationId
                 },
                 isCalled: false
             });
@@ -283,7 +282,7 @@ setInterval(async () => {
                 await CallDetails.create({
                     jobId: call.data.jobId,
                     candidateId: call.data.candidateId,
-                    organisation_id: '',
+                    organisation_id: call.data.organisation_id,
                     assistantId: call.data.assistantId,
                     callId: callId,
                     callDetails: result

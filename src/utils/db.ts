@@ -232,7 +232,8 @@ const scheduledCallSchema = new Schema({
     jobId: { type: String, required: true },
     candidateId: { type: String, required: true },
     assistantId: { type: String, required: true },
-    phoneNumber: { type: String, required: true }
+    phoneNumber: { type: String, required: true },
+    organisation_id: {type: String, required: true},
   },
   isCalled: { type: Boolean, default: false, index: true },
   callId: { type: String, index: true }
