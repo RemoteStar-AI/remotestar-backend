@@ -137,7 +137,3 @@ export async function getCallDetails(callId: string) {
   const call = await vapi.calls.get(callId);
   return call;
 }
-
-
-// Make a call to your own number for testing
-//makeOutboundCall('your-assistant-id', '+1234567890','');
