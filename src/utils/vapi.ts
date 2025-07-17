@@ -57,7 +57,7 @@ export async function createSupportAssistant(systemPrompt: string, firstMessage:
         enabled: true,
         timeoutSeconds: 60,
         messages: [
-          { role: "system", content: VapiAnalysisPrompt },
+          { role: "system", content: "if call goes well and we talk a little bit then its a success full call" },
         ]
       }
     };
@@ -134,6 +134,12 @@ export async function scheduleOutboundCall(
 }
 
 export async function getCallDetails(callId: string) {
-  const call = await vapi.calls.get(callId);
-  return call;
+  try {
+    const call = await vapi.calls.get(callId);
+    console.log('Call details:', call);
+    return call;
+  } catch (error) {
+    console.error('Error getting call details:', error);
+    return {};
+  }
 }

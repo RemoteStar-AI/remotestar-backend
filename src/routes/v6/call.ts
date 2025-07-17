@@ -67,10 +67,16 @@ callRouter.get('/:jobId/:candidateId',authenticate, async (req:any, res:any) => 
         return;
     }
 
-    const callDetails = await Promise.all(previousCalls.map(async (call:any) => {
-        const callDetails = await getCallDetails(call.callId);
-        return callDetails;
-    }));
+    let callDetails: any[] = [];
+    try {
+        callDetails = await Promise.all(previousCalls.map(async (call:any) => {
+            const callDetails = await getCallDetails(call.callId);
+            return callDetails;
+        }));
+    } catch (error) {
+        console.error('Error getting call details:', error);
+        callDetails = [];
+    }
 
     if(previousCalls.length > 0){
         res.json({
