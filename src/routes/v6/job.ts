@@ -189,7 +189,7 @@ jobRouter.get("/:id/regenerate-prompt", authenticate, async (req: any, res: any)
   });
   const prompt = openaiResponse.choices[0].message.content;
   if (prompt && prompt !== "null") {
-    job.prompt = prompt;
+    job.prompt = prompt +`\n \n [JOB_DESCRIPTION] : ${job.description}`;
     await job.save();
     res.status(200).json({ message: "Prompt regenerated successfully", prompt:prompt });
   } else {
