@@ -277,7 +277,7 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
         });
         const prompt = openaiResponse.choices[0].message.content;
         if (prompt && prompt !== "null") {
-          updatedJob.prompt = prompt;
+          updatedJob.prompt = prompt +`\n \n [JOB_DESCRIPTION] : ${data.description}`;
           await updatedJob.save();
         }
       } catch (error) {
