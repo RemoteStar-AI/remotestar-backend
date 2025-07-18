@@ -149,18 +149,18 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
             }
             const startTime = new Date(`${date}T${time}`);
             const endTime = new Date(startTime.getTime() + 10 * 60 * 1000);
-            const concurrentCalls = await ScheduledCalls.countDocuments({
-                startTime: { $lt: endTime },
-                endTime: { $gt: startTime }
-            });
-            if (concurrentCalls >= 5) {
-                const nextAvailable = await findNextAvailableSlot(startTime);
-                return res.status(409).json({
-                    success: false,
-                    message: "Max concurrent calls reached",
-                    nextAvailableSlot: nextAvailable
-                });
-            }
+            // const concurrentCalls = await ScheduledCalls.countDocuments({
+            //     startTime: { $lt: endTime },
+            //     endTime: { $gt: startTime }
+            // });
+            // if (concurrentCalls >= 5) {
+            //     const nextAvailable = await findNextAvailableSlot(startTime);
+            //     return res.status(409).json({
+            //         success: false,
+            //         message: "Max concurrent calls reached",
+            //         nextAvailableSlot: nextAvailable
+            //     });
+            // }
             await ScheduledCalls.create({
                 startTime,
                 endTime,
@@ -261,6 +261,16 @@ setInterval(async () => {
     const now = new Date();
     try {
         while (true) {
+            // Check how many calls are currently running (isCalled: true, endTime > now, callId exists)
+            const runningCalls = await ScheduledCalls.countDocuments({
+                isCalled: true,
+                endTime: { $gt: now },
+                callId: { $exists: true, $ne: null }
+            });
+            if (runningCalls >= 5) {
+                // Limit reached, stop processing more calls this interval
+                break;
+            }
             // Atomically find and lock the oldest due call (isCalled: false)
             const call = await ScheduledCalls.findOneAndUpdate(
                 {
