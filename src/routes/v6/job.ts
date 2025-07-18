@@ -118,6 +118,14 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
           if (!parsedPromptSchema.success) {
             throw new Error("Invalid prompt format");
           }
+          // Ensure jobResponse.prompt is an object
+          if (typeof jobResponse.prompt === "string") {
+            try {
+              jobResponse.prompt = JSON.parse(jobResponse.prompt);
+            } catch (e) {
+              jobResponse.prompt = {};
+            }
+          }
           jobResponse.prompt.systemPrompt = insertErrorSection(parsedPromptSchema.data.systemPrompt+`\n \n [JOB_DESCRIPTION] : ${data.description}`);
           jobResponse.prompt.firstMessage = parsedPromptSchema.data.firstMessage;
   
@@ -208,6 +216,14 @@ jobRouter.get("/:id/regenerate-prompt", authenticate, async (req: any, res: any)
     const parsedPromptSchema = VapiPromptSchema.safeParse(parsedPrompt);
     if (!parsedPromptSchema.success) {
       throw new Error("Invalid prompt format");
+    }
+    // Ensure job.prompt is an object
+    if (typeof job.prompt === "string") {
+      try {
+        job.prompt = JSON.parse(job.prompt);
+      } catch (e) {
+        job.prompt = {};
+      }
     }
     const systemPromptWithDesc = insertErrorSection(parsedPromptSchema.data.systemPrompt + `\n \n [JOB_DESCRIPTION] : ${job.description}`);
     job.prompt.systemPrompt = systemPromptWithDesc;
@@ -303,6 +319,14 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
           const parsedPromptSchema = VapiPromptSchema.safeParse(parsedPrompt);
           if (!parsedPromptSchema.success) {
             throw new Error("Invalid prompt format");
+          }
+          // Ensure updatedJob.prompt is an object
+          if (typeof updatedJob.prompt === "string") {
+            try {
+              updatedJob.prompt = JSON.parse(updatedJob.prompt);
+            } catch (e) {
+              updatedJob.prompt = {};
+            }
           }
           updatedJob.prompt.systemPrompt = insertErrorSection(parsedPromptSchema.data.systemPrompt +`\n \n [JOB_DESCRIPTION] : ${data.description}`);
           updatedJob.prompt.firstMessage = parsedPromptSchema.data.firstMessage;
