@@ -229,7 +229,7 @@ jobRouter.get("/:id/regenerate-prompt", authenticate, async (req: any, res: any)
     job.prompt.systemPrompt = systemPromptWithDesc;
     job.prompt.firstMessage = parsedPromptSchema.data.firstMessage;
     await job.save();
-    res.status(200).json({ message: "Prompt regenerated successfully", prompt:prompt });
+    res.status(200).json({ message: "Prompt regenerated successfully", prompt:systemPromptWithDesc });
   } else {
     res.status(200).json({ message: "Prompt regeneration failed", data: job });
   }
