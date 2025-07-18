@@ -7,7 +7,7 @@ import {
   VapiSystemPrompt3 as VapiSystemPrompt,
 } from "../../utils/prompts";
 import { openai } from "../../utils/openai";
-import { createAndStoreEmbedding, extractJsonFromMarkdown } from "../../utils/helper-functions";
+import { createAndStoreEmbedding, extractJsonFromMarkdown, insertErrorSection } from "../../utils/helper-functions";
 import { authenticate } from "../../middleware/firebase-auth";
 import { z } from "zod";
 import { systemPrompt } from "../../utils/vapi";
@@ -118,7 +118,9 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
           if (!parsedPromptSchema.success) {
             throw new Error("Invalid prompt format");
           }
-          jobResponse.prompt = parsedPrompt;
+          jobResponse.prompt.systemPrompt = insertErrorSection(parsedPromptSchema.data.systemPrompt+`\n \n [JOB_DESCRIPTION] : ${data.description}`);
+          jobResponse.prompt.firstMessage = parsedPromptSchema.data.firstMessage;
+  
           await jobResponse.save();
           console.log("Prompt generated successfully");
         }
@@ -207,7 +209,7 @@ jobRouter.get("/:id/regenerate-prompt", authenticate, async (req: any, res: any)
     if (!parsedPromptSchema.success) {
       throw new Error("Invalid prompt format");
     }
-    const systemPromptWithDesc = parsedPromptSchema.data.systemPrompt + `\n \n [JOB_DESCRIPTION] : ${job.description}`;
+    const systemPromptWithDesc = insertErrorSection(parsedPromptSchema.data.systemPrompt + `\n \n [JOB_DESCRIPTION] : ${job.description}`);
     job.prompt.systemPrompt = systemPromptWithDesc;
     job.prompt.firstMessage = parsedPromptSchema.data.firstMessage;
     await job.save();
@@ -302,7 +304,7 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
           if (!parsedPromptSchema.success) {
             throw new Error("Invalid prompt format");
           }
-          updatedJob.prompt.systemPrompt = parsedPromptSchema.data.systemPrompt +`\n \n [JOB_DESCRIPTION] : ${data.description}`;
+          updatedJob.prompt.systemPrompt = insertErrorSection(parsedPromptSchema.data.systemPrompt +`\n \n [JOB_DESCRIPTION] : ${data.description}`);
           updatedJob.prompt.firstMessage = parsedPromptSchema.data.firstMessage;
           await updatedJob.save();
         }

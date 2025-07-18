@@ -5,6 +5,7 @@ import { authenticate } from "../../middleware/firebase-auth";
 import { DefaultAssistant, CallDetails, User, Job, ScheduledCalls } from "../../utils/db";
 import { openai } from "../../utils/openai";
 import { VapiSystemPrompt3 as VapiSystemPrompt, VapiAnalysisPrompt } from "../../utils/prompts";
+import { insertErrorSection } from "../../utils/helper-functions";
 
 const chatgptModel = "gpt-3.5-turbo";
 const assumedCallDuration = 10;
@@ -34,7 +35,6 @@ async function findNextAvailableSlot(start = new Date()) {
 
 const callSchema = z.object({
     phoneNumber: z.string().min(1),
-   // assistantId: z.string().min(1),
    firstMessage: z.string().min(1),
    systemPrompt: z.string().min(1),
    jobId: z.string().min(1),

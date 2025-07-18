@@ -233,3 +233,20 @@ export async function analyseJdWithCv(jobId:string, userId:string){
 export async function markAnalysisAsNotNew(jobId: string, userId: string) {
   await JobAnalysisOfCandidate.updateOne({ jobId, userId }, { $set: { newlyAnalysed: false } });
 }
+
+export function insertErrorSection(prompt: string): string {
+  const marker = '[Ratings & Feedback]';
+  const index = prompt.indexOf(marker);
+  const testSection = `[Error Handling / Fallback]
+- If the prospect is unsure or has questions, offer to provide more details: "I can help clarify any questions you might have. What would you like to know about the role?"
+- For unclear responses, ask for clarification: "Could you please repeat that? I want to ensure I provide you with the best information."
+- If they inquire about the employer: "We cannot reveal that information just yet. I will share the summary of our call with the hiring manager, and if you are selected, we will share the employer details and invite you to a video interview."`;
+
+  if (index !== -1) {
+    // Insert the test section before the [Ratings & Feedback] marker
+    return `${prompt.slice(0, index)}${testSection.trim()}\n\n${prompt.slice(index)}`;
+  } else {
+    // If the marker is not found, append the test section at the end
+    return `${prompt.trim()}\n\n${testSection.trim()}`;
+  }
+}
