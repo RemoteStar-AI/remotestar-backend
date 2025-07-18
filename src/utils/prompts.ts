@@ -1517,7 +1517,7 @@ return `
   for example: "Hi this is Riley a recruiter from RemoteStar. Do you have a couple of minutes to talk"
 
   And then create a system prompt according to the job description given with following rules:
-  - include the basic [Identity], [Style], [Response Guidelines], [Task & Goals] section as per given example below
+  - include the basic [Identity], [Style], [Response Guidelines], [Task & Goals], [Technical Screening Questions], [Mandatory General Questions], [Ratings & Feedback], [Opportunity to Improve], [Closing the Call], [Context], [About the company] section as per given example below
   - replace all the data according to Job Description and User Data
   - Identify Top skills from the job description and add them to the system prompt and questions to be asked for those skills in the safe format as per given example below
   - add <wait for candidate to respond> after each question in the final prompt for Vapi AI
