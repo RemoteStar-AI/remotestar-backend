@@ -13,7 +13,7 @@ export const systemPrompt = `You are Alex, a customer service voice assistant fo
 - Speak with confidence but remain humble when you don'\''t know something
 - Demonstrate genuine concern for customer issues`;
 
-export async function createSupportAssistant(systemPrompt: string, firstMessage: string, VapiAnalysisPrompt: string) {
+export async function createSupportAssistant(systemPrompt: string, firstMessage: string, VapiAnalysisPrompt: string,name: string) {
   try {
     const defaultAnalysisPlan: object = {
       summaryPlan: {
@@ -62,7 +62,7 @@ export async function createSupportAssistant(systemPrompt: string, firstMessage:
       }
     };
     const assistant = await vapi.assistants.create({
-      name: 'Customer Support Assistant',
+      name: name,
       model: {
         provider: 'openai',
         model: 'gpt-4o',
