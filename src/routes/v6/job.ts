@@ -202,7 +202,13 @@ jobRouter.get("/:id/regenerate-prompt", authenticate, async (req: any, res: any)
   });
   const prompt = openaiResponse.choices[0].message.content;
   if (prompt && prompt !== "null") {
-    job.prompt = prompt +`\n \n [JOB_DESCRIPTION] : ${job.description}`;
+    const parsedPrompt = JSON.parse(prompt);
+    const parsedPromptSchema = VapiPromptSchema.safeParse(parsedPrompt);
+    if (!parsedPromptSchema.success) {
+      throw new Error("Invalid prompt format");
+    }
+    job.prompt.systemPrompt = parsedPromptSchema.data.systemPrompt +`\n \n [JOB_DESCRIPTION] : ${job.description}`;
+    job.prompt.firstMessage = parsedPromptSchema.data.firstMessage;
     await job.save();
     res.status(200).json({ message: "Prompt regenerated successfully", prompt:prompt });
   } else {
