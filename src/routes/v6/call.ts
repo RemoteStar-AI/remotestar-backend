@@ -110,7 +110,7 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
             assistantId = existingAssistant.assistantId;
         } else {
             const analysisPrompt = VapiAnalysisPrompt();
-            const assistant = await createSupportAssistant(systemPrompt, firstMessage, analysisPrompt,`${jobId}-${candidateId}`.substring(0,39));
+            const assistant = await createSupportAssistant(systemPrompt, firstMessage, analysisPrompt,`temp name`);
             assistantId = assistant.id;
             await DefaultAssistant.updateOne(
                 { userId, jobId, candidateId, organisation_id: organisationId },
