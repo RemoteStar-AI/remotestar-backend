@@ -228,6 +228,8 @@ jobRouter.get("/:id/regenerate-prompt", authenticate, async (req: any, res: any)
     const systemPromptWithDesc = insertErrorSection(parsedPromptSchema.data.systemPrompt + `\n \n [JOB_DESCRIPTION] : ${job.description}`);
     job.prompt.systemPrompt = systemPromptWithDesc;
     job.prompt.firstMessage = parsedPromptSchema.data.firstMessage;
+    // Persist the new prompt fields to the database
+    await Job.findByIdAndUpdate(job._id, { $set: { prompt: job.prompt } });
     await job.save();
     res.status(200).json({ message: "Prompt regenerated successfully", prompt:systemPromptWithDesc });
   } else {
