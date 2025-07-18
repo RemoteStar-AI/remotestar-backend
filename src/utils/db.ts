@@ -162,7 +162,7 @@ const jobSchema = new mongoose.Schema({
     mandatory: { type: Boolean, default: false }
   }], default: [], optional: true },
   expectedCulturalFit: { type: culturalFitSchema2, default: {} ,optional:true},
-  prompt: { type: String, default: "" },
+  prompt: { type: Object, default: {} },
 }, { timestamps: true });
 
 const canonicalSkillsSchema = new Schema({

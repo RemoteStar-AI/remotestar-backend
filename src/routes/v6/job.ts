@@ -7,10 +7,17 @@ import {
   VapiSystemPrompt3 as VapiSystemPrompt,
 } from "../../utils/prompts";
 import { openai } from "../../utils/openai";
-import { createAndStoreEmbedding } from "../../utils/helper-functions";
+import { createAndStoreEmbedding, extractJsonFromMarkdown } from "../../utils/helper-functions";
 import { authenticate } from "../../middleware/firebase-auth";
+import { z } from "zod";
+import { systemPrompt } from "../../utils/vapi";
 
 const namespace = "job-pool-v2";
+
+const VapiPromptSchema = z.object({
+  firstMessage: z.string(),
+  systemPrompt: z.string(),
+});
 
 jobRouter.get("/", authenticate, async (req: any, res: any) => {
   const params = req.query;
@@ -105,7 +112,13 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
         });
         const prompt = openaiResponse.choices[0].message.content;
         if (prompt && prompt !== "null") {
-          jobResponse.prompt = prompt;
+          const jsonPrompt = extractJsonFromMarkdown(prompt);
+          const parsedPrompt = JSON.parse(jsonPrompt);
+          const parsedPromptSchema = VapiPromptSchema.safeParse(parsedPrompt);
+          if (!parsedPromptSchema.success) {
+            throw new Error("Invalid prompt format");
+          }
+          jobResponse.prompt = parsedPrompt;
           await jobResponse.save();
           console.log("Prompt generated successfully");
         }
