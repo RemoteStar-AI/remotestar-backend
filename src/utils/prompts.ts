@@ -1670,6 +1670,7 @@ export function VapiAnalysisPrompt():string{
   - No extra text.
   - No extra spaces.
   - No extra lines.
+  - No \\n in the JSON object.
   - Only return the JSON object, no other text.
   `
 }
