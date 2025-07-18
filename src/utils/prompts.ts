@@ -1643,6 +1643,7 @@ export function VapiAnalysisPrompt():string{
 
   analyse the entire call transcript and give me these results in JSON format with following fields
   overall_technical_skills: <analyse the candidate's response and give a rating out of 100 to the candidate based upon his overall technical skills and response,it is also mentioned in the transcript>,
+  overall_summary: <analyse the candidate's response and give a summary of the candidate's based upon the transcript. It should not be more than 100 words>,
   overall_communication: <analyse the candidate's response and give a rating out of 100 to the candidate based upon his overall communication skills and response, it is also mentioned in the transcript>,
   technical_skills: [{
     skill_name: <name of the skill>,
@@ -1657,6 +1658,7 @@ export function VapiAnalysisPrompt():string{
   response format:
   {
     overall_technical_skills: number,
+    overall_summary: string,
     overall_communication: number,
     technical_skills: [{
       skill_name: string,
