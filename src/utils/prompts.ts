@@ -1506,14 +1506,17 @@ return `
   You are given a organisation name : ${organisationName}.
   Your task is to create a prompt for Vapi AI voice assistant for a recruitment call.
 
-  your job is to create a system prompt and first message for Vapi AI voice assistant for a recruitment call.
+  your job is to create a system prompt and firstMessage for Vapi AI voice assistant for a recruitment call.
+  - the output JSON should contain two variables
+  - firstMessage:
+  - systemPrompt:
   in the format JSON:
   {
     "firstMessage": "",
      "systemPrompt": ""
   }
 
-  create a short first message according to the job description and user data. 
+  create a short firstMessage according to the job description and user data. 
   for example: "Hi this is Riley a recruiter from RemoteStar. Do you have a couple of minutes to talk"
 
   And then create a system prompt according to the job description given with following rules:
