@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { z } from "zod";
-import { createSupportAssistant, getCallDetails, makeOutboundCall, scheduleOutboundCall } from "../../utils/vapi";
+import { createSupportAssistant, getCallDetails, makeOutboundCall, scheduleOutboundCall, vapi } from "../../utils/vapi";
 import { authenticate } from "../../middleware/firebase-auth";
 import { DefaultAssistant, CallDetails, User, Job, ScheduledCalls } from "../../utils/db";
 import { openai } from "../../utils/openai";
 import { VapiSystemPrompt3 as VapiSystemPrompt, VapiAnalysisPrompt } from "../../utils/prompts";
 import { insertErrorSection } from "../../utils/helper-functions";
+import type { Request, Response } from "express";
 
 const chatgptModel = "gpt-3.5-turbo";
 const assumedCallDuration = 10;
@@ -96,6 +97,7 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
     try {
         const userId = req.user.firebase_id;
         const organisationId = req.user.organisation;
+        const recruiterEmail = req.user.email;
         const parsedBody = callSchema.parse(req.body);
         const { phoneNumber, firstMessage, systemPrompt, jobId, candidateId, type, date, time } = parsedBody;
         const processedPhoneNumber = processPhoneNumber(phoneNumber);
@@ -134,13 +136,15 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
                 assistantId,
                 // @ts-ignore
                 callId: call.id,
-                callDetails: call
+                callDetails: call,
+                recruiterEmail
             });
             res.json({
                 success: true,
                 assistantId: assistantId,
                 // @ts-ignore
-                callId: call.id
+                callId: call.id,
+                callDetails: call
             });
         }
         if(type === "scheduled"){
@@ -161,6 +165,7 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
             //         nextAvailableSlot: nextAvailable
             //     });
             // }
+            console.log(recruiterEmail)
             await ScheduledCalls.create({
                 startTime,
                 endTime,
@@ -169,7 +174,8 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
                     candidateId,
                     assistantId,
                     phoneNumber: processedPhoneNumber,
-                    organisation_id: organisationId
+                    organisation_id: organisationId,
+                    recruiterEmail:recruiterEmail
                 },
                 isCalled: false
             });
@@ -250,6 +256,77 @@ callRouter.get('/system-prompt/:jobId/:candidateId', authenticate, async (req: a
     }
 });
 
+callRouter.get('/schedule/:jobId/:candidateId',authenticate,async(req:Request,res:Response)=>{
+    try {
+        // Check if VAPI_API_KEY is set
+        if (!process.env.VAPI_API_KEY) {
+            console.error('VAPI_API_KEY environment variable is not set');
+            res.status(500).json({
+                success: false,
+                error: 'VAPI API key not configured'
+            });
+            return;
+        }
+
+        const {jobId,candidateId} = req.params;
+        const possibleOnGoingCalls = await CallDetails.find({jobId,candidateId});
+        const onGoingCallsPartTwo = await ScheduledCalls.find({
+            isCalled: false,
+            'data.jobId': jobId,
+            'data.candidateId': candidateId
+        });
+        console.log(onGoingCallsPartTwo)
+
+        console.log(`Found ${possibleOnGoingCalls.length} possible ongoing calls for jobId: ${jobId}, candidateId: ${candidateId}`);
+        console.log(`Found ${onGoingCallsPartTwo.length} scheduled calls for jobId: ${jobId}, candidateId: ${candidateId}`);
+
+        // Fetch call details from Vapi for all calls and filter for ongoing ones
+        const onGoingCallsOne = await Promise.all(possibleOnGoingCalls.map(async(call: any)=>{
+            try {
+                const callDetails = await vapi.calls.get(call.callId);
+                return callDetails;
+            } catch (error) {
+
+                return null;
+            }
+        }));
+
+        // Filter out null values and only include ongoing calls (status === 'in-progress')
+        const ongoingCalls = onGoingCallsOne
+            .filter(call => call && call.status === 'in-progress')
+            .map(call => {
+                if (!call) return null;
+                // Find the corresponding CallDetails record to get recruiterEmail
+                const callDetail = possibleOnGoingCalls.find(cd => cd.callId === call.id);
+                return {
+                    callId: call.id,
+                    scheduledBy: callDetail?.recruiterEmail || 'Unknown'
+                };
+            })
+            .filter(call => call !== null);
+
+        // Format scheduled calls
+        const formattedScheduledCalls = onGoingCallsPartTwo.map(call => ({
+            callId: call.callId || 'Not yet assigned',
+            scheduledBy: (call.data as any)?.recruiterEmail || 'Unknown',
+            startTime: call.startTime,
+            endTime: call.endTime
+        }));
+
+        res.json({
+            success: true,
+            ongoingCalls: ongoingCalls,
+            scheduledCalls: formattedScheduledCalls
+        });
+    } catch (error) {
+        console.error('Error in schedule route:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch call details'
+        });
+    }
+});
+
 let isCronRunning = false;
 // Cron job to execute due scheduled calls every minute
 setInterval(async () => {
@@ -302,7 +379,8 @@ setInterval(async () => {
                     organisation_id: call.data.organisation_id,
                     assistantId: call.data.assistantId,
                     callId: callId,
-                    callDetails: result
+                    callDetails: result,
+                    recruiterEmail: call.data.recruiterEmail
                 });
                 await ScheduledCalls.updateOne({ _id: call._id }, { callId: callId });
             } catch (err) {

@@ -2,7 +2,7 @@ import { VapiClient } from '@vapi-ai/server-sdk';
 import { VapiAnalysisPrompt } from './prompts';
 
 // Initialize the Vapi client
-const vapi = new VapiClient({
+export const vapi = new VapiClient({
   token: process.env.VAPI_API_KEY!,
 });
 
