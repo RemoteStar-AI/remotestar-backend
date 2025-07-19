@@ -307,7 +307,7 @@ callRouter.get('/schedule/:jobId/:candidateId',authenticate,async(req:Request,re
 
         // Format scheduled calls
         const formattedScheduledCalls = onGoingCallsPartTwo.map(call => ({
-            callId: call.callId || 'Not yet assigned',
+            callId: call._id.toString(),
             scheduledBy: (call.data as any)?.recruiterEmail || 'Unknown',
             startTime: call.startTime,
             endTime: call.endTime
@@ -324,6 +324,24 @@ callRouter.get('/schedule/:jobId/:candidateId',authenticate,async(req:Request,re
             success: false,
             error: 'Failed to fetch call details'
         });
+    }
+});
+
+callRouter.delete('/scheduled/:id',authenticate,async(req:any,res:any)=>{
+    const {id} = req.params;
+    
+    try {
+        const result = await ScheduledCalls.findByIdAndDelete(id);
+        if (!result) {
+            res.status(404).json({success: false, message: "Scheduled call not found"});
+            return;
+        }
+        res.json({success: true});
+        return;
+    } catch (error) {
+        console.error('Error deleting scheduled call:', error);
+        res.status(500).json({success: false, message: "Failed to delete scheduled call"});
+        return;
     }
 });
 
