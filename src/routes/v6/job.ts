@@ -30,7 +30,6 @@ jobRouter.get("/", authenticate, async (req: any, res: any) => {
       res.status(500).json({ error: "Internal Server Error" });
       return;
     }
-    console.log("response", response);
     console.log("Jobs fetched successfully");
     res.status(200).json({
       message: "Jobs fetched successfully",

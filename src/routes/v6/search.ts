@@ -30,7 +30,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
 
     // Pagination params
     const start = parseInt(req.query.start) || 0;
-    let limit = parseInt(req.query.limit) || 20;
+    let limit = parseInt(req.query.limit) || 10;
     const fetchK = MAX_TOP_K;
 
     let job;
@@ -144,7 +144,6 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       topMatches = await pinecone.index(PINECONE_INDEX_NAME).namespace("talent-pool-v2").query({
         filter: {
           organisation_id: job.organisation_id,
-          job_id: { $in: [job._id.toString(), ""] }
         },
         vector: jobEmbedding,
         topK: fetchK,
