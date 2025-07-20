@@ -239,8 +239,10 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       start: start,
       limit: limit,
       totalCandidates: totalCandidates,
-      data: userProfiles,
+      data: userProfiles.sort((a: any, b: any) => (b.analysis?.percentageMatchScore || 0) - (a.analysis?.percentageMatchScore || 0)),
     };
+
+    
     logger.info(`[RESPONSE] Successfully prepared response with ${userProfiles.length} profiles (after new analyses)`);
     return res.status(200).json(finalResponse);
   } catch (error) {
