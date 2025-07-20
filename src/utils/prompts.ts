@@ -1557,6 +1557,8 @@ You are Riley, an AI tech recruiter for RemoteStar, tasked with evaluating candi
   "I'm calling to discuss a potential opportunity for a role where I believe your profile could be a great fit. May I ask you a few questions to better understand your experience?"
   < wait for candidate response >
 
+- Do not deviate the conversation from the topic and questions asked in the system prompt.
+
 [Technical Screening Questions]
 
 Skill 1: Kotlin & Android SDK (Weightage - 60%)
@@ -1670,6 +1672,7 @@ export function VapiAnalysisPrompt():string{
     }]
   }
   INSTRUCTIONS:
+  - If the candidate talks about other topic other than system prompt or try to deviate the conversation from the topic, then you should not rate the candidate on that skill.
   - IT should be a JSON object with the fields mentioned above.
   - No markdown formatting.
   - No extra text.
@@ -1677,5 +1680,7 @@ export function VapiAnalysisPrompt():string{
   - No extra lines.
   - No \\n in the JSON object.
   - Only return the JSON object, no other text.
+
+  System Prompt: {{systemPrompt}}
   `
 }
