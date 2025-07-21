@@ -1647,18 +1647,20 @@ export function VapiAnalysisPrompt():string{
   Transcript: {{transcript}}
 
   analyse the entire call transcript and give me these results in JSON format with following fields
-  overall_technical_skills: <analyse the candidate's response and give a rating out of 100 to the candidate based upon his overall technical skills and response,it is also mentioned in the transcript>,
-  overall_summary: <analyse the candidate's response and give a summary of the candidate's based upon the transcript. It should not be more than 100 words>,
-  overall_communication: <analyse the candidate's response and give a rating out of 100 to the candidate based upon his overall communication skills and response, it is also mentioned in the transcript>,
-  technical_skills: [{
-    skill_name: <name of the skill>,
-    skill_rating: <rating of the skill>,
-    skill_assessment: <based upon the candidate's response, give me a short assessment of his knowledge on the skill>,
+ {
+  "overall_technical_skills": "<analyse the candidate's response and give a rating out of 100 to the candidate based upon his overall technical skills and response, but **strictly only based upon skills and questions explicitly mentioned in the system prompt**. If the candidate talks about any other technical skills other than those mentioned in the system prompt, **do not score them for those unprompted skills** and mention in the summary that the candidate tried to deviate the topic by discussing unrelated technical areas.>",
+  "overall_summary": "<analyse the candidate's response and give a summary of the candidate's performance based upon the transcript. It should not be more than 100 words. Summarise their skills and knowledge **strictly based on the topics and questions within the system prompt**. If the candidate attempts to deviate the topic from what is given in the system prompt, **this should negatively affect the summary and be explicitly mentioned as a deviation**.",
+  "overall_communication": "<analyse the candidate's response and give a rating out of 100 to the candidate based upon his overall communication skills and response, taking his clarity and confidence into account. His construction of sentences and his ability to answer the question.>",
+  "technical_skills": [{
+    "skill_name": "<name of the skill, **only if it's from the system prompt**>",
+    "skill_rating": "<rating of the skill, **only if discussed within the scope of the system prompt**>",
+    "skill_assessment": "<based upon the candidate's response, give me a short assessment of his knowledge on the skill, **only for skills in the system prompt**>",
   },{
-    skill_name: <name of the skill>,
-    skill_rating: <rating of the skill>,
-    skill_assessment: <based upon the candidate's response, give me a short assessment of his knowledge on the skill>,
+    "skill_name": "<name of the skill, **only if it's from the system prompt**>",
+    "skill_rating": "<rating of the skill, **only if discussed within the scope of the system prompt**>",
+    "skill_assessment": "<based upon the candidate's response, give me a short assessment of his knowledge on the skill, **only for skills in the system prompt**>",
   }]
+}
 
   response format:
   {
@@ -1671,15 +1673,17 @@ export function VapiAnalysisPrompt():string{
       skill_assessment: string,
     }]
   }
-  INSTRUCTIONS:
-  - If the candidate talks about other topic other than system prompt or try to deviate the conversation from the topic, then you should not rate the candidate on that skill.
-  - IT should be a JSON object with the fields mentioned above.
-  - No markdown formatting.
-  - No extra text.
-  - No extra spaces.
-  - No extra lines.
-  - No \\n in the JSON object.
-  - Only return the JSON object, no other text.
+INSTRUCTIONS:
+- The evaluation of technical skills and the overall summary **must strictly adhere to the topics, skills, and questions outlined in the 'System Prompt' ({{systemPrompt}})**.
+- If the candidate discusses any technical skills or topics not explicitly mentioned in the 'System Prompt', you **must ignore** them for the purpose of scoring and assessment. These deviations should be noted in the 'overall_summary' and 'overall_technical_skills' explanations as attempts to deviate.
+- For 'technical_skills' array, **only include skills that are present in and discussed within the context of the 'System Prompt'**. Do not create entries for skills the candidate brings up if they are outside the 'System Prompt's scope.
+- IT should be a JSON object with the fields mentioned above.
+- No markdown formatting.
+- No extra text.
+- No extra spaces.
+- No extra lines.
+- No \n in the JSON object.
+- Only return the JSON object, no other text.
 
   System Prompt: {{systemPrompt}}
   `

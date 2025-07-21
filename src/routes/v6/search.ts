@@ -1,11 +1,8 @@
 import { Router } from "express";
 import {
   Job,
-  CulturalFit,
-  Skills,
   User,
   Bookmark,
-  JobSearchResponse,
   JobAnalysisOfCandidate
 } from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
