@@ -50,7 +50,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       return res.status(500).json({ error: "Error retrieving job analyses" });
     }
     
-    const totalCandidatesResponse = await getPineconeVectorCount(PINECONE_INDEX_NAME, "talent-pool-v2");
+    const totalCandidatesResponse = await getPineconeVectorCount(PINECONE_INDEX_NAME, "talent-pool-v2", job.organisation_id)
     const totalCandidates = Math.min(50,totalCandidatesResponse);
 
     // 2. If enough analyses, return top 'limit' sorted by percentageMatchScore
