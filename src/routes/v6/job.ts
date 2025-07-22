@@ -237,27 +237,41 @@ jobRouter.get("/:id/regenerate-prompt", authenticate, async (req: any, res: any)
 });
 
 jobRouter.put("/", authenticate, async (req: any, res: any) => {
-  const body = req.body;
-  const parsedBody = jobSchema.safeParse(body);
-  if (!parsedBody.success) {
-    return res.status(400).json({ error: parsedBody.error.format() });
-  }
-  const data = parsedBody.data;
-  if (!data._id) {
-    return res.status(400).json({ error: "Missing job _id for update" });
-  }
   try {
+    console.log("[PUT /job] Starting job update request");
+    const body = req.body;
+    const parsedBody = jobSchema.safeParse(body);
+    if (!parsedBody.success) {
+      console.log("[PUT /job] Invalid request body:", parsedBody.error.format());
+      return res.status(400).json({ error: parsedBody.error.format() });
+    }
+
+    const data = parsedBody.data;
+    if (!data._id) {
+      console.log("[PUT /job] Missing job _id in request");
+      return res.status(400).json({ error: "Missing job _id for update" });
+    }
+
     let updatedJob: any;
+    console.log(`[PUT /job] Fetching existing job with ID: ${data._id}`);
+    
     // Fetch the existing job
     const existingJob = await Job.findById(data._id);
     if (!existingJob) {
+      console.log(`[PUT /job] Job not found with ID: ${data._id}`);
       return res.status(404).json({ error: "Job not found" });
     }
+
     // Check if description changed
     const descriptionChanged = data.description !== existingJob.description;
+    console.log(`[PUT /job] Description changed: ${descriptionChanged}`);
+
     if (descriptionChanged) {
+      console.log("[PUT /job] Processing description change");
+      
       // Delete old embedding
       try {
+        console.log("[PUT /job] Deleting old embedding");
         const { deleteEmbedding } = require("../../utils/helper-functions");
         await deleteEmbedding(
           existingJob._id.toString(),
@@ -265,12 +279,14 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
           req.user.organisation
         );
       } catch (error) {
-        console.error("Failed to delete old embedding:", error);
+        console.error("[PUT /job] Failed to delete old embedding:", error);
         // Not a hard failure, continue
       }
+
       // Generate new embedding
       let jobEmbeddingText;
       try {
+        console.log("[PUT /job] Generating new job embedding");
         const jobEmbeddingPromptText = jobEmbeddingPrompt(data.description);
         const jobEmbedding = await openai.chat.completions.create({
           model: "gpt-4o-mini",
@@ -278,20 +294,30 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
         });
         jobEmbeddingText = jobEmbedding.choices[0].message.content;
       } catch (error) {
-        console.error("OpenAI API Error (PUT):", error);
+        console.error("[PUT /job] OpenAI API Error:", error);
         return res.status(500).json({ error: "Failed to generate job embedding" });
       }
-      // Update job record (all fields)
-      updatedJob = await Job.findByIdAndUpdate(
-        data._id,
-        { $set: data },
-        { new: true }
-      );
-      if (!updatedJob) {
-        return res.status(404).json({ error: "Job not found after update" });
+
+      // Update job record
+      try {
+        console.log("[PUT /job] Updating job record");
+        updatedJob = await Job.findByIdAndUpdate(
+          data._id,
+          { $set: data },
+          { new: true }
+        );
+        if (!updatedJob) {
+          console.log("[PUT /job] Job not found after update");
+          return res.status(404).json({ error: "Job not found after update" });
+        }
+      } catch (error) {
+        console.error("[PUT /job] Failed to update job record:", error);
+        return res.status(500).json({ error: "Failed to update job record" });
       }
+
       // Store new embedding
       try {
+        console.log("[PUT /job] Storing new embedding");
         await createAndStoreEmbedding(
           updatedJob._id.toString(),
           jobEmbeddingText || "",
@@ -300,11 +326,13 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
           updatedJob._id.toString()
         );
       } catch (error) {
-        console.error("Embedding Storage Error (PUT):", error);
+        console.error("[PUT /job] Embedding Storage Error:", error);
         return res.status(500).json({ error: "Failed to store job embedding" });
       }
+
       // Generate new prompt
       try {
+        console.log("[PUT /job] Generating new prompt");
         const openaiPrompt = VapiSystemPrompt(
           data.description,
           req.user.organisationName
@@ -326,6 +354,7 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
             try {
               updatedJob.prompt = JSON.parse(updatedJob.prompt);
             } catch (e) {
+              console.error("[PUT /job] Failed to parse existing prompt:", e);
               updatedJob.prompt = {};
             }
           }
@@ -334,22 +363,30 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
           await updatedJob.save();
         }
       } catch (error) {
-        console.error("Prompt Generation Error (PUT):", error);
+        console.error("[PUT /job] Prompt Generation Error:", error);
         return res.status(500).json({ error: "Failed to generate prompt" });
       }
+
       // Re-analyse top 10 candidates
       (async () => {
         try {
+          console.log("[PUT /job] Starting background analysis of top 10 candidates");
           const PINECONE_INDEX_NAME = "remotestar";
-          // 1. Fetch job embedding
+          
+          console.log("[PUT /job] Fetching job embedding");
           const jobEmbeddingResponse = await require("../../utils/pinecone")
             .pinecone.index(PINECONE_INDEX_NAME)
             .namespace("job-pool-v2")
             .fetch([updatedJob._id.toString()]);
+          
           const jobEmbedding =
             jobEmbeddingResponse.records[updatedJob._id.toString()]?.values;
-          if (!jobEmbedding) throw new Error("Job embedding not found");
-          // 2. Query Pinecone for top 10 candidates
+          if (!jobEmbedding) {
+            console.error("[PUT /job] Job embedding not found in background analysis");
+            throw new Error("Job embedding not found");
+          }
+
+          console.log("[PUT /job] Querying Pinecone for top matches");
           const topMatches = await require("../../utils/pinecone")
             .pinecone.index(PINECONE_INDEX_NAME)
             .namespace("talent-pool-v2")
@@ -359,36 +396,43 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
               includeMetadata: true,
               includeValues: false,
             });
-          // 3. Extract user IDs
+
           const userIds = topMatches.matches.map((record: any) => record.id);
-          // 4. Analyse each user (in parallel)
+          console.log(`[PUT /job] Analyzing ${userIds.length} candidates`);
+          
           const { analyseJdWithCv } = require("../../utils/helper-functions");
           await Promise.all(
             userIds.map((userId: string) =>
               analyseJdWithCv(updatedJob._id.toString(), userId)
             )
           );
+          console.log("[PUT /job] Background analysis completed successfully");
         } catch (err) {
-          console.error(
-            "Background analysis for top 10 candidates failed (PUT):",
-            err
-          );
+          console.error("[PUT /job] Background analysis failed:", err);
         }
       })();
     } else {
-      // Just update the fields as usual
-      updatedJob = await Job.findByIdAndUpdate(
-        data._id,
-        { $set: data },
-        { new: true }
-      );
-      if (!updatedJob) {
-        return res.status(404).json({ error: "Job not found after update" });
+      console.log("[PUT /job] No description change, performing simple update");
+      try {
+        updatedJob = await Job.findByIdAndUpdate(
+          data._id,
+          { $set: data },
+          { new: true }
+        );
+        if (!updatedJob) {
+          console.log("[PUT /job] Job not found after simple update");
+          return res.status(404).json({ error: "Job not found after update" });
+        }
+      } catch (error) {
+        console.error("[PUT /job] Simple update failed:", error);
+        return res.status(500).json({ error: "Failed to update job" });
       }
     }
+
+    console.log("[PUT /job] Job update completed successfully");
     return res.status(200).json({ message: "Job updated successfully", data: updatedJob });
   } catch (error) {
-    console.error("Job update error:", error);
+    console.error("[PUT /job] Unhandled error:", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });
