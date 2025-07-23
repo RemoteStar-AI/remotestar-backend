@@ -1513,11 +1513,11 @@ return `You are an expert AI Prompt Engineer who is an expert in creating prompt
   in the format JSON:
   {
     "firstMessage": "",
-     "systemPrompt": ""
+    "systemPrompt": ""
   }
 
 
-  create a short firstMessage according to the job description and user data.
+- create a short firstMessage according to the job description and user data.
   for example: "Hi this is Riley an AI recruiter from RemoteStar. Do you have a couple of minutes to talk?"
 
 
