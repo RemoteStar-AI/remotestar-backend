@@ -310,7 +310,8 @@ callRouter.get('/schedule/:jobId/:candidateId',authenticate,async(req:Request,re
             callId: call._id.toString(),
             scheduledBy: (call.data as any)?.recruiterEmail || 'Unknown',
             startTime: call.startTime,
-            endTime: call.endTime
+            endTime: call.endTime,
+            phoneNumber: (call.data as any)?.phoneNumber || 'Unknown'
         }));
 
         res.json({
