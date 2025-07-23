@@ -144,6 +144,9 @@ export async function getCallDetails(callId: string) {
     return call;
   } catch (error) {
     console.error('Error getting call details:', error);
-    return {};
+    return {
+      error: error,
+      message: 'Error fetching call details. Please try again.'
+    };
   }
 }
