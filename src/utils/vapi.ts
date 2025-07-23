@@ -79,6 +79,10 @@ export async function createSupportAssistant(systemPrompt: string, firstMessage:
       },
       firstMessage: firstMessage,
       analysisPlan: defaultAnalysisPlan,
+      transcriber:{
+        provider: 'deepgram',
+        model: 'nova-3'
+      }
     });
     
     console.log('Assistant created:', assistant.id);

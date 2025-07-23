@@ -114,8 +114,9 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
 
       // Generate prompt
       try {
+        console.log
         const openaiPrompt = VapiSystemPrompt(
-          data.description,
+          JSON.stringify(data.description),
           organisationName
         );
         const openaiResponse = await openai.chat.completions.create({
