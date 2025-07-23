@@ -162,6 +162,24 @@ export async function createAndStoreEmbedding(id: string, embeddingText: string,
   }
 }
 
+/**
+ * Deletes an embedding from Pinecone by vector id and namespace.
+ * @param id The vector ID to delete.
+ * @param namespace The Pinecone namespace.
+ * @param organisation_id (Optional) The organisation ID for logging.
+ */
+export async function deleteEmbedding(id: string, namespace: string, organisation_id?: string): Promise<void> {
+  logger.info(`[PINECONE_EMBED] Deleting embedding for id: ${id} in namespace: ${namespace}`);
+  try {
+    const index = pinecone.index(PINECONE_INDEX_NAME);
+    await index.namespace(namespace).deleteOne(id);
+    logger.info(`[PINECONE_EMBED] Successfully deleted embedding for id: ${id} in namespace: ${namespace}`);
+  } catch (error) {
+    logger.error(`[PINECONE_EMBED] Error deleting embedding for id: ${id} in namespace: ${namespace}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Do not rethrow, just log the error.
+  }
+}
+
 export async function analyseJdWithCv(jobId:string, userId:string){
   const job = await Job.findById(jobId);
   const user = await User.findById(userId);
