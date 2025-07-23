@@ -41,6 +41,20 @@ jobRouter.get("/", authenticate, async (req: any, res: any) => {
   }
 });
 
+jobRouter.get("/:id", authenticate, async (req: any, res: any) => {
+  try {
+    const id = req.params.id;
+    const job = await Job.findById(id);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+    res.status(200).json({ message: "Job fetched successfully", data: job });
+  } catch (error) {
+    console.error("[GET /job/:id] Error:", error);
+    res.status(500).json({ error: "Internal Server Error", message: error instanceof Error ? error.message : String(error) });
+  }
+});
+
 jobRouter.post("/", authenticate, async (req: any, res: any) => {
   try {
     console.log("Job creation started");
