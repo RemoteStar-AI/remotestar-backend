@@ -457,9 +457,7 @@ jobRouter.delete("/:id", authenticate, async (req: any, res: any) => {
   try {
     const id = req.params.id;
     const job = await Job.findByIdAndDelete(id);
-    const jobSearchResponse = await JobSearchResponse.findByIdAndDelete(
-      job?._id
-    );
+    const jobSearchResponse = await JobSearchResponse.deleteOne({jobId:id});
     if (!job) {
       return res.status(404).json({ error: "Job not found" });
     }
