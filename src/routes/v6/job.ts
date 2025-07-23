@@ -231,7 +231,7 @@ jobRouter.get("/:id/regenerate-prompt", authenticate, async (req: any, res: any)
     console.log(job.prompt)
     await Job.findByIdAndUpdate(job._id, { $set: { prompt: job.prompt } });
     await job.save();
-    res.status(200).json({ message: "Prompt regenerated successfully", prompt: job.prompt });
+    res.status(200).json({ message: "Prompt regenerated successfully", prompt: JSON.stringify(job.prompt) });
   } else {
     res.status(200).json({ message: "Prompt regeneration failed", data: job });
   }
