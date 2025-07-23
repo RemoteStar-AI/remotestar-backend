@@ -208,9 +208,7 @@ const jobAnalysisOfCandidateSchema=new Schema({
 },{timestamps:true})
 
 const defaultAssistantSchema=new Schema({
-  userId: {type: String, required: true},
   jobId: {type: String, required: true},
-  candidateId: {type: String, required: true},
   organisation_id: {type: String, required: true},
   firstMessage: {type: String, required: true},
   systemPrompt: {type: String, required: true},
