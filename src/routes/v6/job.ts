@@ -33,7 +33,7 @@ jobRouter.get("/", authenticate, async (req: any, res: any) => {
     console.log("Jobs fetched successfully");
     res.status(200).json({
       message: "Jobs fetched successfully",
-      data: response,
+      data: response.reverse(),
     });
   } catch (error) {
     console.error(error);
