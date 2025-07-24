@@ -10,7 +10,7 @@ import { openai } from "../../utils/openai";
 import { createAndStoreEmbedding, extractJsonFromMarkdown, insertErrorSection } from "../../utils/helper-functions";
 import { authenticate } from "../../middleware/firebase-auth";
 import { z } from "zod";
-import { systemPrompt } from "../../utils/vapi";
+import { systemPrompt, updateScriptforAssistant } from "../../utils/vapi";
 
 const namespace = "job-pool-v2";
 
@@ -280,7 +280,16 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
 
     // Check if description changed
     const descriptionChanged = data.description !== existingJob.description;
+    const promptChanged = data.prompt !== existingJob.prompt;
     console.log(`[PUT /job] Description changed: ${descriptionChanged}`);
+
+    if (promptChanged) {
+      console.log("[PUT /job] Processing prompt change");
+      const assistantId = existingJob.prompt.assistantId;
+      const script = existingJob.prompt.systemPrompt;
+      const updatedAssistant = await updateScriptforAssistant(assistantId, script, data.description);
+      console.log("[PUT /job] Prompt updated successfully");
+    }
 
     if (descriptionChanged) {
       console.log("[PUT /job] Processing description change");

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { createSupportAssistant, getCallDetails, makeOutboundCall, scheduleOutboundCall, vapi } from "../../utils/vapi";
+import { createSupportAssistant, getCallDetails, makeOutboundCall, scheduleOutboundCall, updateScriptforAssistant, vapi } from "../../utils/vapi";
 import { authenticate } from "../../middleware/firebase-auth";
 import { DefaultAssistant, CallDetails, User, Job, ScheduledCalls } from "../../utils/db";
 import { openai } from "../../utils/openai";
@@ -103,16 +103,25 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
         const processedPhoneNumber = processPhoneNumber(phoneNumber);
         const existingAssistant = await DefaultAssistant.findOne({
             jobId,
-            candidateId,
             organisation_id: organisationId
         });
 
         let assistantId: string;
-        if (existingAssistant && existingAssistant.systemPrompt === systemPrompt && existingAssistant.firstMessage === firstMessage) {
-            assistantId = existingAssistant.assistantId;
+        if (existingAssistant) {
+            if(existingAssistant.systemPrompt === systemPrompt && existingAssistant.firstMessage === firstMessage){
+                assistantId = existingAssistant.assistantId;
+            }else{
+                const assistant = await updateScriptforAssistant(existingAssistant.assistantId, firstMessage, systemPrompt);
+                assistantId = assistant.id;
+                await DefaultAssistant.updateOne({_id: existingAssistant._id},{$set:{
+                    assistantId: assistant.id,
+                    firstMessage: firstMessage,
+                    systemPrompt: systemPrompt
+                }})
+            }
         } else {
             const analysisPrompt = VapiAnalysisPrompt();
-            const assistant = await createSupportAssistant(systemPrompt, firstMessage, analysisPrompt,`temp name`);
+            const assistant = await createSupportAssistant(systemPrompt, firstMessage, analysisPrompt,`${jobId.slice(0,2)}-${jobId.slice(-4)}`);
             assistantId = assistant.id;
             await DefaultAssistant.updateOne(
                 { userId, jobId, candidateId, organisation_id: organisationId },
