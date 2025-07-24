@@ -150,25 +150,3 @@ export async function getCallDetails(callId: string) {
     };
   }
 }
-
-export async function updateScriptforAssistant(assistantId: string, firstMessage: string, script: string) {
-  try {
-    const assistant = await vapi.assistants.update(assistantId, {
-      firstMessage: firstMessage,
-      model: {
-        provider: 'openai',
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: script,
-          },
-        ],
-      },
-    });
-    return assistant;
-  } catch (error) {
-    console.error('Error updating assistant:', error);
-    throw error;
-  }
-}
