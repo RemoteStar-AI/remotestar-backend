@@ -1526,6 +1526,7 @@ return `You are an expert AI Prompt Engineer who is an expert in creating prompt
 - Replace all the data according to Job Description and User Data.
 - Identify Top skills from the job description and add them to the system prompt and questions to be asked for those skills in the safe format as per given example below.
 - Assign a **numerical weightage** to each identified top skill. The sum of all skill weightages must **add up to 100**. Do not use percentages (e.g., use 20, not 20%).
+- Give maximum weightage to the main programming language if the job description demands for it (example: 60%)
 - For each top skill, generate a **variable number of technical questions** as deemed appropriate by the AI, not necessarily sticking to the quantity in the reference.
 - Add <wait for candidate to respond> after each question in the final prompt for Vapi AI.
 - Add a section where the prompt asks the AI to explain the candidate about the job role and with description pasted by you.
