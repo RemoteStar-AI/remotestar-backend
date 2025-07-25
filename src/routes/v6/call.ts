@@ -4,7 +4,7 @@ import { createSupportAssistant, getCallDetails, makeOutboundCall, scheduleOutbo
 import { authenticate } from "../../middleware/firebase-auth";
 import { DefaultAssistant, CallDetails, User, Job, ScheduledCalls } from "../../utils/db";
 import { openai } from "../../utils/openai";
-import { VapiSystemPrompt3 as VapiSystemPrompt, VapiAnalysisPrompt } from "../../utils/prompts";
+import { VapiAnalysisPrompt } from "../../utils/prompts";
 import { insertErrorSection } from "../../utils/helper-functions";
 import type { Request, Response } from "express";
 
@@ -200,70 +200,70 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
     }
 });
 
-callRouter.get('/system-prompt/:jobId/:candidateId', authenticate, async (req: any, res: any) => {
-    try {
-        const { jobId, candidateId } = req.params;
+// callRouter.get('/system-prompt/:jobId/:candidateId', authenticate, async (req: any, res: any) => {
+//     try {
+//         const { jobId, candidateId } = req.params;
 
-        try {
-            const user = await User.findById(candidateId);
-            const job = await Job.findById(jobId);
+//         try {
+//             const user = await User.findById(candidateId);
+//             const job = await Job.findById(jobId);
 
-            if (!job || !user) {
-                return res.status(404).json({
-                    success: false,
-                    message: "Job or user not found"
-                });
-            }
+//             if (!job || !user) {
+//                 return res.status(404).json({
+//                     success: false,
+//                     message: "Job or user not found"
+//                 });
+//             }
 
-            const firstMessageAndSystemPromptPrompt = VapiSystemPrompt(
-                JSON.stringify(job.description),
-                req.user.organisationName
-            );
+//             const firstMessageAndSystemPromptPrompt = VapiSystemPrompt(
+//                 JSON.stringify(job.description),
+//                 req.user.organisationName
+//             );
 
-            try {
-                const response = await openai.chat.completions.create({
-                    model: chatgptModel,
-                    messages: [{ role: "user", content: firstMessageAndSystemPromptPrompt }],
-                    response_format: { type: "json_object" }
-                });
+//             try {
+//                 const response = await openai.chat.completions.create({
+//                     model: chatgptModel,
+//                     messages: [{ role: "user", content: firstMessageAndSystemPromptPrompt }],
+//                     response_format: { type: "json_object" }
+//                 });
 
-                try {
-                    const firstMessageAndSystemPrompt = JSON.parse(response.choices[0].message.content || "{}");
+//                 try {
+//                     const firstMessageAndSystemPrompt = JSON.parse(response.choices[0].message.content || "{}");
 
-                    return res.json({
-                        success: true,
-                        firstMessage: firstMessageAndSystemPrompt.firstMessage,
-                        systemPrompt: firstMessageAndSystemPrompt.systemPrompt
-                    });
-                } catch (parseError) {
-                    console.error('Error parsing OpenAI response:', parseError);
-                    return res.status(500).json({
-                        success: false,
-                        message: "Failed to parse OpenAI response"
-                    });
-                }
-            } catch (openaiError) {
-                console.error('OpenAI API error:', openaiError);
-                return res.status(500).json({
-                    success: false,
-                    message: "Failed to generate system prompt"
-                });
-            }
-        } catch (dbError) {
-            console.error('Database query error:', dbError);
-            return res.status(500).json({
-                success: false,
-                message: "Database query failed"
-            });
-        }
-    } catch (error) {
-        console.error('Unexpected error in system-prompt route:', error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
-    }
-});
+//                     return res.json({
+//                         success: true,
+//                         firstMessage: firstMessageAndSystemPrompt.firstMessage,
+//                         systemPrompt: firstMessageAndSystemPrompt.systemPrompt
+//                     });
+//                 } catch (parseError) {
+//                     console.error('Error parsing OpenAI response:', parseError);
+//                     return res.status(500).json({
+//                         success: false,
+//                         message: "Failed to parse OpenAI response"
+//                     });
+//                 }
+//             } catch (openaiError) {
+//                 console.error('OpenAI API error:', openaiError);
+//                 return res.status(500).json({
+//                     success: false,
+//                     message: "Failed to generate system prompt"
+//                 });
+//             }
+//         } catch (dbError) {
+//             console.error('Database query error:', dbError);
+//             return res.status(500).json({
+//                 success: false,
+//                 message: "Database query failed"
+//             });
+//         }
+//     } catch (error) {
+//         console.error('Unexpected error in system-prompt route:', error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Internal server error"
+//         });
+//     }
+// });
 
 callRouter.get('/schedule/:jobId/:candidateId',authenticate,async(req:Request,res:Response)=>{
     try {

@@ -14,6 +14,8 @@ import { systemPrompt, updateScriptforAssistant } from "../../utils/vapi";
 
 const namespace = "job-pool-v2";
 
+const firstMessage = 'Hi this is Rilesh from RemoteStar. Do you have a couple of minutes to talk?';
+
 const VapiPromptSchema = z.object({
   firstMessage: z.string(),
   systemPrompt: z.string(),
@@ -114,7 +116,7 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
 
       // Generate prompt
       try {
-        console.log
+        console.log("Generating prompt");
         const openaiPrompt = VapiSystemPrompt(
           JSON.stringify(data.description),
           organisationName
@@ -141,7 +143,7 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
             }
           }
           jobResponse.prompt.systemPrompt = insertErrorSection(parsedPromptSchema.data.systemPrompt+`\n \n [JOB_DESCRIPTION] : ${data.description}`);
-          jobResponse.prompt.firstMessage = parsedPromptSchema.data.firstMessage;
+          jobResponse.prompt.firstMessage = firstMessage;
   
           await jobResponse.save();
           console.log("Prompt generated successfully");
@@ -241,7 +243,7 @@ jobRouter.get("/:id/regenerate-prompt", authenticate, async (req: any, res: any)
     }
     const systemPromptWithDesc = insertErrorSection(parsedPromptSchema.data.systemPrompt + `\n \n [JOB_DESCRIPTION] : ${job.description}`);
     job.prompt.systemPrompt = systemPromptWithDesc;
-    job.prompt.firstMessage = parsedPromptSchema.data.firstMessage;
+    job.prompt.firstMessage = firstMessage;
     // Persist the new prompt fields to the database
     console.log(job.prompt)
     await Job.findByIdAndUpdate(job._id, { $set: { prompt: job.prompt } });
@@ -384,7 +386,7 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
             }
           }
           updatedJob.prompt.systemPrompt = insertErrorSection(parsedPromptSchema.data.systemPrompt +`\n \n [JOB_DESCRIPTION] : ${data.description}`);
-          updatedJob.prompt.firstMessage = parsedPromptSchema.data.firstMessage;
+          updatedJob.prompt.firstMessage = firstMessage;
           await updatedJob.save();
         }
       } catch (error) {
