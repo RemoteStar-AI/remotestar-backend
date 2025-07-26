@@ -84,9 +84,11 @@ export async function createSupportAssistant(systemPrompt: string, firstMessage:
         model: 'nova-3'
       },
       server:{
-        url : `${process.env.SERVER_URL}api/v6/call/webhook`,
+        url : `${process.env.SERVER_URL}/api/v6/call/webhook`,
+        timeoutSeconds: 5,
         headers:{
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true"
         }
       }
     });
@@ -146,7 +148,6 @@ export async function scheduleOutboundCall(
 export async function getCallDetails(callId: string) {
   try {
     const call = await vapi.calls.get(callId);
-    console.log('Call details:', call);
     return call;
   } catch (error) {
     console.error('Error getting call details:', error);

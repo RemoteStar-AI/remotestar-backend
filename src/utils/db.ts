@@ -222,6 +222,9 @@ const callDetailsSchema=new Schema({
   recruiterEmail: { type: String, required: true },
   callId: {type: String, required: true},
   callDetails: {type: Object, default: {}},
+  status: {type: String, default: "initiated"},
+  lastUpdated: {type: Date, default: Date.now},
+  vapiData: {type: Object, default: {}},
 },{timestamps:true})
 
 const scheduledCallSchema = new Schema({
@@ -236,7 +239,18 @@ const scheduledCallSchema = new Schema({
     recruiterEmail: { type: String, required: true },
   },
   isCalled: { type: Boolean, default: false, index: true },
+  status: { type: String, default: "not-called" },
   callId: { type: String, index: true }
+}, { timestamps: true });
+
+const webhookSubscriptionSchema = new Schema({
+  organisation_id: { type: String, required: true, index: true },
+  webhook_url: { type: String, required: true },
+  events: { type: [String], default: ['call.status.changed', 'call.completed', 'call.failed', 'call.initiated'] },
+  is_active: { type: Boolean, default: true },
+  secret_key: { type: String, required: true }, // For webhook signature verification
+  last_delivery_attempt: { type: Date },
+  delivery_failures: { type: Number, default: 0 }
 }, { timestamps: true });
 
 export const Job = mongoose.model("Job", jobSchema);
@@ -254,3 +268,4 @@ export const JobAnalysisOfCandidate = mongoose.model("JobAnalysisOfCandidate", j
 export const DefaultAssistant = mongoose.model("DefaultAssistant", defaultAssistantSchema);
 export const CallDetails = mongoose.model("CallDetails", callDetailsSchema);
 export const ScheduledCalls = mongoose.model("ScheduledCalls", scheduledCallSchema);
+export const WebhookSubscription = mongoose.model("WebhookSubscription", webhookSubscriptionSchema);
