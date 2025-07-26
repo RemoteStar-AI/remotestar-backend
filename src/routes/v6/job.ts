@@ -105,8 +105,7 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
           jobResponse._id.toString(),
           jobEmbeddingText || "",
           namespace,
-          organisation_id,
-          jobResponse._id.toString()
+          organisation_id
         );
         console.log("Job embedding stored successfully");
       } catch (error) {
@@ -349,8 +348,7 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
           updatedJob._id.toString(),
           jobEmbeddingText || "",
           namespace,
-          req.user.organisation,
-          updatedJob._id.toString()
+          req.user.organisation
         );
       } catch (error) {
         console.error("[PUT /job] Embedding Storage Error:", error);

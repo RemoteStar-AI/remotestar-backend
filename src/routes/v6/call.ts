@@ -35,10 +35,12 @@ async function findNextAvailableSlot(start = new Date()) {
 }
 
 const callSchema = z.object({
-    phoneNumber: z.string().min(1),
+   phoneNumber: z.string().min(1),
    firstMessage: z.string().min(1),
    systemPrompt: z.string().min(1),
    jobId: z.string().min(1),
+   jobName: z.string().min(1).optional(),
+   companyName: z.string().min(1),
    candidateId: z.string().min(1),
    type: z.enum(["outbound", "scheduled"]),
    date: z.string().min(1).optional(),
@@ -98,8 +100,9 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
         const userId = req.user.firebase_id;
         const organisationId = req.user.organisation;
         const recruiterEmail = req.user.email;
+        const token = req.user.token;
         const parsedBody = callSchema.parse(req.body);
-        const { phoneNumber, firstMessage, systemPrompt, jobId, candidateId, type, date, time } = parsedBody;
+        const { phoneNumber, firstMessage, systemPrompt, jobId, candidateId, type, date, time, jobName, companyName } = parsedBody;
         const processedPhoneNumber = processPhoneNumber(phoneNumber);
         const existingAssistant = await DefaultAssistant.findOne({
             jobId,
@@ -121,7 +124,8 @@ callRouter.post('/',authenticate, async (req:any, res:any) => {
             }
         } else {
             const analysisPrompt = VapiAnalysisPrompt();
-            const assistant = await createSupportAssistant(systemPrompt, firstMessage, analysisPrompt,`${jobId.slice(0,2)}-${jobId.slice(-4)}`);
+            const assistantName = `${jobName}-${companyName}`.substring(0, 30);
+            const assistant = await createSupportAssistant(systemPrompt, firstMessage, analysisPrompt, assistantName, JSON.stringify(token));
             assistantId = assistant.id;
             await DefaultAssistant.updateOne(
                 { userId, jobId, candidateId, organisation_id: organisationId },
@@ -353,6 +357,15 @@ callRouter.delete('/scheduled/:id',authenticate,async(req:any,res:any)=>{
         res.status(500).json({success: false, message: "Failed to delete scheduled call"});
         return;
     }
+});
+
+callRouter.get('/webhook',authenticate,async(req:any,res:any)=>{
+    const {callId,status} = req.body;
+    if(status === 'completed'){
+        console.log("Call completed");
+    }
+    console.log(req.body);
+    res.json({success: true});
 });
 
 let isCronRunning = false;

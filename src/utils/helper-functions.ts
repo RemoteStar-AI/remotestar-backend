@@ -121,7 +121,7 @@ export function extractJsonFromMarkdown(text:string) {
  * @param userId The ID of the user, which will be used as the vector ID.
  * @param embeddingText The text to create an embedding from (e.g., a resume summary).
  */
-export async function createAndStoreEmbedding(id: string, embeddingText: string, namespace: string, organisation_id: string, job_id: string): Promise<void> {
+export async function createAndStoreEmbedding(id: string, embeddingText: string, namespace: string, organisation_id: string): Promise<void> {
   const type = namespace === 'jobs' ? 'job' : 'user';
   logger.info(`[PINECONE_EMBED] Starting embedding generation for ${type}: ${id}`);
 
@@ -144,14 +144,12 @@ export async function createAndStoreEmbedding(id: string, embeddingText: string,
     logger.info(`[PINECONE_EMBED] Upserting embedding to Pinecone for ${type}: ${id}`);
     const index = pinecone.index(PINECONE_INDEX_NAME);
     console.log("organisation_id", organisation_id);
-    console.log("job_id", job_id);
     await index.namespace(namespace).upsert([
       {
         id: id,
         values: embedding,  
         metadata: {
           organisation_id: organisation_id,
-          job_id: job_id
         }
       },
     ]);
@@ -192,59 +190,90 @@ export async function analyseJdWithCv(jobId:string, userId:string){
     throw new Error("User resume not found");
   }
 
+  console.log("Fetching resume from:", resumeUrl);
   const response = await fetch(resumeUrl);
   if (!response.ok) {
-    throw new Error(`Failed to fetch resume from ${resumeUrl}`);
+    throw new Error(`Failed to fetch resume from ${resumeUrl}: ${response.status} ${response.statusText}`);
   }
 
   const resumeBuffer = await response.arrayBuffer();
-  const fileName = user.resume_url.split('/').pop() || 'resume.pdf';
+  console.log("Resume buffer size:", resumeBuffer.byteLength, "bytes");
+  
+  // Better filename extraction
+  let fileName = 'resume.pdf'; // default
+  try {
+    if (user.resume_url.includes('/')) {
+      const urlParts = user.resume_url.split('/');
+      const lastPart = urlParts[urlParts.length - 1];
+      // Remove any query parameters
+      fileName = lastPart.split('?')[0] || 'resume.pdf';
+    }
+  } catch (error) {
+    console.warn("Error extracting filename, using default:", error);
+  }
+  
   const contentType = response.headers.get('content-type') || 'application/pdf';
+  console.log("Content type:", contentType, "File name:", fileName);
 
-  const uploadedFile = await openai.files.create({
-    file: new File([new Uint8Array(resumeBuffer)], fileName, {
-      type: contentType,
-    }),
-    purpose: "user_data",
-  });
-  const promptText = jdCvMatchingPrompt(job.description);
-  const analysisResponse = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "user",
-        content: [{ type: "file", file: { file_id: uploadedFile.id } }, { type: "text", text: promptText }],
-      }
-    ],
-  });
-
-  const analysisText = analysisResponse.choices[0].message.content;
-  if (!analysisText) {
-    throw new Error("Analysis text not found");
-  }
-  console.log("[DEBUG] Raw analysisText from OpenAI:", analysisText);
-  const extractedJsonString = extractJsonFromMarkdown(analysisText);
-  console.log("[DEBUG] Extracted JSON string:", extractedJsonString);
-  const analysisJson = JSON.parse(extractedJsonString);
-
-  // Compute rank
-  let rank = 1;
-  if (typeof analysisJson.percentageMatchScore === 'number') {
-    // Get all existing analyses for this job
-    const existingAnalyses = await JobAnalysisOfCandidate.find({ jobId });
-    // Count how many have a higher percentageMatchScore
-    const higherRankCount = existingAnalyses.filter(a => (a.data?.percentageMatchScore || 0) > analysisJson.percentageMatchScore).length;
-    rank = higherRankCount + 1;
-  } else {
-    // If no score, append to end
-    const existingCount = await JobAnalysisOfCandidate.countDocuments({ jobId });
-    rank = existingCount + 1;
+  // Broader content type validation
+  const validTypes = ['pdf', 'doc', 'docx', 'txt', 'rtf'];
+  const isValidType = validTypes.some(type => contentType.toLowerCase().includes(type));
+  if (!isValidType) {
+    console.warn(`Unexpected content type: ${contentType} for file: ${fileName}`);
   }
 
-  const analysis = await JobAnalysisOfCandidate.create({ jobId: jobId, userId: userId, data: analysisJson, newlyAnalysed: true, rank });
-  console.log("Analysis created", JSON.stringify(analysis));
-  if (!analysis) {
-    throw new Error("Analysis not found");
+  try {
+    console.log("Uploading file to OpenAI...");
+    const uploadedFile = await openai.files.create({
+      file: new File([new Uint8Array(resumeBuffer)], fileName, {
+        type: contentType,
+      }),
+      purpose: "user_data",
+    });
+    console.log("File uploaded to OpenAI with ID:", uploadedFile.id);
+    
+    const promptText = jdCvMatchingPrompt(job.description);
+    const analysisResponse = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: [{ type: "file", file: { file_id: uploadedFile.id } }, { type: "text", text: promptText }],
+        }
+      ],
+    });
+
+    const analysisText = analysisResponse.choices[0].message.content;
+    if (!analysisText) {
+      throw new Error("Analysis text not found");
+    }
+    console.log("[DEBUG] Raw analysisText from OpenAI:", analysisText);
+    const extractedJsonString = extractJsonFromMarkdown(analysisText);
+    console.log("[DEBUG] Extracted JSON string:", extractedJsonString);
+    const analysisJson = JSON.parse(extractedJsonString);
+
+    // Compute rank
+    let rank = 1;
+    if (typeof analysisJson.percentageMatchScore === 'number') {
+      // Get all existing analyses for this job
+      const existingAnalyses = await JobAnalysisOfCandidate.find({ jobId });
+      // Count how many have a higher percentageMatchScore
+      const higherRankCount = existingAnalyses.filter(a => (a.data?.percentageMatchScore || 0) > analysisJson.percentageMatchScore).length;
+      rank = higherRankCount + 1;
+    } else {
+      // If no score, append to end
+      const existingCount = await JobAnalysisOfCandidate.countDocuments({ jobId });
+      rank = existingCount + 1;
+    }
+
+    const analysis = await JobAnalysisOfCandidate.create({ jobId: jobId, userId: userId, data: analysisJson, newlyAnalysed: true, rank });
+    console.log("Analysis created", JSON.stringify(analysis));
+    if (!analysis) {
+      throw new Error("Analysis not found");
+    }
+  } catch (error) {
+    console.error("Error in file upload or analysis:", error);
+    throw error;
   }
 }
 

@@ -327,7 +327,7 @@ async function processFile(
       const embeddingText = embeddingRes.choices[0].message.content?.trim();
 
       if (embeddingText) {
-        await createAndStoreEmbedding(uniqueId.toString(), embeddingText, namespace, organisation_id, jobId ?? "");
+        await createAndStoreEmbedding(uniqueId.toString(), embeddingText, namespace, organisation_id);
       } else {
         logger.warn(
           `[EMBEDDING] Could not generate embedding text for user ${uniqueId}. Skipping storage.`
@@ -681,7 +681,7 @@ resumeUploadRouter.post(
       const embeddingTextReanalysis =
         embeddingTextResponse.choices[0].message.content?.trim();
       if (embeddingTextReanalysis) {
-        await createAndStoreEmbedding(id.toString(), embeddingTextReanalysis, namespace, organisation_id, jobId ?? null);
+        await createAndStoreEmbedding(id.toString(), embeddingTextReanalysis, namespace, organisation_id);
       } else {
         logger.warn(
           `[EMBEDDING] Could not generate embedding text for re-analysed user ${id}. Skipping storage.`

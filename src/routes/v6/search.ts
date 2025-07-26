@@ -28,6 +28,8 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     // Pagination params
     const start = parseInt(req.query.start) || 0;
     let limit = parseInt(req.query.limit) || 10;
+    console.log("start", start);
+    console.log("limit", limit);
     const fetchK = MAX_TOP_K;
 
     let job;
@@ -55,6 +57,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
 
     // 2. If enough analyses, return top 'limit' sorted by percentageMatchScore
     if (jobAnalyses.length >= start + limit) {
+      console.log("enough analyses");
       // Get userIds for the top candidates
       const sortedAnalyses = jobAnalyses.sort((a: any, b: any) => (b.data?.percentageMatchScore || 0) - (a.data?.percentageMatchScore || 0));
       const paginatedAnalyses = sortedAnalyses.slice(start, start + limit);

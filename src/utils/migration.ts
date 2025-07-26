@@ -26,47 +26,97 @@ import { User, Company, Job, JobAnalysisOfCandidate } from "./db";
 
 const ORG_ID = "6835782f4ec996c8f13dca2d";
 
-export async function addOrganisationId(MongoURI: string) {
-  try {
-    await mongoose.connect(MongoURI);
-    // Update all users
-    await User.updateMany({}, { $set: { organisation_id: ORG_ID } });
-    console.log("Updated all users");
+// export async function addOrganisationId(MongoURI: string) {
+//   try {
+//     await mongoose.connect(MongoURI);
+//     // Update all users
+//     await User.updateMany({}, { $set: { organisation_id: ORG_ID } });
+//     console.log("Updated all users");
 
-    // Update all companies
-    await Company.updateMany({}, { $set: { organisation_id: ORG_ID } });
-    console.log("Updated all companies");
+//     // Update all companies
+//     await Company.updateMany({}, { $set: { organisation_id: ORG_ID } });
+//     console.log("Updated all companies");
 
-    // Update all jobs
-    await Job.updateMany({}, { $set: { organisation_id: ORG_ID } });
-    console.log("Updated all jobs");
-  } catch (err) {
-    console.error(err);
-  } finally {
-    await mongoose.disconnect();
-  }
-}
+//     // Update all jobs
+//     await Job.updateMany({}, { $set: { organisation_id: ORG_ID } });
+//     console.log("Updated all jobs");
+//   } catch (err) {
+//     console.error(err);
+//   } finally {
+//     await mongoose.disconnect();
+//   }
+// }
 
-export async function deleteRecentJobAnalyses(MongoURI: string) {
-  try {
-    await mongoose.connect(MongoURI);
-    const minutes = 60;
-    const minutesAgo = new Date(Date.now() - minutes * 60 * 1000);
-    const result = await JobAnalysisOfCandidate.deleteMany({
-      createdAt: { $gte: minutesAgo },
-    });
-    console.log(
-      `Deleted ${result.deletedCount} documents from JobAnalysisOfCandidate created in the last ${minutes} minutes.`
-    );
-  } catch (err) {
-    console.error(err);
-  } finally {
-    await mongoose.disconnect();
-  }
-}
+// export async function deleteRecentJobAnalyses(MongoURI: string) {
+//   try {
+//     await mongoose.connect(MongoURI);
+//     const minutes = 60;
+//     const minutesAgo = new Date(Date.now() - minutes * 60 * 1000);
+//     const result = await JobAnalysisOfCandidate.deleteMany({
+//       createdAt: { $gte: minutesAgo },
+//     });
+//     console.log(
+//       `Deleted ${result.deletedCount} documents from JobAnalysisOfCandidate created in the last ${minutes} minutes.`
+//     );
+//   } catch (err) {
+//     console.error(err);
+//   } finally {
+//     await mongoose.disconnect();
+//   }
+// }
 
-// Uncomment the following line to run the script
-// addOrganisationId();
-// deleteRecentJobAnalyses(process.env.MONGO_URI!);
+/**
+//  * Deletes all JobAnalysisOfCandidate documents whose userId is NOT in the allowedUserIds array.
+//  * @param {string} MongoURI - The MongoDB connection string.
+//  */
+// export async function deleteJobAnalysisExceptUserIds(MongoURI: string) {
+//   const allowedUserIds = [
+//     "685bf5b15ec7d03d6d40bac8",
+//     "687512a06125099b3950f6f9",
+//     "68585bb37aa3838420441f00",
+//     "6859a50d38d37fa072f06bac",
+//     "685d2f1cf94542290e366954",
+//     "685d2f94f94542290e366b0e"
+//   ];
+//   try {
+//     await mongoose.connect(MongoURI);
+//     // Delete all JobAnalysisOfCandidate documents whose userId is NOT in the allowedUserIds array
+//     const result = await JobAnalysisOfCandidate.deleteMany({ userId: { $nin: allowedUserIds } });
+//     console.log(`Deleted ${result.deletedCount} JobAnalysisOfCandidate documents not in the allowed user list.`);
+//   } catch (err) {
+//     console.error(err);
+//   } finally {
+//     await mongoose.disconnect();
+//   }
+// }
+
+/**
+ * Deletes all users except those whose userId is in the hardcoded allowedUserIds array.
+ * @param {string} MongoURI - The MongoDB connection string.
+ */
+// export async function deleteUsersExceptList(MongoURI: string) {
+//   // Hardcoded user IDs from the provided response
+//   const allowedUserIds = [
+//     "685bf5b15ec7d03d6d40bac8",
+//     "687512a06125099b3950f6f9",
+//     "68585bb37aa3838420441f00",
+//     "6859a50d38d37fa072f06bac",
+//     "685d2f1cf94542290e366954",
+//     "685d2f94f94542290e366b0e"
+//   ];
+//   try {
+//     await mongoose.connect(MongoURI);
+//     // Delete all users whose _id is NOT in the allowedUserIds array
+//     const result = await User.deleteMany({ _id: { $nin: allowedUserIds } });
+//     console.log(`Deleted ${result.deletedCount} users not in the allowed list.`);
+//   } catch (err) {
+//     console.error(err);
+//   } finally {
+//     await mongoose.disconnect();
+//   }
+// }
+
+// Example usage (uncomment and provide your MongoDB URI):
+// deleteUsersExceptList(process.env.MONGO_URI!);
 
 

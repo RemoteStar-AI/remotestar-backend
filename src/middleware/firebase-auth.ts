@@ -18,6 +18,7 @@ export async function authenticate(req:Request,res:Response,next:NextFunction){
         req.user.email = decodedToken.email;
         req.user.firebase_id = decodedToken.uid;
         req.user.displayName = decodedToken.name;
+        req.user.token = token;
         const organisation = await Organisation.findOne({ members: { $in: [decodedToken.email] } });
         if (organisation) {
             req.user.organisation = organisation._id;

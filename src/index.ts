@@ -25,7 +25,6 @@ import { resumeUploadRouter as embedRouter6 } from './routes/v6/embed';
 import { jobRouter as jobRouter6 } from './routes/v6/job';
 import { searchRouter as searchRouter6 } from './routes/v6/search';
 import { userRouter as userRouter6 } from './routes/v6/user';
-import { deleteRecentJobAnalyses } from './utils/migration';
 import { callRouter } from './routes/v6/call';
 dotenv.config();
 
@@ -86,8 +85,6 @@ async function main(){
     try {
         await mongoose.connect(process.env.MONGODB_URI!);
         console.log("Connected to MongoDB with database name: " + process.env.MONGODB_URI!.split('/').pop());
-            // deleteRecentJobAnalyses(process.env.MONGODB_URI!);
-            // console.log("Deleted recent job analyses");
         app.listen(PORT,'0.0.0.0', () => {
             console.log(`Server is running on port ${PORT}`);
         });
