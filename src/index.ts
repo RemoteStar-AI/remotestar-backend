@@ -2,6 +2,8 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import http from 'http';
+import { WebSocketServer, WebSocket } from 'ws';
 // Import routers (Ensure these are properly typed)
 import {extractRouter} from './routes/v1/extract';
 import {embedRouter} from './routes/v1/embed';
@@ -26,10 +28,105 @@ import { jobRouter as jobRouter6 } from './routes/v6/job';
 import { searchRouter as searchRouter6 } from './routes/v6/search';
 import { userRouter as userRouter6 } from './routes/v6/user';
 import { callRouter } from './routes/v6/call';
+
 dotenv.config();
 
 const app: Application = express();
 const PORT: number = Number(process.env.PORT) || 3000;
+
+// WebSocket setup
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
+
+// Store connected clients
+type ClientId = string;
+const clients = new Map<ClientId, WebSocket>();
+
+// Message interfaces
+interface InitMessage {
+  type: "init";
+  payload: {
+    candidateId: string;
+  };
+}
+
+interface CallEventMessage {
+  event: string;
+  callId: string;
+  status: string;
+  data?: any;
+}
+
+// WebSocket connection handler
+wss.on("connection", (ws: WebSocket) => {
+  let candidateId: string | undefined;
+
+  ws.on("message", (msg: Buffer) => {
+    try {
+      const message = msg.toString();
+      const parsed: InitMessage = JSON.parse(message);
+      
+      if (parsed.type === "init") {
+        candidateId = parsed.payload.candidateId;
+        console.log("candidateId: ", candidateId);
+        clients.set(candidateId, ws);
+        console.log(`WebSocket client connected: ${candidateId}`);
+        
+        // Send confirmation
+        ws.send(JSON.stringify({
+          type: "connected",
+          candidateId: candidateId,
+          message: "Successfully connected to WebSocket server"
+        }));
+      }
+    } catch (err) {
+      console.error("Invalid WebSocket message received:", err);
+      ws.send(JSON.stringify({
+        type: "error",
+        message: "Invalid message format"
+      }));
+    }
+  });
+
+  ws.on("close", () => {
+    if (candidateId) {
+      clients.delete(candidateId);
+      console.log(`WebSocket client disconnected: ${candidateId}`);
+    }
+  });
+
+  ws.on("error", (error) => {
+    console.error("WebSocket error:", error);
+    if (candidateId) {
+      clients.delete(candidateId);
+    }
+  });
+});
+
+// Export WebSocket utilities for use in routes
+export const sendWebSocketMessage = (candidateId: string, message: CallEventMessage) => {
+  const ws = clients.get(candidateId);
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(message));
+    console.log(`Sent WebSocket message to ${candidateId}:`, message);
+    return true;
+  } else {
+    console.log(`No active WebSocket connection for ${candidateId}`);
+    return false;
+  }
+};
+
+export const broadcastToAll = (message: CallEventMessage) => {
+  let sentCount = 0;
+  clients.forEach((ws, candidateId) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(message));
+      sentCount++;
+    }
+  });
+  console.log(`Broadcasted message to ${sentCount} clients`);
+  return sentCount;
+};
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -86,9 +183,11 @@ async function main(){
         await mongoose.connect(process.env.MONGODB_URI!);
         console.log("Connected to MongoDB with database name: " + process.env.MONGODB_URI!.split('/').pop());
         
-        app.listen(PORT,'0.0.0.0', () => {
+        server.listen(PORT,'0.0.0.0', () => {
             console.log(`Server is running on port ${PORT}`);
+            console.log(`WebSocket server is ready for connections`);
         });
+
     } catch (error) {
         console.error("Error connecting to MongoDB", error);
     }

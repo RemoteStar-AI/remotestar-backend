@@ -102,10 +102,11 @@ export async function createSupportAssistant(systemPrompt: string, firstMessage:
 }
 
 
-export async function makeOutboundCall(assistantId: string, phoneNumber: string, phoneNumberId: string) {
+export async function makeOutboundCall(assistantId: string, phoneNumber: string, phoneNumberId: string, candidateIdAsName: string) {
   try {
     const call = await vapi.calls.create({
       assistantId: assistantId,
+      name: candidateIdAsName,
       phoneNumberId: phoneNumberId, // Your Vapi phone number ID
       customer: {
         number: phoneNumber, // Target phone number
