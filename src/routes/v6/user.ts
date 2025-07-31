@@ -23,7 +23,7 @@ userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
       logger.warn(`[GET_USER] User not found for ID: ${userId}`);
       return res.status(404).json({ error: "User not found" });
     }
-
+    //testing
     let userAnalysis = await JobAnalysisOfCandidate.findOne({
       jobId: jobId,
       userId: userId,
