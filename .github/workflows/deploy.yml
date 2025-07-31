@@ -12,6 +12,7 @@ jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    environment: production
     strategy:
       matrix:
         environment: [main, staging, demo]  # Deploy to all environments; adjust as needed
