@@ -531,7 +531,80 @@ callRouter.post(
         // Always return success to VAPI even on error to prevent retries
         res.json({ success: true });
       }
+    } else if (req.body.message?.type === "conversation-update") {
+      console.log("VAPI Webhook received:");
+      console.log(req.body);
+
+      // Set CORS headers for VAPI
+      res.header("Access-Control-Allow-Origin", "*");
+      res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+      res.header(
+        "Access-Control-Allow-Headers",
+        "Content-Type, X-Vapi-Signature, X-Vapi-Timestamp"
+      );
+
+      try {
+        // Validate message structure
+        if (!req.body.message) {
+          console.error("Missing message in webhook payload");
+          return res
+            .status(400)
+            .json({ success: false, error: "Missing message" });
+        }
+
+        // Extract conversation data from VAPI payload
+        const {
+          conversation, // Conversation messages
+          messages, // Raw messages
+          messagesOpenAIFormatted, // OpenAI formatted messages
+          artifact, // Artifact data
+          call, // Call object
+          assistant, // Assistant object
+          customer, // Customer object
+          ...otherData
+        } = req.body.message;
+
+        const callId = call?.id;
+        const candidateId = call?.name;
+
+        console.log(
+          `Processing conversation update - Call ID: ${callId}, Messages count: ${messages?.length || 0}`
+        );
+
+        if (!callId) {
+          console.error("Missing callId in conversation webhook payload");
+          return res
+            .status(400)
+            .json({ success: false, error: "Missing callId" });
+        }
+
+        // Send WebSocket notification to the frontend
+        sendWebSocketMessage(candidateId, {
+          event: "call.conversation.update",
+          callId: callId,
+          status: "conversation-update", // Required field for CallEventMessage
+          data: {
+            conversation,
+            messages,
+            messagesOpenAIFormatted,
+            artifact,
+            assistantId: assistant?.id,
+            customerNumber: customer?.number,
+            ...otherData
+          }
+        });
+
+        console.log(`Conversation update sent for call ${callId}`);
+
+        // Always return success to VAPI
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error processing VAPI conversation webhook:", error);
+        // Always return success to VAPI even on error to prevent retries
+        res.json({ success: true });
+      }
     } else {
+      console.log("VAPI Webhook received:", req.body);
       res.status(200).json({ success: true });
     }
   }

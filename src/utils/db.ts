@@ -253,6 +253,15 @@ const webhookSubscriptionSchema = new Schema({
   delivery_failures: { type: Number, default: 0 }
 }, { timestamps: true });
 
+const interviewSchema=new Schema({
+  userId: {type: String, required: true},
+  candidateEmail: {type: String, required: true},
+  candidateId: {type: String, required: true},
+  jobId: {type: String, required: true},
+  interviewLink: {type: String, required: true},
+  expiresAt: {type: Date, required: true, default: Date.now() + 1000 * 60 * 60 * 24* 15},
+},{timestamps:true})
+
 export const Job = mongoose.model("Job", jobSchema);
 export const Company = mongoose.model("Company", companySchema);
 export const CulturalFit = mongoose.model("CulturalFit", culturalFitSchema);
@@ -269,3 +278,4 @@ export const DefaultAssistant = mongoose.model("DefaultAssistant", defaultAssist
 export const CallDetails = mongoose.model("CallDetails", callDetailsSchema);
 export const ScheduledCalls = mongoose.model("ScheduledCalls", scheduledCallSchema);
 export const WebhookSubscription = mongoose.model("WebhookSubscription", webhookSubscriptionSchema);
+export const Interview = mongoose.model("Interview", interviewSchema);

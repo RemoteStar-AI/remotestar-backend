@@ -71,3 +71,28 @@ export const defaultAdminEmail = (organisation_name: string, name: string): stri
   </div>
   `;
 };
+
+export const defaultReachoutEmail = (name: string, email: string, JobName: string, interviewLink: string): string => {
+  return `
+  <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
+    <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
+      <div style="background:#5B96A5;padding:24px 0;text-align:center;color:#fff;">
+        <h2 style="margin:0;font-size:2rem;letter-spacing:1px;">RemoteStar</h2>
+      </div>
+      <div style="padding:32px 24px 24px 24px;">
+        <p style="font-size:1.1rem;margin-bottom:18px;">Hello <b>${name}</b>,</p>
+        <p style="font-size:1rem;margin-bottom:14px;">Congratulations! 🎉</p>
+        <p style="font-size:1rem;margin-bottom:14px;">We are excited to inform you that you have been <b>shortlisted for an interview</b> for the position of <b>${JobName}</b></p>
+        <p style="font-size:1rem;margin-bottom:14px;">Your application stood out among many candidates, and we would love to learn more about your experience and discuss how you can contribute to our team.</p>
+        <p style="font-size:1rem;margin-bottom:18px;">Please click the link below to schedule your interview:</p>
+        <a href="${interviewLink}" style="display:inline-block;margin:18px 0 0 0;padding:12px 28px;background:#5B96A5;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;font-size:1rem;">Schedule Your Interview</a>
+        <p style="margin-top:24px;font-size:0.95rem;color:#666;">Please ensure you have a stable internet connection and a quiet environment for the interview.</p>
+        <p style="margin-top:32px;font-size:0.95rem;color:#888;">Best regards,<br>The RemoteStar Recruitment Team</p>
+      </div>
+      <div style="background:#f4f4f7;padding:16px;text-align:center;font-size:0.9rem;color:#aaa;">
+        &copy; ${new Date().getFullYear()} RemoteStar. All rights reserved.
+      </div>
+    </div>
+  </div>
+  `;
+};
