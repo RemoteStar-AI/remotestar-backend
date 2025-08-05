@@ -1668,6 +1668,8 @@ export function VapiAnalysisPrompt():string{
 {
   "overall_technical_skills": "<analyse the candidate's response and give a rating out of 100 to the candidate based upon his overall technical skills and response. This rating **must be calculated by taking into account the assigned weightage of each skill as mentioned in the system prompt**. If the candidate performs poorly in a highly weighted skill (e.g., 70%), their overall score should be significantly impacted. Conversely, strong performance in a low-weighted skill (e.g., 5%) should not drastically boost the overall score. This rating should be **strictly only based upon skills and questions explicitly mentioned in the system prompt**. If the candidate talks about any other technical skills other than those mentioned in the system prompt, **do not score them for those unprompted skills** and mention in the summary that the candidate tried to deviate the topic by discussing unrelated technical areas.>",
   "overall_summary": "<analyse the candidate's response and give a summary of the candidate's performance based upon the transcript. It should not be more than 100 words. Summarise their skills and knowledge **strictly based on the topics and questions within the system prompt**. If the candidate attempts to deviate the topic from what is given in the system prompt, **this should negatively affect the summary and be explicitly mentioned as a deviation**.",
+  "years_of_experience": "<analyse the candidate's response and give me total years of experience that candidate have>",
+  "notice_period": "<analyse the candidate's response and give me the notice period that candidate have>",
   "overall_communication": "<analyse the candidate's response and give a rating out of 100 to the candidate based upon his overall communication skills and response, taking his clarity and confidence into account. His construction of sentences and his ability to answer the question.>",
   "technical_skills": [{
     "skill_name": "<name of the skill, **only if it's from the system prompt**>",
@@ -1686,6 +1688,8 @@ export function VapiAnalysisPrompt():string{
     overall_technical_skills: number,
     overall_summary: string,
     overall_communication: number,
+    years_of_experience: number,
+    notice_period: number,
     technical_skills: [{
       skill_name: string,
       skill_rating: number,
@@ -1701,7 +1705,6 @@ INSTRUCTIONS:
 - No extra text.
 - No extra spaces.
 - No extra lines.
-- No
  in the JSON object.
 - Only return the JSON object, no other text.
 

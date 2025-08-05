@@ -137,7 +137,6 @@ callRouter.post("/", authenticate, async (req: any, res: any) => {
     const userId = req.user.firebase_id;
     const organisationId = req.user.organisation;
     const recruiterEmail = req.user.email;
-    const token = req.user.token;
     const parsedBody = callSchema.parse(req.body);
     const {
       phoneNumber,
@@ -189,8 +188,7 @@ callRouter.post("/", authenticate, async (req: any, res: any) => {
         systemPrompt,
         firstMessage,
         analysisPrompt,
-        assistantName,
-        JSON.stringify(token)
+        assistantName
       );
       assistantId = assistant.id;
       await DefaultAssistant.updateOne(

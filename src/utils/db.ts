@@ -259,6 +259,10 @@ const interviewSchema=new Schema({
   candidateId: {type: String, required: true},
   jobId: {type: String, required: true},
   interviewLink: {type: String, required: true},
+  assistantId: {type: String, required: true},
+  systemPrompt: {type: String, required: true},
+  analysisPrompt: {type: String, required: true},
+  firstMessage: {type: String, required: true},
   expiresAt: {type: Date, required: true, default: Date.now() + 1000 * 60 * 60 * 24* 15},
 },{timestamps:true})
 

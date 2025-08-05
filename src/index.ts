@@ -28,6 +28,7 @@ import { jobRouter as jobRouter6 } from './routes/v6/job';
 import { searchRouter as searchRouter6 } from './routes/v6/search';
 import { userRouter as userRouter6 } from './routes/v6/user';
 import { callRouter } from './routes/v6/call';
+import { interviewRouter } from './routes/v6/interview';
 
 dotenv.config();
 
@@ -177,6 +178,7 @@ app.use("/api/v6/job", jobRouter6);
 app.use("/api/v6/search", searchRouter6);
 app.use("/api/v6/user", userRouter6);
 app.use("/api/v6/call", callRouter);
+app.use("/api/v6/interview", interviewRouter);
 
 async function main(){
     try {

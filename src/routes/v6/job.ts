@@ -10,11 +10,11 @@ import { openai } from "../../utils/openai";
 import { createAndStoreEmbedding, extractJsonFromMarkdown, insertErrorSection } from "../../utils/helper-functions";
 import { authenticate } from "../../middleware/firebase-auth";
 import { z } from "zod";
-import { systemPrompt, updateScriptforAssistant } from "../../utils/vapi";
+import { systemPrompt, updateScriptforAssistant} from "../../utils/vapi";
 
 const namespace = "job-pool-v2";
 
-const firstMessage = 'Hi this is Rilesh from RemoteStar. Do you have a couple of minutes to talk?';
+const firstMessage = 'Hi this is Riley from RemoteStar. Do you have a couple of minutes to talk?';
 
 const VapiPromptSchema = z.object({
   firstMessage: z.string(),
@@ -67,6 +67,7 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
     try {
       const parsedBody = jobSchema.safeParse(body);
       if (!parsedBody.success) {
+        console.log("Request data validation failed", parsedBody.error.format());
         return res.status(400).json({ error: parsedBody.error.format() });
       }
       console.log("Request data validated successfully");
