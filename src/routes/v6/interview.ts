@@ -27,7 +27,7 @@ interviewRouter.get("/:id",authenticate, async (req: any, res: any) => {
     }
 
     console.log(`Fetching interview with ID: ${id}`);
-    const interview = await Interview.findById(id);
+    const interview = await Interview.findOne({interviewLink: id});
     
     if(!interview){
       console.log(`Error: Interview not found with ID: ${id}`);
@@ -44,6 +44,7 @@ interviewRouter.get("/:id",authenticate, async (req: any, res: any) => {
     console.log(`Successfully retrieved interview data for ID: ${id}`);
     res.status(200).json({ 
       success: true, 
+      interviewId: interview._id,
       assistantId: interview.assistantId, 
       jobName: job?.title, 
       jobDescription: job?.description, 
