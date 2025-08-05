@@ -41,7 +41,6 @@ Authorization: Bearer <firebase_token>
 ```json
 {
   "name": "string",
-  "email": "string",
   "JobName": "string", 
   "candidateEmail": "string",
   "candidateId": "string",
@@ -54,7 +53,6 @@ Authorization: Bearer <firebase_token>
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | name | string | Yes | Name of the person creating the interview |
-| email | string | Yes | Email of the person creating the interview |
 | JobName | string | Yes | Name/title of the job position |
 | candidateEmail | string | Yes | Email address of the candidate |
 | candidateId | string | Yes | Unique identifier for the candidate |
