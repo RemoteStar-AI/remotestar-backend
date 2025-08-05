@@ -285,13 +285,13 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
     const promptChanged = data.prompt !== existingJob.prompt;
     console.log(`[PUT /job] Description changed: ${descriptionChanged}`);
 
-    if (promptChanged) {
-      console.log("[PUT /job] Processing prompt change");
-      const assistantId = existingJob.prompt.assistantId;
-      const script = existingJob.prompt.systemPrompt;
-      const updatedAssistant = await updateScriptforAssistant(assistantId, script, data.description);
-      console.log("[PUT /job] Prompt updated successfully");
-    }
+    // if (promptChanged) {
+    //   console.log("[PUT /job] Processing prompt change");
+    //   console.log("[PUT /job] Assistant ID:", assistantId);
+    //   const script = existingJob.prompt.systemPrompt;
+    //   const updatedAssistant = await updateScriptforAssistant(assistantId, script, data.description);
+    //   console.log("[PUT /job] Prompt updated successfully");
+    // }
 
     if (descriptionChanged) {
       console.log("[PUT /job] Processing description change");
