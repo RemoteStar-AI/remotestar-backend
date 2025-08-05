@@ -11,8 +11,8 @@ export const interviewRouter = Router();
 const firstMessage = "Hi this is Riley from RemoteStar. Do you have a couple of minutes to talk?";
 
 interviewRouter.post("/email", async (req: Request, res: Response) => {
-  const { name, email, JobName, interviewLink, toEmail } = req.body;    
-  const emailText = defaultReachoutEmail(name, email, JobName, interviewLink);
+  const { name, JobName, interviewLink, toEmail } = req.body;    
+  const emailText = defaultReachoutEmail(name, JobName, interviewLink);
   await sendEmail(toEmail, "Interview Scheduled", emailText);
   res.status(200).json({ success: true });
 });
@@ -148,7 +148,7 @@ interviewRouter.post("/", authenticate, async (req: any, res: any) => {
     // Send email notification
     console.log(`Sending email notification to ${candidateEmail}`);
     try {
-      const emailText = defaultReachoutEmail(name, email, JobName, interviewLink);
+      const emailText = defaultReachoutEmail(name, JobName, interviewLink);
       await sendEmail(candidateEmail, "Interview Scheduled", emailText);
       console.log(`Email sent successfully to ${candidateEmail}`);
     } catch (emailError) {
@@ -162,6 +162,7 @@ interviewRouter.post("/", authenticate, async (req: any, res: any) => {
       success: true, 
       interviewId: interview._id,
       assistantId: assistantId,
+
       message: "Interview created and email sent successfully" 
     });
   } catch (error) {
