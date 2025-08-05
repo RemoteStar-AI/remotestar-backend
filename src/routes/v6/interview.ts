@@ -17,7 +17,7 @@ interviewRouter.post("/email", async (req: Request, res: Response) => {
   res.status(200).json({ success: true });
 });
 
-interviewRouter.get("/:id",authenticate, async (req: any, res: any) => {
+interviewRouter.get("/:id", async (req: any, res: any) => {
   try {
     const { id } = req.params;
     
