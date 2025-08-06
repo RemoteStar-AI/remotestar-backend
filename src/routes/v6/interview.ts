@@ -191,22 +191,17 @@ interviewRouter.post("/get-presigned-url", async (req: any, res: any) => {
     console.log("Generating presigned URL for video upload with data:", {
       sessionId: req.body.sessionId,
       chunkNumber: req.body.chunkNumber,
-      userId: req.user?.firebase_id
+      userId: req.body.userId
     });
 
     const schema = z.object({
       sessionId: z.string().min(1),
       chunkNumber: z.number().int().positive(),
+      userId: z.string().min(1),
       interviewId: z.string().min(1).optional() // Optional for validation
     });
 
-    const { sessionId, chunkNumber, interviewId } = schema.parse(req.body);
-    const userId = req.user?.firebase_id;
-    
-    if (!userId) {
-      console.log("Error: User ID not found in authentication");
-      return res.status(401).json({ success: false, error: "User authentication required" });
-    }
+    const { sessionId, chunkNumber, userId, interviewId } = schema.parse(req.body);
 
     // Optional: Validate interview exists if interviewId is provided
     if (interviewId) {
@@ -214,12 +209,6 @@ interviewRouter.post("/get-presigned-url", async (req: any, res: any) => {
       if (!interview) {
         console.log(`Error: Interview not found with ID: ${interviewId}`);
         return res.status(404).json({ success: false, error: "Interview not found" });
-      }
-      
-      // Optional: Check if user owns this interview
-      if (interview.userId !== userId) {
-        console.log(`Error: User ${userId} does not own interview ${interviewId}`);
-        return res.status(403).json({ success: false, error: "Access denied to this interview" });
       }
     }
 
