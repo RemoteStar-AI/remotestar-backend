@@ -1,8 +1,8 @@
 import nodemailer from "nodemailer";
-import dotenv from 'dotenv'
-dotenv.config()
+import dotenv from "dotenv";
+dotenv.config();
 
-const webiseUrl = process.env.WEBSITE_URL
+const webiseUrl = process.env.WEBSITE_URL;
 
 export const sendEmail = async (to: string, subject: string, text: string) => {
   const transporter = nodemailer.createTransport({
@@ -19,7 +19,7 @@ export const sendEmail = async (to: string, subject: string, text: string) => {
     subject,
     html: text,
   };
-  
+
   try {
     await transporter.sendMail(mailOptions);
     console.log("Email sent successfully");
@@ -28,7 +28,10 @@ export const sendEmail = async (to: string, subject: string, text: string) => {
   }
 };
 
-export const defaultMemberEmail = (organisation_name: string, name: string): string => {
+export const defaultMemberEmail = (
+  organisation_name: string,
+  name: string,
+): string => {
   return `
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
@@ -50,7 +53,10 @@ export const defaultMemberEmail = (organisation_name: string, name: string): str
   `;
 };
 
-export const defaultAdminEmail = (organisation_name: string, name: string): string => {
+export const defaultAdminEmail = (
+  organisation_name: string,
+  name: string,
+): string => {
   return `
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
@@ -72,8 +78,13 @@ export const defaultAdminEmail = (organisation_name: string, name: string): stri
   `;
 };
 
-export const defaultReachoutEmail = (name: string, JobName: string, interviewLink: string): string => {
-  interviewLink = 'http://localhost:3000/interview?interviewId='+interviewLink;
+export const defaultReachoutEmail = (
+  name: string,
+  JobName: string,
+  interviewLink: string,
+): string => {
+  interviewLink = "https://rs-interview.vercel.app/interview?interviewId=" +
+    interviewLink;
   return `
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
@@ -97,3 +108,4 @@ export const defaultReachoutEmail = (name: string, JobName: string, interviewLin
   </div>
   `;
 };
+
