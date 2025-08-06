@@ -83,7 +83,7 @@ export const defaultReachoutEmail = (
   JobName: string,
   interviewLink: string,
 ): string => {
-  interviewLink = "https://rs-interview.vercel.app/interview?interviewId=" +
+  interviewLink = "https://interview.remotestar.io/interview?interviewId=" +
     interviewLink;
   return `
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
@@ -108,4 +108,3 @@ export const defaultReachoutEmail = (
   </div>
   `;
 };
-
