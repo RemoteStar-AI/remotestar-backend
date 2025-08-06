@@ -73,6 +73,7 @@ export const defaultAdminEmail = (organisation_name: string, name: string): stri
 };
 
 export const defaultReachoutEmail = (name: string, JobName: string, interviewLink: string): string => {
+  interviewLink = 'http://localhost:3000/interview?interviewId='+interviewLink;
   return `
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
