@@ -4,6 +4,7 @@ import { defaultReachoutEmail, sendEmail } from "../../utils/mail";
 import { authenticate } from "../../middleware/firebase-auth";
 import { createSupportAssistant, updateScriptforAssistant } from "../../utils/vapi";
 import { VapiSystemPrompt3 as VapiSystemPrompt, VapiAnalysisPrompt } from "../../utils/prompts";
+import { generateVideoUploadPresignedUrl, getVideoChunkSignedUrl } from "../../utils/s3";
 import { z } from "zod";
 import crypto from "crypto";
 
@@ -184,4 +185,90 @@ interviewRouter.post("/", authenticate, async (req: any, res: any) => {
     });
   }
 });
+
+interviewRouter.post("/get-presigned-url", async (req: any, res: any) => {
+  try {
+    console.log("Generating presigned URL for video upload with data:", {
+      sessionId: req.body.sessionId,
+      chunkNumber: req.body.chunkNumber,
+      userId: req.user?.firebase_id
+    });
+
+    const schema = z.object({
+      sessionId: z.string().min(1),
+      chunkNumber: z.number().int().positive(),
+      interviewId: z.string().min(1).optional() // Optional for validation
+    });
+
+    const { sessionId, chunkNumber, interviewId } = schema.parse(req.body);
+    const userId = req.user?.firebase_id;
+    
+    if (!userId) {
+      console.log("Error: User ID not found in authentication");
+      return res.status(401).json({ success: false, error: "User authentication required" });
+    }
+
+    // Optional: Validate interview exists if interviewId is provided
+    if (interviewId) {
+      const interview = await Interview.findById(interviewId);
+      if (!interview) {
+        console.log(`Error: Interview not found with ID: ${interviewId}`);
+        return res.status(404).json({ success: false, error: "Interview not found" });
+      }
+      
+      // Optional: Check if user owns this interview
+      if (interview.userId !== userId) {
+        console.log(`Error: User ${userId} does not own interview ${interviewId}`);
+        return res.status(403).json({ success: false, error: "Access denied to this interview" });
+      }
+    }
+
+    // Optional: Add rate limiting or quota checking here
+    // For example, check total session bytes, interview duration, or user quotas
+    
+    console.log(`Generating presigned URL for user ${userId}, session ${sessionId}, chunk ${chunkNumber}`);
+    
+    const presignedUrlData = await generateVideoUploadPresignedUrl(
+      userId,
+      sessionId,
+      chunkNumber
+    );
+
+    console.log(`Successfully generated presigned URL for chunk ${chunkNumber} in session ${sessionId}`);
+
+    res.status(200).json({
+      success: true,
+      presignedUrl: presignedUrlData.presignedUrl,
+      key: presignedUrlData.key,
+      filename: presignedUrlData.filename,
+      metadata: presignedUrlData.metadata,
+      expiresIn: 300 // 5 minutes
+    });
+
+  } catch (error) {
+    console.error("Error generating presigned URL:", error);
+    
+    // Handle specific error types
+    if (error instanceof z.ZodError) {
+      console.error("Validation error:", error.errors);
+      return res.status(400).json({ 
+        success: false, 
+        error: "Invalid request data", 
+        details: error.errors 
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to generate presigned URL" 
+    });
+  }
+});
+
+
+interviewRouter.post("/get-call-details", async (req: any, res: any) => {
+  const body = req.body;
+  res.status(200).json({ success: true, message: "Call details fetched successfully" });
+});
+
 

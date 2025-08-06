@@ -13,6 +13,15 @@ const s3 = new S3Client({
   },
 });
 
+// Video bucket S3 client (separate from resume bucket)
+const videoS3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY!,
+    secretAccessKey: process.env.AWS_SECRET_KEY!,
+  },
+});
+
 export const uploadPDFToS3 = async (fileBuffer: Buffer, filename: string, mimetype: string) => {
   const key = `resumes/${uuidv4()}-${filename}`;
   await s3.send(
@@ -55,4 +64,66 @@ export const deleteFileFromS3 = async (fileUrlOrKey: string) => {
       Key: key,
     })
   );
+};
+
+// New functions for video upload presigned URLs
+export const generateVideoUploadPresignedUrl = async (
+  userId: string,
+  sessionId: string,
+  chunkNumber: number,
+  expiresIn = 300 // 5 minutes for security
+) => {
+  const timestamp = Date.now();
+  const chunkId = uuidv4();
+  
+  // Create unique filename with metadata
+  const filename = `${timestamp}-chunk-${chunkNumber}-${chunkId}.webm`;
+  const key = `videos/${userId}/${sessionId}/${filename}`;
+  
+  const command = new PutObjectCommand({
+    Bucket: process.env.AWS_VIDEO_BUCKET_NAME!,
+    Key: key,
+    ContentType: 'video/webm',
+    ServerSideEncryption: 'AES256', // Required by bucket policy
+    Metadata: {
+      'user-id': userId,
+      'session-id': sessionId,
+      'chunk-number': chunkNumber.toString(),
+      'timestamp': timestamp.toString(),
+      'chunk-id': chunkId,
+      'upload-type': 'video-chunk'
+    }
+  });
+  
+  const presignedUrl = await getSignedUrl(videoS3, command, { expiresIn });
+  
+  return {
+    presignedUrl,
+    key,
+    filename,
+    metadata: {
+      userId,
+      sessionId,
+      chunkNumber,
+      timestamp,
+      chunkId
+    }
+  };
+};
+
+export const deleteVideoChunkFromS3 = async (key: string) => {
+  await videoS3.send(
+    new DeleteObjectCommand({
+      Bucket: process.env.AWS_VIDEO_BUCKET_NAME!,
+      Key: key,
+    })
+  );
+};
+
+export const getVideoChunkSignedUrl = async (key: string, expiresIn = 3600) => {
+  const command = new GetObjectCommand({
+    Bucket: process.env.AWS_VIDEO_BUCKET_NAME!,
+    Key: key,
+  });
+  return await getSignedUrl(videoS3, command, { expiresIn });
 };
