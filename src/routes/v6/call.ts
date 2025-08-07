@@ -27,6 +27,7 @@ import mongoose from "mongoose";
 
 const chatgptModel = "gpt-3.5-turbo";
 const assumedCallDuration = 10;
+const nudgeAssistantId = "e916d042-af61-41d8-8692-08d11b919a5c";
 
 function processPhoneNumber(phoneNumber: string) {
   // Trim spaces from sides and remove any - or em dashes in between
@@ -611,221 +612,24 @@ callRouter.post(
   }
 );
 
-// // Webhook subscription management endpoints
-// callRouter.post('/webhook/subscribe', authenticate, async (req: any, res: any) => {
-//     try {
-//         const userId = req.user.firebase_id;
-//         const organisationId = req.user.organisation;
-//         const parsedBody = webhookSubscriptionSchema.parse(req.body);
-
-//         const { webhook_url, events = ['call.status.changed', 'call.completed', 'call.failed'] } = parsedBody;
-
-//         // Check if subscription already exists for this organisation and URL
-//         const existingSubscription = await WebhookSubscription.findOne({
-//             organisation_id: organisationId,
-//             webhook_url
-//         });
-
-//         if (existingSubscription) {
-//             // Update existing subscription
-//             await WebhookSubscription.updateOne(
-//                 { _id: existingSubscription._id },
-//                 {
-//                     events,
-//                     is_active: true,
-//                     delivery_failures: 0
-//                 }
-//             );
-
-//             return res.json({
-//                 success: true,
-//                 message: 'Webhook subscription updated',
-//                 subscription_id: existingSubscription._id,
-//                 secret_key: existingSubscription.secret_key
-//             });
-//         }
-
-//         // Create new subscription
-//         const secretKey = generateWebhookSecret();
-//         const subscription = await WebhookSubscription.create({
-//             organisation_id: organisationId,
-//             webhook_url,
-//             events,
-//             secret_key: secretKey,
-//             is_active: true
-//         });
-
-//         res.json({
-//             success: true,
-//             message: 'Webhook subscription created',
-//             subscription_id: subscription._id,
-//             secret_key: secretKey
-//         });
-//     } catch (error) {
-//         console.error('Error creating webhook subscription:', error);
-//         res.status(500).json({
-//             success: false,
-//             error: error instanceof Error ? error.message : 'Internal server error'
-//         });
-//     }
-// });
-
-// callRouter.get('/webhook/subscriptions', authenticate, async (req: any, res: any) => {
-//     try {
-//         const organisationId = req.user.organisation;
-
-//         const subscriptions = await WebhookSubscription.find({
-//             organisation_id: organisationId
-//         }).select('-secret_key'); // Don't return secret keys
-
-//         res.json({
-//             success: true,
-//             subscriptions: subscriptions.map(sub => ({
-//                 id: sub._id,
-//                 webhook_url: sub.webhook_url,
-//                 events: sub.events,
-//                 is_active: sub.is_active,
-//                 last_delivery_attempt: sub.last_delivery_attempt,
-//                 delivery_failures: sub.delivery_failures,
-//                 created_at: sub.createdAt,
-//                 updated_at: sub.updatedAt
-//             }))
-//         });
-//     } catch (error) {
-//         console.error('Error fetching webhook subscriptions:', error);
-//         res.status(500).json({
-//             success: false,
-//             error: 'Internal server error'
-//         });
-//     }
-// });
-
-// callRouter.delete('/webhook/subscribe/:id', authenticate, async (req: any, res: any) => {
-//     try {
-//         const { id } = req.params;
-//         const organisationId = req.user.organisation;
-
-//         const result = await WebhookSubscription.findOneAndDelete({
-//             _id: id,
-//             organisation_id: organisationId
-//         });
-
-//         if (!result) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: 'Webhook subscription not found'
-//             });
-//         }
-
-//         res.json({
-//             success: true,
-//             message: 'Webhook subscription deleted'
-//         });
-//     } catch (error) {
-//         console.error('Error deleting webhook subscription:', error);
-//         res.status(500).json({
-//             success: false,
-//             error: 'Internal server error'
-//         });
-//     }
-// });
-
-// callRouter.patch('/webhook/subscribe/:id', authenticate, async (req: any, res: any) => {
-//     try {
-//         const { id } = req.params;
-//         const organisationId = req.user.organisation;
-//         const { is_active, events } = req.body;
-
-//         const updateData: any = {};
-//         if (typeof is_active === 'boolean') updateData.is_active = is_active;
-//         if (Array.isArray(events)) updateData.events = events;
-
-//         const result = await WebhookSubscription.findOneAndUpdate(
-//             {
-//                 _id: id,
-//                 organisation_id: organisationId
-//             },
-//             { $set: updateData },
-//             { new: true }
-//         ).select('-secret_key');
-
-//         if (!result) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: 'Webhook subscription not found'
-//             });
-//         }
-
-//         res.json({
-//             success: true,
-//             message: 'Webhook subscription updated',
-//             subscription: result
-//         });
-//     } catch (error) {
-//         console.error('Error updating webhook subscription:', error);
-//         res.status(500).json({
-//             success: false,
-//             error: 'Internal server error'
-//         });
-//     }
-// });
-
-// // Test webhook endpoint for development/testing
-// callRouter.post('/webhook/test', authenticate, async (req: any, res: any) => {
-//     try {
-//         const organisationId = req.user.organisation;
-//         const { webhook_url, event_type = 'call.status.changed' } = req.body;
-
-//         if (!webhook_url) {
-//             return res.status(400).json({
-//                 success: false,
-//                 error: 'webhook_url is required'
-//             });
-//         }
-
-//         // Create a test payload
-//         const testPayload = {
-//             event: event_type as 'call.status.changed' | 'call.completed' | 'call.failed',
-//             callId: 'test_call_123',
-//             jobId: 'test_job_456',
-//             candidateId: 'test_candidate_789',
-//             organisation_id: organisationId,
-//             recruiterEmail: req.user.email,
-//             status: 'test',
-//             timestamp: new Date().toISOString(),
-//             data: {
-//                 type: 'test',
-//                 message: 'This is a test webhook notification'
-//             }
-//         };
-
-//         // Send test webhook
-//         const success = await sendWebhookNotification(
-//             webhook_url,
-//             testPayload,
-//             'test_secret_key'
-//         );
-
-//         if (success) {
-//             res.json({
-//                 success: true,
-//                 message: 'Test webhook sent successfully',
-//                 payload: testPayload
-//             });
-//         } else {
-//             res.status(500).json({
-//                 success: false,
-//                 error: 'Failed to send test webhook'
-//             });
-//         }
-//     } catch (error) {
-//         console.error('Error sending test webhook:', error);
-//         res.status(500).json({
-//             success: false,
-//             error: 'Internal server error'
-//         });
-//     }
-// });
+callRouter.post("/nudge", authenticate, async (req: any, res: any) => {
+  const phoneNumber = req.body.phoneNumber;
+  const candidateId = req.body.candidateId;
+  const finalPhoneNumber = processPhoneNumber(phoneNumber);
+  const call = await makeOutboundCall(nudgeAssistantId, finalPhoneNumber, process.env.VAPI_PHONE_NUMBER_ID || "", candidateId);
+  await CallDetails.create({
+    jobId: "nudge",
+    candidateId: candidateId,
+    organisation_id: req.user.organisation,
+    assistantId: nudgeAssistantId,
+    // @ts-ignore
+    callId: call.id,
+    callDetails: call,
+    recruiterEmail: req.user.email,
+    type: "nudge",
+  });
+  res.json({ success: true, call });
+});
 
 let isCronRunning = false;
 // Cron job to execute due scheduled calls every minute

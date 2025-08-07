@@ -225,7 +225,7 @@ const callDetailsSchema=new Schema({
   status: {type: String, default: "initiated"},
   lastUpdated: {type: Date, default: Date.now},
   vapiData: {type: Object, default: {}},
-  type: {type:String, enum:["call", "email","interview"], default:"call"},
+  type: {type:String, enum:["call", "email","interview","nudge"], default:"call"},
   message: {type: String, default: ""},
 },{timestamps:true})
 
