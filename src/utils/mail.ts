@@ -93,11 +93,10 @@ export const defaultReachoutEmail = (
       </div>
       <div style="padding:32px 24px 24px 24px;">
         <p style="font-size:1.1rem;margin-bottom:18px;">Hello <b>${name}</b>,</p>
-        <p style="font-size:1rem;margin-bottom:14px;">Congratulations! 🎉</p>
-        <p style="font-size:1rem;margin-bottom:14px;">We are excited to inform you that you have been <b>shortlisted for an interview</b> for the position of <b>${JobName}</b></p>
-        <p style="font-size:1rem;margin-bottom:14px;">Your application stood out among many candidates, and we would love to learn more about your experience and discuss how you can contribute to our team.</p>
-        <p style="font-size:1rem;margin-bottom:18px;">Please click the link below to schedule your interview:</p>
-        <a href="${interviewLink}" style="display:inline-block;margin:18px 0 0 0;padding:12px 28px;background:#5B96A5;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;font-size:1rem;">Schedule Your Interview</a>
+        <p style="font-size:1rem;margin-bottom:14px;">We are pleased to inform you that your application has been <b>successfully shortlisted</b> for the position of <b>${JobName}</b>.</p>
+        <p style="font-size:1rem;margin-bottom:14px;">Your qualifications and experience have demonstrated strong alignment with our requirements, and we are eager to learn more about your professional background and discuss potential opportunities for collaboration.</p>
+        <p style="font-size:1rem;margin-bottom:18px;">We invite you to attend the interview at your convenience using the link provided below:</p>
+        <a href="${interviewLink}" style="display:inline-block;margin:18px 0 0 0;padding:12px 28px;background:#5B96A5;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;font-size:1rem;">Attend Interview</a>
         <p style="margin-top:24px;font-size:0.95rem;color:#666;">Please ensure you have a stable internet connection and a quiet environment for the interview.</p>
         <p style="margin-top:32px;font-size:0.95rem;color:#888;">Best regards,<br>The RemoteStar Recruitment Team</p>
       </div>
