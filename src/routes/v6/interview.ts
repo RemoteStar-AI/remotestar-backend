@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { CallDetails, Interview, Job } from "../../utils/db";
 import { defaultReachoutEmail, sendEmail } from "../../utils/mail";
 import { authenticate } from "../../middleware/firebase-auth";
-import { createSupportAssistant, updateScriptforAssistant } from "../../utils/vapi";
+import { createSupportAssistant, getCallDetails, updateScriptforAssistant } from "../../utils/vapi";
 import { VapiSystemPrompt3 as VapiSystemPrompt, VapiAnalysisPrompt } from "../../utils/prompts";
 import { generateVideoUploadPresignedUrl, getVideoChunkSignedUrl } from "../../utils/s3";
 import { z } from "zod";
@@ -276,7 +276,7 @@ interviewRouter.post("/get-call-details", async (req: any, res: any) => {
   console.log("Call details fetched successfully", body);
   const callId = body.vapiResponse.id;
   const interviewId = body.interviewId;
-  const interview = await Interview.findOne({interviewLink: interviewId});
+  const interview = await Interview.findOneAndUpdate({interviewLink: interviewId}, {status: "started",callId: callId});
   if (!interview) {
     console.log(`Error: Interview not found with ID: ${interviewId}`);
     return res.status(404).json({ success: false, error: "Interview not found" });
@@ -306,9 +306,19 @@ interviewRouter.post("/get-call-details", async (req: any, res: any) => {
 interviewRouter.get("/end-call/:id", async (req: any, res: any) => {
   const { id } = req.params;
   const interview = await Interview.findOneAndUpdate({interviewLink: id}, {status: "ended"});
+  const callId = interview?.callId;
+  if(!callId){
+    console.log(`Error: Call ID not found with ID: ${id}`);
+    return res.status(404).json({ success: false, error: "Call ID not found" });
+  }
+  const callDetails = await getCallDetails(callId);
+  if ('error' in callDetails) {
+    console.log(`Error: Call details not found with ID: ${callId}`);
+    return res.status(404).json({ success: false, error: "Call details not found" });
+  }
   if (!interview) {
     console.log(`Error: Interview not found with ID: ${id}`);
     return res.status(404).json({ success: false, error: "Interview not found" });
   }
-  res.status(200).json({ success: true, message: "Call ended successfully" });
+  res.status(200).json({ success: true, message: "Call ended successfully",callDetails: callDetails });
 });

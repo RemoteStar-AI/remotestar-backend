@@ -269,6 +269,7 @@ const interviewSchema=new Schema({
   firstMessage: {type: String, required: true},
   expiresAt: {type: Date, required: true, default: Date.now() + 1000 * 60 * 60 * 24* 15},
   status: {type: String, default: "initiated"},
+  callId: {type: String, default: ""},
 },{timestamps:true})
 
 export const Job = mongoose.model("Job", jobSchema);
