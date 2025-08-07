@@ -27,3 +27,16 @@ jobs:
           file: Dockerfile
           push: true
           tags: govindup63/remotestar-backend:${{ github.sha }}
+      - name: clone remotestar-staging-ops repo , update image tag and push tag
+        env:
+          PAT: ${{ secrets.PAT }}
+        run: |
+          git clone https://github.com/govindup63/remotestar-staging-ops.git
+          cd remotestar-staging-ops
+          sed -i 's|image: govindup63/remotestar-backend:.*|image: govindup63/remotestar-backend:${{ github.sha }}|' deployment.yml
+
+          git config user.name "Github Actions Bot"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "updated image tag to ${{ github.sha }}"
+          git push https://${{ secrets.PAT }}@github.com/govindup63/remotestar-staging-ops.git main

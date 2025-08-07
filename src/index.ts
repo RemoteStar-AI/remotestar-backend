@@ -187,7 +187,7 @@ async function main(){
         
         server.listen(PORT,'0.0.0.0', () => {
             console.log(`Server is running on port ${PORT}`);
-            console.log(`WebSocket server is ready for connections`);
+            console.log(`WebSocket server is ready for connections : hehe testing`);
         });
 
     } catch (error) {
