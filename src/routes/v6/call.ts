@@ -108,6 +108,9 @@ callRouter.get(
     try {
       callDetails = await Promise.all(
         previousCalls.map(async (call: any) => {
+          if(call.type === "email") {
+            return call;
+          }
           const callDetails = await getCallDetails(call.callId);
           return callDetails;
         })

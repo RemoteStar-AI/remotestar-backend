@@ -218,13 +218,15 @@ const defaultAssistantSchema=new Schema({
 const callDetailsSchema=new Schema({
   jobId: {type: String, required: true},
   candidateId: {type: String, required: true},
-  organisation_id: {type: String, required: true},
+  organisation_id: {type: String,required: true},
   recruiterEmail: { type: String, required: true },
   callId: {type: String, required: true},
   callDetails: {type: Object, default: {}},
   status: {type: String, default: "initiated"},
   lastUpdated: {type: Date, default: Date.now},
   vapiData: {type: Object, default: {}},
+  type: {type:String, enum:["call", "email","interview"], default:"call"},
+  message: {type: String, default: ""},
 },{timestamps:true})
 
 const scheduledCallSchema = new Schema({
@@ -255,6 +257,8 @@ const webhookSubscriptionSchema = new Schema({
 
 const interviewSchema=new Schema({
   userId: {type: String, required: true},
+  recruiterEmail: {type: String, required: true},
+  organisation_id: {type: String, required: true},
   candidateEmail: {type: String, required: true},
   candidateId: {type: String, required: true},
   jobId: {type: String, required: true},
@@ -264,6 +268,7 @@ const interviewSchema=new Schema({
   analysisPrompt: {type: String, required: true},
   firstMessage: {type: String, required: true},
   expiresAt: {type: Date, required: true, default: Date.now() + 1000 * 60 * 60 * 24* 15},
+  status: {type: String, default: "initiated"},
 },{timestamps:true})
 
 export const Job = mongoose.model("Job", jobSchema);
