@@ -155,17 +155,18 @@ interviewRouter.post("/", authenticate, async (req: any, res: any) => {
     try {
       const emailText = defaultReachoutEmail(name, JobName, interviewLink);
       await sendEmail(candidateEmail, "Interview Scheduled", emailText);
-      await CallDetails.create({
+       const res = await CallDetails.create({
         jobId,
         candidateId,
         organisation_id: organisationId,
         recruiterEmail,
-        callId: "",
+        callId: "its an email bruh",
         type: "email",
         status: "initiated",
         lastUpdated: new Date(),
         message: `Email sent to ${candidateEmail}`
       })
+      console.log("Call details created successfully", res);
       console.log(`Email sent successfully to ${candidateEmail}`);
     } catch (emailError) {
       console.error(`Error sending email to ${candidateEmail}:`, emailError);
