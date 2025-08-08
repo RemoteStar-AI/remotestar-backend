@@ -33,7 +33,8 @@ jobs:
         run: |
           git clone https://github.com/govindup63/remotestar-staging-ops.git
           cd remotestar-staging-ops
-          sed -i 's|image: govindup63/remotestar-backend:.*|image: govindup63/remotestar-backend:${{ github.sha }}|' deployment.yml
+          sed -i 's|image: govindup63/remotestar-backend:.*|image: govindup63/remotestar-backend:${{ github.sha }}|' deployment-staging.yml
+          sed -i 's|image: govindup63/remotestar-backend:.*|image: govindup63/remotestar-backend:${{ github.sha }}|' deployment-main.yml
 
           git config user.name "Github Actions Bot"
           git config user.email "actions@github.com"
