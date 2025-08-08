@@ -4,7 +4,7 @@ import { defaultReachoutEmail, sendEmail } from "../../utils/mail";
 import { authenticate } from "../../middleware/firebase-auth";
 import { createSupportAssistant, getCallDetails, updateScriptforAssistant } from "../../utils/vapi";
 import { VapiSystemPrompt3 as VapiSystemPrompt, VapiAnalysisPrompt } from "../../utils/prompts";
-import { generateVideoUploadPresignedUrl, getVideoChunkSignedUrl } from "../../utils/s3";
+import { generateOneTimeVideoUploadPresignedUrl } from "../../utils/s3";
 import { z } from "zod";
 import crypto from "crypto";
 
@@ -204,20 +204,18 @@ interviewRouter.post("/", authenticate, async (req: any, res: any) => {
 
 interviewRouter.post("/get-presigned-url", async (req: any, res: any) => {
   try {
-    console.log("Generating presigned URL for video upload with data:", {
-      sessionId: req.body.sessionId,
-      chunkNumber: req.body.chunkNumber,
-      userId: req.body.userId
+    console.log("Generating single-upload presigned URL for video with data:", {
+      candidateId: req.body.candidateId,
+      contentType: req.body.contentType,
     });
 
     const schema = z.object({
-      sessionId: z.string().min(1),
-      chunkNumber: z.number().int().positive(),
-      userId: z.string().min(1),
+      candidateId: z.string().min(1),
+      contentType: z.string().min(1).optional(),
       interviewId: z.string().min(1).optional() // Optional for validation
     });
 
-    const { sessionId, chunkNumber, userId, interviewId } = schema.parse(req.body);
+    const { candidateId, interviewId, contentType } = schema.parse(req.body);
 
     // Optional: Validate interview exists if interviewId is provided
     if (interviewId) {
@@ -231,15 +229,18 @@ interviewRouter.post("/get-presigned-url", async (req: any, res: any) => {
     // Optional: Add rate limiting or quota checking here
     // For example, check total session bytes, interview duration, or user quotas
     
-    console.log(`Generating presigned URL for user ${userId}, session ${sessionId}, chunk ${chunkNumber}`);
-    
-    const presignedUrlData = await generateVideoUploadPresignedUrl(
-      userId,
-      sessionId,
-      chunkNumber
+    console.log(`Generating single-upload presigned URL for candidate ${candidateId}`);
+
+    const presignedUrlData = await generateOneTimeVideoUploadPresignedUrl(
+      candidateId,
+      contentType ?? "video/webm"
     );
 
-    console.log(`Successfully generated presigned URL for chunk ${chunkNumber} in session ${sessionId}`);
+    console.log(`Successfully generated single-upload presigned URL for candidate ${candidateId}`);
+    await Interview.findOneAndUpdate(
+      { interviewLink: interviewId },
+      { key: presignedUrlData.key, contentType: contentType ?? "video/webm" }
+    );
 
     res.status(200).json({
       success: true,
@@ -247,7 +248,7 @@ interviewRouter.post("/get-presigned-url", async (req: any, res: any) => {
       key: presignedUrlData.key,
       filename: presignedUrlData.filename,
       metadata: presignedUrlData.metadata,
-      expiresIn: 300 // 5 minutes
+      expiresIn: 900 // 15 minutes
     });
 
   } catch (error) {
@@ -295,6 +296,7 @@ interviewRouter.post("/get-call-details", async (req: any, res: any) => {
     status: body.vapiResponse.status,
     lastUpdated: new Date(),
     vapiData: body.vapiResponse,
+    interviewId,
     type: "interview"
   }
   await CallDetails.create(newCalldetail);

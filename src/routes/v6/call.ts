@@ -16,6 +16,7 @@ import {
   Job,
   ScheduledCalls,
   WebhookSubscription,
+  Interview,
 } from "../../utils/db";
 import { openai } from "../../utils/openai";
 import { VapiAnalysisPrompt } from "../../utils/prompts";
@@ -24,6 +25,7 @@ import { vapiWebhookVerification } from "../../utils/vapi-webhook-verification";
 import type { Request, Response } from "express";
 import { sendWebSocketMessage } from "../../index";
 import mongoose from "mongoose";
+import { getVideoSignedUrlFromLink } from "../../utils/s3";
 
 const chatgptModel = "gpt-3.5-turbo";
 const assumedCallDuration = 10;
@@ -113,6 +115,19 @@ callRouter.get(
             return call;
           }
           const callDetails = await getCallDetails(call.callId);
+          if(call.type === "interview") {
+            const interviewId = call.interviewId;
+            const interview = await Interview.findOne({interviewLink: interviewId});
+            const key = interview?.key;
+            console.log("key", key);
+            if(key) { 
+            const oneTimeVideoViewUrl = await getVideoSignedUrlFromLink(key);
+            return {
+              ...callDetails,
+              oneTimeVideoViewUrl,
+            };
+            }
+          }
           return callDetails;
         })
       );

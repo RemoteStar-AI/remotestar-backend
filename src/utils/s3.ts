@@ -127,3 +127,71 @@ export const getVideoChunkSignedUrl = async (key: string, expiresIn = 3600) => {
   });
   return await getSignedUrl(videoS3, command, { expiresIn });
 };
+
+// One-time (single object) video upload presigned URL
+export const generateOneTimeVideoUploadPresignedUrl = async (
+  candidateId: string,
+  contentType: string = "video/webm",
+  expiresIn: number = 900 // 15 minutes
+) => {
+  const timestamp = Date.now();
+  const uploadId = uuidv4();
+
+  const extension = (() => {
+    if (contentType.includes("mp4")) return "mp4";
+    if (contentType.includes("webm")) return "webm";
+    if (contentType.includes("quicktime")) return "mov";
+    if (contentType.includes("x-matroska") || contentType.includes("mkv")) return "mkv";
+    return "webm";
+  })();
+
+  const filename = `${timestamp}-full-${uploadId}.${extension}`;
+  const key = `videos/${candidateId}/${filename}`;
+
+  const command = new PutObjectCommand({
+    Bucket: process.env.AWS_VIDEO_BUCKET_NAME!,
+    Key: key,
+    ContentType: contentType,
+    ServerSideEncryption: "AES256",
+    Metadata: {
+      "candidate-id": candidateId,
+      "timestamp": timestamp.toString(),
+      "upload-id": uploadId,
+      "upload-type": "video-single",
+    },
+  });
+
+  const presignedUrl = await getSignedUrl(videoS3, command, { expiresIn });
+
+  return {
+    presignedUrl,
+    key,
+    filename,
+    metadata: {
+      candidateId,
+      timestamp,
+      uploadId,
+    },
+  };
+};
+
+// Create a 15-minute GET presigned URL from a video link (or key)
+export const getVideoSignedUrlFromLink = async (
+  fileUrlOrKey: string,
+  expiresIn: number = 900
+) => {
+  let key = fileUrlOrKey;
+
+  if (fileUrlOrKey.startsWith("https://")) {
+    const url = new URL(fileUrlOrKey);
+    key = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
+    key = decodeURIComponent(key);
+  }
+
+  const command = new GetObjectCommand({
+    Bucket: process.env.AWS_VIDEO_BUCKET_NAME!,
+    Key: key,
+  });
+
+  return await getSignedUrl(videoS3, command, { expiresIn });
+};

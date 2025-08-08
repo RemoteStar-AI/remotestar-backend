@@ -226,6 +226,7 @@ const callDetailsSchema=new Schema({
   lastUpdated: {type: Date, default: Date.now},
   vapiData: {type: Object, default: {}},
   type: {type:String, enum:["call", "email","interview","nudge"], default:"call"},
+  interviewId: {type: String, optional: true},
   message: {type: String, default: ""},
 },{timestamps:true})
 
@@ -268,6 +269,8 @@ const interviewSchema=new Schema({
   analysisPrompt: {type: String, required: true},
   firstMessage: {type: String, required: true},
   expiresAt: {type: Date, required: true, default: Date.now() + 1000 * 60 * 60 * 24* 15},
+  key: {type: String, default: ""},
+  contentType: {type: String, default: ""},
   status: {type: String, default: "initiated"},
   callId: {type: String, default: ""},
 },{timestamps:true})
