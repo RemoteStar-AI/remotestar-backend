@@ -210,16 +210,17 @@ interviewRouter.post("/get-presigned-url", async (req: any, res: any) => {
     });
 
     const schema = z.object({
-      candidateId: z.string().min(1),
       contentType: z.string().min(1).optional(),
       interviewId: z.string().min(1).optional() // Optional for validation
     });
 
-    const { candidateId, interviewId, contentType } = schema.parse(req.body);
+    const { interviewId, contentType } = schema.parse(req.body);
 
     // Optional: Validate interview exists if interviewId is provided
+    let candidateId = "";
     if (interviewId) {
       const interview = await Interview.findById(interviewId);
+      candidateId = interview?.candidateId || "";
       if (!interview) {
         console.log(`Error: Interview not found with ID: ${interviewId}`);
         return res.status(404).json({ success: false, error: "Interview not found" });
