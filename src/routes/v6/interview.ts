@@ -219,7 +219,7 @@ interviewRouter.post("/get-presigned-url", async (req: any, res: any) => {
     // Optional: Validate interview exists if interviewId is provided
     let candidateId = "";
     if (interviewId) {
-      const interview = await Interview.findById(interviewId);
+      const interview = await Interview.findOne({ interviewLink: interviewId });
       candidateId = interview?.candidateId || "";
       if (!interview) {
         console.log(`Error: Interview not found with ID: ${interviewId}`);
