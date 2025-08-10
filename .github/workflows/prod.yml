@@ -31,7 +31,7 @@ jobs:
         env:
           PAT: ${{ secrets.PAT }}
         run: |
-          git clone https://github.com/govindup63/remotestar-staging-ops.git
+          git clone https://${PAT}@github.com/govindup63/remotestar-staging-ops.git
           cd remotestar-staging-ops
           sed -i 's|image: govindup63/remotestar-backend:.*|image: govindup63/remotestar-backend:${{ github.sha }}|' deployment-staging.yml
           sed -i 's|image: govindup63/remotestar-backend:.*|image: govindup63/remotestar-backend:${{ github.sha }}|' deployment-main.yml
