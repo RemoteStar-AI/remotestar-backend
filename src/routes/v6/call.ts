@@ -115,19 +115,19 @@ callRouter.get(
             return call;
           }
           const callDetails = await getCallDetails(call.callId);
-          if(call.type === "interview") {
-            const interviewId = call.interviewId;
-            const interview = await Interview.findOne({interviewLink: interviewId});
-            const key = interview?.key;
-            console.log("key", key);
-            if(key) { 
-            const oneTimeVideoViewUrl = await getVideoSignedUrlFromLink(key);
-            return {
-              ...callDetails,
-              oneTimeVideoViewUrl,
-            };
-            }
-          }
+          // if(call.type === "interview") {
+          //   const interviewId = call.interviewId;
+          //   const interview = await Interview.findOne({interviewLink: interviewId});
+          //   const key = interview?.key;
+          //   console.log("key", key);
+          //   if(key) { 
+          //   const oneTimeVideoViewUrl = await getVideoSignedUrlFromLink(key);
+          //   return {
+          //     ...callDetails,
+          //     oneTimeVideoViewUrl,
+          //   };
+          //   }
+          // }
           return callDetails;
         })
       );
