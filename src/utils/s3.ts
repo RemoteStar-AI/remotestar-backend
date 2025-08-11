@@ -90,6 +90,7 @@ export const deleteFileFromS3 = async (fileUrlOrKey: string) => {
       Key: key,
     })
   );
+<<<<<<< HEAD
 };
 
 // Fetch object contents from the resume bucket as a Buffer
@@ -124,11 +125,11 @@ export const generateVideoUploadPresignedUrl = async (
 ) => {
   const timestamp = Date.now();
   const chunkId = uuidv4();
-  
+
   // Create unique filename with metadata
   const filename = `${timestamp}-chunk-${chunkNumber}-${chunkId}.webm`;
   const key = `videos/${userId}/${sessionId}/${filename}`;
-  
+
   const command = new PutObjectCommand({
     Bucket: process.env.AWS_VIDEO_BUCKET_NAME!,
     Key: key,
@@ -143,9 +144,9 @@ export const generateVideoUploadPresignedUrl = async (
       'upload-type': 'video-chunk'
     }
   });
-  
+
   const presignedUrl = await getSignedUrl(videoS3, command, { expiresIn });
-  
+
   return {
     presignedUrl,
     key,

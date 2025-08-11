@@ -5,7 +5,7 @@ import mongoose, { Schema } from "mongoose";
 const userSchema = new Schema({
   firebase_id: { type: String, required: true },
   firebase_email: { type: String, required: true },
-  firebase_uploader_name: { type: String ,default: ""},
+  firebase_uploader_name: { type: String, default: "" },
   organisation_id: { type: String, default: "" },
   total_bookmarks: { type: Number, default: 0 },
   resume_url: { type: String, default: "https://conasems-ava-prod.s3.sa-east-1.amazonaws.com/aulas/ava/dummy-1641923583.pdf" },
@@ -16,9 +16,9 @@ const userSchema = new Schema({
   address: { type: String },
   current_location: { type: String, default: "" },
   summary: { type: String },
-  profile_completeness: { type: Number, min: 0},
-  years_of_experience: { type: Number, min: 0},
-  designation: { type: String ,default: ""},
+  profile_completeness: { type: Number, min: 0 },
+  years_of_experience: { type: Number, min: 0 },
+  designation: { type: String, default: "" },
   experience: [{
     company: { type: String },
     role: { type: String },
@@ -99,35 +99,35 @@ userSchema.index({ organisation_id: 1 });
 
 const culturalFitSchema = new Schema({
   userId: { type: String, required: true },
-  product_score: { type: Number, min: 0, max: 100},
-  service_score: { type: Number, min: 0, max: 100},
-  startup_score: { type: Number, min: 0, max: 100},
-  mnc_score: { type: Number, min: 0, max: 100},
-  loyalty_score: { type: Number, min: 0, max: 100},
-  coding_score: { type: Number, min: 0, max: 100},
-  leadership_score: { type: Number, min: 0, max: 100},
-  architecture_score: { type: Number, min: 0, max: 100},
+  product_score: { type: Number, min: 0, max: 100 },
+  service_score: { type: Number, min: 0, max: 100 },
+  startup_score: { type: Number, min: 0, max: 100 },
+  mnc_score: { type: Number, min: 0, max: 100 },
+  loyalty_score: { type: Number, min: 0, max: 100 },
+  coding_score: { type: Number, min: 0, max: 100 },
+  leadership_score: { type: Number, min: 0, max: 100 },
+  architecture_score: { type: Number, min: 0, max: 100 },
 }, { timestamps: true });
 // Fast lookup of cultural fit by user
 culturalFitSchema.index({ userId: 1 });
 
 const culturalFitSchema2 = new Schema({
   userId: { type: String, optional: true },
-  product_score: { type: Number, min: 0, max: 100},
-  service_score: { type: Number, min: 0, max: 100},
-  startup_score: { type: Number, min: 0, max: 100},
-  mnc_score: { type: Number, min: 0, max: 100},
-  loyalty_score: { type: Number, min: 0, max: 100},
-  coding_score: { type: Number, min: 0, max: 100},
-  leadership_score: { type: Number, min: 0, max: 100},
-  architecture_score: { type: Number, min: 0, max: 100},
+  product_score: { type: Number, min: 0, max: 100 },
+  service_score: { type: Number, min: 0, max: 100 },
+  startup_score: { type: Number, min: 0, max: 100 },
+  mnc_score: { type: Number, min: 0, max: 100 },
+  loyalty_score: { type: Number, min: 0, max: 100 },
+  coding_score: { type: Number, min: 0, max: 100 },
+  leadership_score: { type: Number, min: 0, max: 100 },
+  architecture_score: { type: Number, min: 0, max: 100 },
 }, { timestamps: true });
 
 const skillsSchema = new Schema({
   name: { type: String },
   years_experience: { type: Number },
   summary: { type: String },
-  score: { type: Number, min: 0, max: 5}
+  score: { type: Number, min: 0, max: 5 }
 });
 
 const userSkillsSchema = new Schema({
@@ -165,13 +165,15 @@ const jobSchema = new mongoose.Schema({
     max: { type: String, default: "0" }
   },
   additionalRequirements: { type: String, default: "" },
-  expectedSkills: { type: [{
-    name: { type: String },
-    years_experience: { type: Number },
-    score: { type: Number, min: 0, max: 5 },
-    mandatory: { type: Boolean, default: false }
-  }], default: [], optional: true },
-  expectedCulturalFit: { type: culturalFitSchema2, default: {} ,optional:true},
+  expectedSkills: {
+    type: [{
+      name: { type: String },
+      years_experience: { type: Number },
+      score: { type: Number, min: 0, max: 5 },
+      mandatory: { type: Boolean, default: false }
+    }], default: [], optional: true
+  },
+  expectedCulturalFit: { type: culturalFitSchema2, default: {}, optional: true },
   prompt: { type: Object, default: {} },
 }, { timestamps: true });
 // Add index after declaration
@@ -202,56 +204,56 @@ bookmarkSchema.index({ companyId: 1 });
 bookmarkSchema.index({ userId: 1, memberId: 1 });
 
 const jobSearchResposeSchema = new Schema({
-  jobId : {type: String, required: true},
-  organisation_id: {type:String,required:true},
-  response: { type: Object,default:{}},
-},{timestamps:true})
+  jobId: { type: String, required: true },
+  organisation_id: { type: String, required: true },
+  response: { type: Object, default: {} },
+}, { timestamps: true })
 
 const analysisSchema = new Schema({
-  userId: {type: String, required: true},
-  jobId: {type: String, required: true},
-  analysis: {type:String, default:""},
-},{timestamps:true})
+  userId: { type: String, required: true },
+  jobId: { type: String, required: true },
+  analysis: { type: String, default: "" },
+}, { timestamps: true })
 
-const jobRequiredSkillsSchema=new Schema({
-  jobId: {type: String, required: true},
-  skills: {type: [String], required: true},
-},{timestamps:true})
+const jobRequiredSkillsSchema = new Schema({
+  jobId: { type: String, required: true },
+  skills: { type: [String], required: true },
+}, { timestamps: true })
 
-const jobAnalysisOfCandidateSchema=new Schema({
-  jobId: {type: String, required: true},
-  userId: {type: String, required: true},
-  rank: {type: Number, required: true},
-  data: {type:Object, default:{}},
-  newlyAnalysed: {type: Boolean, default: true},
-},{timestamps:true})
+const jobAnalysisOfCandidateSchema = new Schema({
+  jobId: { type: String, required: true },
+  userId: { type: String, required: true },
+  rank: { type: Number, required: true },
+  data: { type: Object, default: {} },
+  newlyAnalysed: { type: Boolean, default: true },
+}, { timestamps: true })
 // Accelerate lookups by job and user
 jobAnalysisOfCandidateSchema.index({ jobId: 1 });
 jobAnalysisOfCandidateSchema.index({ jobId: 1, userId: 1 });
 jobAnalysisOfCandidateSchema.index({ userId: 1 });
 
-const defaultAssistantSchema=new Schema({
-  jobId: {type: String, required: true},
-  organisation_id: {type: String, required: true},
-  firstMessage: {type: String, required: true},
-  systemPrompt: {type: String, required: true},
-  assistantId: {type: String, required: true},
-},{timestamps:true})
+const defaultAssistantSchema = new Schema({
+  jobId: { type: String, required: true },
+  organisation_id: { type: String, required: true },
+  firstMessage: { type: String, required: true },
+  systemPrompt: { type: String, required: true },
+  assistantId: { type: String, required: true },
+}, { timestamps: true })
 
-const callDetailsSchema=new Schema({
-  jobId: {type: String, required: true},
-  candidateId: {type: String, required: true},
-  organisation_id: {type: String,required: true},
+const callDetailsSchema = new Schema({
+  jobId: { type: String, required: true },
+  candidateId: { type: String, required: true },
+  organisation_id: { type: String, required: true },
   recruiterEmail: { type: String, required: true },
-  callId: {type: String, required: true},
-  callDetails: {type: Object, default: {}},
-  status: {type: String, default: "initiated"},
-  lastUpdated: {type: Date, default: Date.now},
-  vapiData: {type: Object, default: {}},
-  type: {type:String, enum:["call", "email","interview","nudge"], default:"call"},
-  interviewId: {type: String, optional: true},
-  message: {type: String, default: ""},
-},{timestamps:true})
+  callId: { type: String, required: true },
+  callDetails: { type: Object, default: {} },
+  status: { type: String, default: "initiated" },
+  lastUpdated: { type: Date, default: Date.now },
+  vapiData: { type: Object, default: {} },
+  type: { type: String, enum: ["call", "email", "interview", "nudge"], default: "call" },
+  interviewId: { type: String, optional: true },
+  message: { type: String, default: "" },
+}, { timestamps: true })
 
 const scheduledCallSchema = new Schema({
   startTime: { type: Date, required: true, index: true },
@@ -261,7 +263,7 @@ const scheduledCallSchema = new Schema({
     candidateId: { type: String, required: true },
     assistantId: { type: String, required: true },
     phoneNumber: { type: String, required: true },
-    organisation_id: {type: String, required: true},
+    organisation_id: { type: String, required: true },
     recruiterEmail: { type: String, required: true },
   },
   isCalled: { type: Boolean, default: false, index: true },
@@ -279,24 +281,22 @@ const webhookSubscriptionSchema = new Schema({
   delivery_failures: { type: Number, default: 0 }
 }, { timestamps: true });
 
-const interviewSchema=new Schema({
-  userId: {type: String, required: true},
-  recruiterEmail: {type: String, required: true},
-  organisation_id: {type: String, required: true},
-  candidateEmail: {type: String, required: true},
-  candidateId: {type: String, required: true},
-  jobId: {type: String, required: true},
-  interviewLink: {type: String, required: true},
-  assistantId: {type: String, required: true},
-  systemPrompt: {type: String, required: true},
-  analysisPrompt: {type: String, required: true},
-  firstMessage: {type: String, required: true},
-  expiresAt: {type: Date, required: true, default: Date.now() + 1000 * 60 * 60 * 24* 15},
-  key: {type: String, default: ""},
-  contentType: {type: String, default: ""},
-  status: {type: String, default: "initiated"},
-  callId: {type: String, default: ""},
-},{timestamps:true})
+const interviewSchema = new Schema({
+  userId: { type: String, required: true },
+  recruiterEmail: { type: String, required: true },
+  organisation_id: { type: String, required: true },
+  candidateEmail: { type: String, required: true },
+  candidateId: { type: String, required: true },
+  jobId: { type: String, required: true },
+  interviewLink: { type: String, required: true },
+  assistantId: { type: String, required: true },
+  systemPrompt: { type: String, required: true },
+  analysisPrompt: { type: String, required: true },
+  firstMessage: { type: String, required: true },
+  expiresAt: { type: Date, required: true, default: Date.now() + 1000 * 60 * 60 * 24 * 15 },
+  status: { type: String, default: "initiated" },
+  callId: { type: String, default: "" },
+}, { timestamps: true })
 
 export const Job = mongoose.model("Job", jobSchema);
 export const Company = mongoose.model("Company", companySchema);

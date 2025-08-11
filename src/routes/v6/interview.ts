@@ -4,7 +4,6 @@ import { defaultReachoutEmail, sendEmail } from "../../utils/mail";
 import { authenticate } from "../../middleware/firebase-auth";
 import { createSupportAssistant, getCallDetails, updateScriptforAssistant } from "../../utils/vapi";
 import { VapiSystemPrompt3 as VapiSystemPrompt, VapiAnalysisPrompt } from "../../utils/prompts";
-import { generateOneTimeVideoUploadPresignedUrl } from "../../utils/s3";
 import { z } from "zod";
 import crypto from "crypto";
 
@@ -198,76 +197,6 @@ interviewRouter.post("/", authenticate, async (req: any, res: any) => {
     res.status(500).json({ 
       success: false, 
       error: "Failed to create interview or send email" 
-    });
-  }
-});
-
-interviewRouter.post("/get-presigned-url", async (req: any, res: any) => {
-  try {
-    console.log("Generating single-upload presigned URL for video with data:", {
-      candidateId: req.body.candidateId,
-      contentType: req.body.contentType,
-    });
-
-    const schema = z.object({
-      contentType: z.string().min(1).optional(),
-      interviewId: z.string().min(1).optional() // Optional for validation
-    });
-
-    const { interviewId, contentType } = schema.parse(req.body);
-
-    // Optional: Validate interview exists if interviewId is provided
-    let candidateId = "";
-    if (interviewId) {
-      const interview = await Interview.findOne({ interviewLink: interviewId });
-      candidateId = interview?.candidateId || "";
-      if (!interview) {
-        console.log(`Error: Interview not found with ID: ${interviewId}`);
-        return res.status(404).json({ success: false, error: "Interview not found" });
-      }
-    }
-
-    // Optional: Add rate limiting or quota checking here
-    // For example, check total session bytes, interview duration, or user quotas
-    
-    console.log(`Generating single-upload presigned URL for candidate ${candidateId}`);
-
-    const presignedUrlData = await generateOneTimeVideoUploadPresignedUrl(
-      candidateId,
-      contentType ?? "video/webm"
-    );
-
-    console.log(`Successfully generated single-upload presigned URL for candidate ${candidateId}`);
-    await Interview.findOneAndUpdate(
-      { interviewLink: interviewId },
-      { key: presignedUrlData.key, contentType: contentType ?? "video/webm" }
-    );
-
-    res.status(200).json({
-      success: true,
-      presignedUrl: presignedUrlData.presignedUrl,
-      key: presignedUrlData.key,
-      filename: presignedUrlData.filename,
-      metadata: presignedUrlData.metadata,
-      expiresIn: 900 // 15 minutes
-    });
-
-  } catch (error) {
-    console.error("Error generating presigned URL:", error);
-    
-    // Handle specific error types
-    if (error instanceof z.ZodError) {
-      console.error("Validation error:", error.errors);
-      return res.status(400).json({ 
-        success: false, 
-        error: "Invalid request data", 
-        details: error.errors 
-      });
-    }
-    
-    res.status(500).json({ 
-      success: false, 
-      error: "Failed to generate presigned URL" 
     });
   }
 });
