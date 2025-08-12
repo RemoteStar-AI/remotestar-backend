@@ -90,7 +90,6 @@ export const deleteFileFromS3 = async (fileUrlOrKey: string) => {
       Key: key,
     })
   );
-<<<<<<< HEAD
 };
 
 // Fetch object contents from the resume bucket as a Buffer
