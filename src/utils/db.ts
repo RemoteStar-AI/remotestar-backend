@@ -92,6 +92,10 @@ const userSchema = new Schema({
     work_type: [{ type: String }]
   }
 }, { timestamps: true });
+// Performance indexes for frequent lookups
+userSchema.index({ email: 1, organisation_id: 1 });
+// Fast organisation-wide scans
+userSchema.index({ organisation_id: 1 });
 
 const culturalFitSchema = new Schema({
   userId: { type: String, required: true },
@@ -104,6 +108,8 @@ const culturalFitSchema = new Schema({
   leadership_score: { type: Number, min: 0, max: 100},
   architecture_score: { type: Number, min: 0, max: 100},
 }, { timestamps: true });
+// Fast lookup of cultural fit by user
+culturalFitSchema.index({ userId: 1 });
 
 const culturalFitSchema2 = new Schema({
   userId: { type: String, optional: true },
@@ -128,6 +134,10 @@ const userSkillsSchema = new Schema({
   userId: { type: String, required: true },
   skills: [skillsSchema],
 }, { timestamps: true });
+// Fast lookup of skills by user
+userSkillsSchema.index({ userId: 1 });
+
+// Index for jobs by organisation will be added after schema declaration
 
 const companySchema = new Schema({
   name: { type: String, required: true },
@@ -164,6 +174,10 @@ const jobSchema = new mongoose.Schema({
   expectedCulturalFit: { type: culturalFitSchema2, default: {} ,optional:true},
   prompt: { type: Object, default: {} },
 }, { timestamps: true });
+// Add index after declaration
+jobSchema.index({ organisation_id: 1 });
+// Common filter: company within an organisation
+jobSchema.index({ companyId: 1, organisation_id: 1 });
 
 const canonicalSkillsSchema = new Schema({
   name: { type: String, required: true, unique: true },
@@ -181,6 +195,11 @@ const bookmarkSchema = new Schema({
   jobId: { type: String, required: true },
   companyId: { type: String, required: true },
 }, { timestamps: true });
+// Indexes to accelerate frequent bookmark lookups
+bookmarkSchema.index({ memberId: 1 });
+bookmarkSchema.index({ userId: 1 });
+bookmarkSchema.index({ companyId: 1 });
+bookmarkSchema.index({ userId: 1, memberId: 1 });
 
 const jobSearchResposeSchema = new Schema({
   jobId : {type: String, required: true},
@@ -206,6 +225,10 @@ const jobAnalysisOfCandidateSchema=new Schema({
   data: {type:Object, default:{}},
   newlyAnalysed: {type: Boolean, default: true},
 },{timestamps:true})
+// Accelerate lookups by job and user
+jobAnalysisOfCandidateSchema.index({ jobId: 1 });
+jobAnalysisOfCandidateSchema.index({ jobId: 1, userId: 1 });
+jobAnalysisOfCandidateSchema.index({ userId: 1 });
 
 const defaultAssistantSchema=new Schema({
   jobId: {type: String, required: true},

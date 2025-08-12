@@ -2,6 +2,7 @@ import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } fro
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
+import type { Readable } from "stream";
 
 dotenv.config();
 
@@ -11,6 +12,8 @@ const s3 = new S3Client({
     accessKeyId: process.env.AWS_ACCESS_KEY!,
     secretAccessKey: process.env.AWS_SECRET_KEY!,
   },
+  forcePathStyle: false,
+  requestHandler: undefined,
 });
 
 // Video bucket S3 client (separate from resume bucket)
@@ -20,6 +23,8 @@ const videoS3 = new S3Client({
     accessKeyId: process.env.AWS_ACCESS_KEY!,
     secretAccessKey: process.env.AWS_SECRET_KEY!,
   },
+  forcePathStyle: false,
+  requestHandler: undefined,
 });
 
 export const uploadPDFToS3 = async (fileBuffer: Buffer, filename: string, mimetype: string) => {
@@ -33,6 +38,27 @@ export const uploadPDFToS3 = async (fileBuffer: Buffer, filename: string, mimety
     })
   );
   return `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+};
+
+// Generate presigned URL for uploading a resume (PDF or other doc types) directly to S3
+export const generateResumeUploadPresignedUrl = async (
+  filename: string,
+  contentType: string,
+  expiresIn: number = 900 // 15 minutes
+) => {
+  const key = `resumes/${uuidv4()}-${filename}`;
+  const command = new PutObjectCommand({
+    Bucket: process.env.AWS_BUCKET_NAME!,
+    Key: key,
+    ContentType: contentType,
+  });
+  const presignedUrl = await getSignedUrl(s3, command, { expiresIn });
+  return {
+    presignedUrl,
+    key,
+    filename,
+    expiresIn,
+  };
 };
 
 export const getSignedUrlForResume = async (key: string, expiresIn = 3600) => {
@@ -64,6 +90,29 @@ export const deleteFileFromS3 = async (fileUrlOrKey: string) => {
       Key: key,
     })
   );
+};
+
+// Fetch object contents from the resume bucket as a Buffer
+export const getResumeObjectBuffer = async (keyOrUrl: string): Promise<Buffer> => {
+  let key = keyOrUrl;
+  if (keyOrUrl.startsWith("https://")) {
+    const url = new URL(keyOrUrl);
+    key = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
+    key = decodeURIComponent(key);
+  }
+  const resp = await s3.send(
+    new GetObjectCommand({
+      Bucket: process.env.AWS_BUCKET_NAME!,
+      Key: key,
+    })
+  );
+  const body = resp.Body as Readable | undefined;
+  if (!body) return Buffer.from([]);
+  const chunks: Buffer[] = [];
+  for await (const chunk of body as any) {
+    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks);
 };
 
 // New functions for video upload presigned URLs

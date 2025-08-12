@@ -17,6 +17,22 @@ const MAX_TOP_K = 50;
 
 export const searchRouter = Router();
 
+// Tiny in-memory TTL cache for hot items
+type CacheEntry<T> = { value: T; expiresAt: number };
+const ttlCache = new Map<string, CacheEntry<any>>();
+const setCache = <T>(key: string, value: T, ttlMs: number) => {
+  ttlCache.set(key, { value, expiresAt: Date.now() + ttlMs });
+};
+const getCache = <T>(key: string): T | null => {
+  const entry = ttlCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt < Date.now()) {
+    ttlCache.delete(key);
+    return null;
+  }
+  return entry.value as T;
+};
+
 searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
   try {
     const Id = req.params.jobId;
@@ -34,7 +50,19 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
 
     let job;
     try {
-      job = await Job.findById(Id);
+      // Cache job object briefly to avoid repeated deserialization
+      const cacheKey = `job:${Id}`;
+      const cachedJob = getCache<any>(cacheKey);
+      if (cachedJob) {
+        job = cachedJob;
+      } else {
+        job = await Job.findById(Id).select({
+          _id: 1,
+          title: 1,
+          organisation_id: 1,
+        }).lean();
+        if (job) setCache(cacheKey, job, 5_000);
+      }
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }
@@ -64,18 +92,31 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       const userIds = paginatedAnalyses.map((a: any) => a.userId);
 
       // Fetch user details
-      let users = [];
+      let users = [] as any[];
       try {
-        users = await User.find({ _id: { $in: userIds },organisation_id: job.organisation_id });
+        users = await User.find({ _id: { $in: userIds }, organisation_id: job.organisation_id })
+          .select({
+            _id: 1,
+            name: 1,
+            email: 1,
+            years_of_experience: 1,
+            designation: 1,
+            firebase_email: 1,
+            current_location: 1,
+            total_bookmarks: 1,
+          })
+          .lean();
       } catch (error) {
         logger.error(`[DB] Error finding users: ${error instanceof Error ? error.message : 'Unknown error'}`);
         return res.status(500).json({ error: "Error retrieving user details" });
       }
 
       // Fetch bookmarks
-      let userBookmarks = [];
+      let userBookmarks = [] as any[];
       try {
-        userBookmarks = await Bookmark.find({ userId: { $in: userIds } });
+        userBookmarks = await Bookmark.find({ userId: { $in: userIds } })
+          .select({ _id: 1, userId: 1, memberId: 1 })
+          .lean();
       } catch (error) {
         logger.error(`[DB] Error finding bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`);
         return res.status(500).json({ error: "Error retrieving bookmark details" });
@@ -121,22 +162,29 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
 
     // 3. Not enough analyses, fetch more candidates from Pinecone
     // Fetch job embedding
-    let jobEmbedding;
-    try {
-      const jobEmbeddingResponse = await pinecone
-        .index(PINECONE_INDEX_NAME)
-        .namespace("job-pool-v2")
-        .fetch([Id]);
-      logger.info(`[PINECONE] Successfully fetched job embedding for job ${Id}`);
-      jobEmbedding = jobEmbeddingResponse.records[Id]?.values;
-      if (!jobEmbedding) {
-        logger.error(`[PINECONE] Job embedding not found for job ${Id}`);
-        return res.status(404).json({ error: "Job embedding not found" });
+      let jobEmbedding: number[] | undefined;
+      try {
+        const cacheKey = `jobEmbedding:${Id}`;
+        const cached = getCache<number[]>(cacheKey);
+        if (cached) {
+          jobEmbedding = cached;
+        } else {
+          const jobEmbeddingResponse = await pinecone
+            .index(PINECONE_INDEX_NAME)
+            .namespace("job-pool-v2")
+            .fetch([Id]);
+          logger.info(`[PINECONE] Successfully fetched job embedding for job ${Id}`);
+          jobEmbedding = jobEmbeddingResponse.records[Id]?.values as number[] | undefined;
+          if (!jobEmbedding) {
+            logger.error(`[PINECONE] Job embedding not found for job ${Id}`);
+            return res.status(404).json({ error: "Job embedding not found" });
+          }
+          setCache(cacheKey, jobEmbedding, 10_000);
+        }
+      } catch (error) {
+        logger.error(`[PINECONE] Error fetching job embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return res.status(500).json({ error: "Error fetching job embedding" });
       }
-    } catch (error) {
-      logger.error(`[PINECONE] Error fetching job embedding: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return res.status(500).json({ error: "Error fetching job embedding" });
-    }
 
     // Query for matching candidates
     let topMatches;
@@ -176,9 +224,11 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     }
 
     // Re-fetch all analyses for this job
-    let allAnalyses = [];
+    let allAnalyses = [] as any[];
     try {
-      allAnalyses = await JobAnalysisOfCandidate.find({ jobId: Id });
+      allAnalyses = await JobAnalysisOfCandidate.find({ jobId: Id })
+        .select({ userId: 1, data: 1 })
+        .lean();
     } catch (error) {
       logger.error(`[DB] Error re-fetching job analyses: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return res.status(500).json({ error: "Error retrieving job analyses after update" });
@@ -190,18 +240,31 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     const userIds = paginatedAnalyses.map((a: any) => a.userId);
 
     // Fetch user details
-    let users = [];
+    let users = [] as any[];
     try {
-      users = await User.find({ _id: { $in: userIds },organisation_id: job.organisation_id });
+      users = await User.find({ _id: { $in: userIds }, organisation_id: job.organisation_id })
+        .select({
+          _id: 1,
+          name: 1,
+          email: 1,
+          years_of_experience: 1,
+          designation: 1,
+          firebase_email: 1,
+          current_location: 1,
+          total_bookmarks: 1,
+        })
+        .lean();
     } catch (error) {
       logger.error(`[DB] Error finding users: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return res.status(500).json({ error: "Error retrieving user details" });
     }
 
     // Fetch bookmarks
-    let userBookmarks = [];
+    let userBookmarks = [] as any[];
     try {
-      userBookmarks = await Bookmark.find({ userId: { $in: userIds }});
+      userBookmarks = await Bookmark.find({ userId: { $in: userIds }})
+        .select({ _id: 1, userId: 1, memberId: 1 })
+        .lean();
     } catch (error) {
       logger.error(`[DB] Error finding bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return res.status(500).json({ error: "Error retrieving bookmark details" });

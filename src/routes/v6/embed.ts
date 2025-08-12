@@ -20,7 +20,7 @@ import {
   createAndStoreEmbedding,
 } from "../../utils/helper-functions";
 import { User, CulturalFit, Skills, Job } from "../../utils/db";
-import { uploadPDFToS3 } from "../../utils/s3";
+import { uploadPDFToS3, generateResumeUploadPresignedUrl, getResumeObjectBuffer } from "../../utils/s3";
 import mongoose from "mongoose";
 import pdfParse from "pdf-parse";
 import { v4 as uuidv4 } from "uuid";
@@ -57,11 +57,12 @@ async function processFile(
   email: string,
   organisation_id: string,
   displayName: string,
-  jobId: string | null
+  jobId: string | null,
+  existingS3Key?: string | null
 ) {
   try {
     logger.info(`[PROCESS] Starting file: ${file.originalname}`);
-    // --- UPLOAD PDF to OpenAI ---
+    // --- Upload PDF to OpenAI (start immediately) ---
     logger.info(`[OPENAI] Uploading PDF to OpenAI for: ${file.originalname}`);
     const uploadedFile = await openai.files.create({
       file: new File([new Uint8Array(file.buffer)], file.originalname, {
@@ -69,83 +70,137 @@ async function processFile(
       }),
       purpose: "user_data",
     });
-    logger.info(
-      `[OPENAI] Uploaded PDF to OpenAI with file_id: ${uploadedFile.id}`
-    );
+    logger.info(`[OPENAI] Uploaded PDF to OpenAI with file_id: ${uploadedFile.id}`);
 
-    // --- Structured data extraction using file input ---
+    // Prepare prompts
     const extractPromptText = extractPrompt(
       "a file has been uploaded of that candidate use that to extract the data"
     );
-    logger.info(`[OPENAI] Sending extraction prompt for: ${file.originalname}`);
-    let response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "file", file: { file_id: uploadedFile.id } },
-            { type: "text", text: extractPromptText },
-          ],
-        },
-      ],
-    });
-    logger.info(
-      `[OPENAI] Received extraction response for: ${file.originalname}`
+    const cfPromptText = culturalFitPrompt(
+      "a file has been uploaded of that candidate use that to extract the data"
+    );
+    const skPromptText = skillsPromptNoCanon(
+      "a file has been uploaded of that candidate use that to extract the data"
     );
 
-    let extractedData = response.choices[0].message.content?.trim();
-    if (!extractedData) throw new Error("Empty response from OpenAI");
-
-    // Parse and validate the extracted data
-    let validJson = extractJsonFromMarkdown(extractedData).replace(
-      /(\r\n|\n|\r)/gm,
-      ""
-    );
-    let parsedJson = JSON.parse(validJson);
-    let validation = resumeSchema.safeParse(parsedJson);
-    if (!validation.success) {
-      logger.info(
-        `[VALIDATION] Extraction did not match schema for: ${file.originalname}`
-      );
-      // Try reformatting if validation fails
-      const errorDetails = validation.error.errors
-        .map((err) => `Path: ${err.path.join(".") || "root"} - ${err.message}`)
-        .join("\n");
-      const reformatText = reformatPrompt(extractedData, errorDetails);
-      logger.info(`[OPENAI] Sending reformat prompt for: ${file.originalname}`);
-      response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+    // Kick off three OpenAI requests in parallel: extraction (with reformat fallback), cultural fit, skills
+    const extractionPromise = (async () => {
+      logger.info(`[OPENAI] Sending extraction prompt for: ${file.originalname}`);
+      let response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "user",
             content: [
               { type: "file", file: { file_id: uploadedFile.id } },
-              { type: "text", text: reformatText },
+              { type: "text", text: extractPromptText },
             ],
           },
         ],
       });
-      logger.info(
-        `[OPENAI] Received reformatted response for: ${file.originalname}`
-      );
-      extractedData = response.choices[0].message.content?.trim();
-      if (!extractedData)
-        throw new Error("Empty reformatted response from OpenAI");
-      validJson = extractJsonFromMarkdown(extractedData).replace(
-        /(\r\n|\n|\r)/gm,
-        ""
-      );
-      parsedJson = JSON.parse(validJson);
-      validation = resumeSchema.safeParse(parsedJson);
+      logger.info(`[OPENAI] Received extraction response for: ${file.originalname}`);
+      let extractedData = response.choices[0].message.content?.trim();
+      if (!extractedData) throw new Error("Empty response from OpenAI");
+      let validJson = extractJsonFromMarkdown(extractedData).replace(/(\r\n|\n|\r)/gm, "");
+      let parsedJson = JSON.parse(validJson);
+      let validation = resumeSchema.safeParse(parsedJson);
       if (!validation.success) {
-        logger.error(
-          `[VALIDATION] Reformatted response still does not match schema for: ${file.originalname}`
-        );
-        throw new Error("Failed to format response into the required schema");
+        const errorDetails = validation.error.errors
+          .map((err) => `Path: ${err.path.join(".") || "root"} - ${err.message}`)
+          .join("\n");
+        const reformatText = reformatPrompt(extractedData, errorDetails);
+        logger.info(`[OPENAI] Sending reformat prompt for: ${file.originalname}`);
+        response = await openai.chat.completions.create({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "file", file: { file_id: uploadedFile.id } },
+                { type: "text", text: reformatText },
+              ],
+            },
+          ],
+        });
+        logger.info(`[OPENAI] Received reformatted response for: ${file.originalname}`);
+        extractedData = response.choices[0].message.content?.trim();
+        if (!extractedData) throw new Error("Empty reformatted response from OpenAI");
+        validJson = extractJsonFromMarkdown(extractedData).replace(/(\r\n|\n|\r)/gm, "");
+        parsedJson = JSON.parse(validJson);
+        validation = resumeSchema.safeParse(parsedJson);
+        if (!validation.success) {
+          logger.error(
+            `[VALIDATION] Reformatted response still does not match schema for: ${file.originalname}`
+          );
+          throw new Error("Failed to format response into the required schema");
+        }
       }
-    }
-    logger.info(`[VALIDATION] Extraction validated for: ${file.originalname}`);
+      logger.info(`[VALIDATION] Extraction validated for: ${file.originalname}`);
+      return parsedJson;
+    })();
+
+    const culturalFitPromise = (async () => {
+      logger.info(`[OPENAI] Sending cultural fit prompt for: ${file.originalname}`);
+      const cfRes = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "file", file: { file_id: uploadedFile.id } },
+              { type: "text", text: cfPromptText },
+            ],
+          },
+        ],
+      });
+      const cfText = cfRes.choices[0].message.content?.trim();
+      if (!cfText) throw new Error("Empty cultural fit response");
+      const cfJson = extractJsonFromMarkdown(cfText).replace(/[\r\n]/g, "");
+      const cfParsed = JSON.parse(cfJson);
+      if (!culturalFitSchema.safeParse(cfParsed).success) {
+        logger.error(`[VALIDATION] Cultural fit validation failed for: ${file.originalname}`);
+        throw new Error("Cultural fit validation failed");
+      }
+      logger.info(`[VALIDATION] Cultural fit validated for: ${file.originalname}`);
+      return cfParsed;
+    })();
+
+    const skillsPromise = (async () => {
+      logger.info(`[OPENAI] Sending skills prompt for: ${file.originalname}`);
+      const skRes = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "file", file: { file_id: uploadedFile.id } },
+              { type: "text", text: skPromptText },
+            ],
+          },
+        ],
+      });
+      const skText = skRes.choices[0].message.content?.trim();
+      if (!skText) throw new Error("Empty skills response");
+      const skJson = extractJsonFromMarkdown(skText).replace(/[\r\n]/g, "");
+      let skParsed = JSON.parse(skJson);
+      // Sanitize years_experience
+      skParsed = skParsed.map((skill: any) => ({
+        ...skill,
+        years_experience:
+          typeof skill.years_experience === "number" && !isNaN(skill.years_experience)
+            ? skill.years_experience
+            : 0,
+      }));
+      if (!skillsSchema.safeParse(skParsed).success) {
+        logger.error(`[VALIDATION] Skills validation failed for: ${file.originalname}`);
+        throw new Error("Skills validation failed");
+      }
+      logger.info(`[SKILLS] Skills before normalization : ${JSON.stringify(skParsed)}`);
+      return skParsed;
+    })();
+
+    // Wait for extraction to do duplicate-check dependent work
+    const parsedJson = await extractionPromise;
 
     // Duplicate check: email + organisation_id
     const existingUser = await User.findOne({
@@ -162,17 +217,27 @@ async function processFile(
       };
     }
 
-    // Upload PDF to S3
+    // Wait for cultural fit and skills in parallel with S3 upload (after duplicate check)
+    const cfAndSkills = Promise.all([culturalFitPromise, skillsPromise]);
+
+    // Decide resume URL: reuse existing S3 object if key provided; otherwise upload
     let resume_url: string | null = null;
+    let uploadedByServer = false;
     try {
-      resume_url = await uploadPDFToS3(
-        file.buffer,
-        file.originalname,
-        file.mimetype
-      );
-      logger.info(`[S3] Uploaded PDF to S3 for: ${file.originalname}`);
+      if (existingS3Key) {
+        resume_url = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${existingS3Key}`;
+        logger.info(`[S3] Using existing S3 object for: ${file.originalname} -> ${existingS3Key}`);
+      } else {
+        resume_url = await uploadPDFToS3(
+          file.buffer,
+          file.originalname,
+          file.mimetype
+        );
+        uploadedByServer = true;
+        logger.info(`[S3] Uploaded PDF to S3 for: ${file.originalname}`);
+      }
     } catch (e) {
-      logger.error(`[S3] S3 upload failed for ${file.originalname}:`, e);
+      logger.error(`[S3] S3 handling failed for ${file.originalname}:`, e);
       throw new Error("Resume upload to S3 failed");
     }
 
@@ -180,77 +245,8 @@ async function processFile(
     const uniqueId = new mongoose.Types.ObjectId();
     logger.info(`[DB] Creating user document for: ${file.originalname}`);
 
-    // Get cultural fit
-    const cfPrompt = culturalFitPrompt(
-      "a file has been uploaded of that candidate use that to extract the data"
-    );
-    logger.info(
-      `[OPENAI] Sending cultural fit prompt for: ${file.originalname}`
-    );
-    const cfRes = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "file", file: { file_id: uploadedFile.id } },
-            { type: "text", text: cfPrompt },
-          ],
-        },
-      ],
-    });
-    const cfText = cfRes.choices[0].message.content?.trim();
-    if (!cfText) throw new Error("Empty cultural fit response");
-    const cfJson = extractJsonFromMarkdown(cfText).replace(/[\r\n]/g, "");
-    const cfParsed = JSON.parse(cfJson);
-    if (!culturalFitSchema.safeParse(cfParsed).success) {
-      logger.error(
-        `[VALIDATION] Cultural fit validation failed for: ${file.originalname}`
-      );
-      throw new Error("Cultural fit validation failed");
-    }
-    logger.info(
-      `[VALIDATION] Cultural fit validated for: ${file.originalname}`
-    );
-
-    // Get skills
-    const skPrompt = skillsPromptNoCanon(
-      "a file has been uploaded of that candidate use that to extract the data"
-    );
-    logger.info(`[SKILLS] Skills prompt: ${skPrompt}`);
-    logger.info(`[OPENAI] Sending skills prompt for: ${file.originalname}`);
-    const skRes = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "file", file: { file_id: uploadedFile.id } },
-            { type: "text", text: skPrompt },
-          ],
-        },
-      ],
-    });
-    const skText = skRes.choices[0].message.content?.trim();
-    if (!skText) throw new Error("Empty skills response");
-    const skJson = extractJsonFromMarkdown(skText).replace(/[\r\n]/g, "");
-    let skParsed = JSON.parse(skJson);
-    // Sanitize years_experience: ensure it's a number, set to 0 if not
-    skParsed = skParsed.map((skill: any) => ({
-      ...skill,
-      years_experience: typeof skill.years_experience === 'number' && !isNaN(skill.years_experience)
-        ? skill.years_experience
-        : 0,
-    }));
-    if (!skillsSchema.safeParse(skParsed).success) {
-      logger.error(
-        `[VALIDATION] Skills validation failed for: ${file.originalname}`
-      );
-      throw new Error("Skills validation failed");
-    }
-    logger.info(
-      `[SKILLS] Skills before normalization : ${JSON.stringify(skParsed)}`
-    );
+    // Resolve cultural fit and skills
+    const [cfParsed, skParsed] = await cfAndSkills;
     const session = await mongoose.startSession();
     try {
       session.startTransaction();
@@ -345,8 +341,8 @@ async function processFile(
       await session.abortTransaction();
       session.endSession();
       logger.error(`[DB] Transaction failed for: ${file.originalname}`, error);
-      // If S3 file was uploaded, delete it to avoid orphaned files
-      if (resume_url) {
+      // If S3 file was uploaded by server, delete it to avoid orphaned files
+      if (resume_url && uploadedByServer) {
         try {
           await import("../../utils/s3").then(mod => mod.deleteFileFromS3(resume_url!));
           logger.info(`[S3] Deleted orphaned S3 file after DB transaction failure: ${resume_url}`);
@@ -383,111 +379,14 @@ async function sendWebhookNotification(webhookUrl: string, data: any) {
   }
 }
 
+// Deprecated: server-side file upload endpoint. Enforce direct-to-S3 flow.
 resumeUploadRouter.post(
   "/",
   authenticate,
-  upload.array("files"),
-  async (req: any, res: any) => {
-    try {
-      logger.info(
-        `[ROUTE] Resume upload started. Files: ${req.files?.length || 0}`
-      );
-      // Validate input
-      const validation = extractSchema.safeParse(req.body);
-      if (!validation.success) {
-        logger.error(`[ROUTE] Validation error:`, validation.error.format());
-        return res.status(400).json({ error: validation.error.format() });
-      }
-      const { jobId, webhook_url } = validation.data;
-      const files = req.files as Express.Multer.File[];
-      if (!files || files.length === 0) {
-        logger.error(`[ROUTE] No files provided.`);
-        return res.status(400).json({ error: "No files provided" });
-      }
-      const organisation_id = req.user.organisation;
-      // Generate a unique processing ID
-      const processingId = uuidv4();
-      // Initialize processing status
-      processingStatus.set(processingId, {
-        status: "pending",
-        progress: 0,
-      });
-      // Start processing in the background
-      (async () => {
-        try {
-          processingStatus.set(processingId, {
-            status: "processing",
-            progress: 0,
-          });
-          const { firebase_id, email, displayName } = req.user;
-          // Process files in parallel and preserve order
-          const fileProcessPromises = files.map((file, i) =>
-            processFile(
-              file,
-              firebase_id,
-              email,
-              organisation_id,
-              displayName,
-              jobId ?? null
-            ).then(result => {
-              // Always return an object with _index, filename, and the result
-              return { _index: i, filename: file.originalname, ...result };
-            })
-          );
-          // Use Promise.all to process all files in parallel
-          let results = await Promise.all(fileProcessPromises);
-          // Sort results to maintain original file order (keep _index for now)
-          results = results.sort((a, b) => a._index - b._index);
-          // Update progress and send webhook updates as if files were processed serially
-          for (let i = 0; i < results.length; i++) {
-            const progress = Math.round(((i + 1) / results.length) * 100);
-            // Remove _index only when slicing for output
-            const outputResults = results.slice(0, i + 1).map(({ _index, ...rest }) => rest);
-            processingStatus.set(processingId, {
-              status: i === results.length - 1 ? "completed" : "processing",
-              progress,
-              results: outputResults,
-            });
-            if (webhook_url) {
-              await sendWebhookNotification(webhook_url, {
-                processingId,
-                status: i === results.length - 1 ? "completed" : "processing",
-                progress,
-                results: outputResults,
-              });
-            }
-          }
-          logger.info(
-            `[ROUTE] All files processed for processingId: ${processingId}`
-          );
-        } catch (error: any) {
-          processingStatus.set(processingId, {
-            status: "failed",
-            error: error.message || "Processing failed",
-          });
-          if (webhook_url) {
-            await sendWebhookNotification(webhook_url, {
-              processingId,
-              status: "failed",
-              error: error.message || "Processing failed",
-            });
-          }
-          logger.error(
-            `[ROUTE] Processing failed for processingId: ${processingId}`,
-            error
-          );
-        }
-      })();
-      // Immediately return the processing ID
-      return res.status(202).json({
-        message: "Resume processing started",
-        processingId,
-        status: "pending",
-      });
-    } catch (error) {
-      logger.error(`[ROUTE] Error during resume processing:`, error);
-      return res.status(500).json({ error: "Internal server error" });
-    }
+  async (_req: any, res: any) => {
+    return res.status(410).json({
+      error: "Deprecated endpoint. Use direct S3 upload via presigned URL and then /process-resume(-s)-by-key(s).",
+    });
   }
 );
 
@@ -755,3 +654,197 @@ resumeUploadRouter.get(
 
 
 export { resumeUploadRouter };
+
+// New endpoint: get presigned URL for direct resume upload to S3
+resumeUploadRouter.post(
+  "/get-resume-presigned-url",
+  authenticate,
+  async (req: any, res: any) => {
+    try {
+      const { filename, contentType } = req.body || {};
+      if (!filename || !contentType) {
+        return res.status(400).json({ error: "filename and contentType are required" });
+      }
+      const result = await generateResumeUploadPresignedUrl(filename, contentType);
+      return res.status(200).json({ success: true, ...result });
+    } catch (error) {
+      logger.error("[S3] Failed to generate resume presigned URL:", error);
+      return res.status(500).json({ error: "Failed to generate presigned URL" });
+    }
+  }
+);
+
+// Direct-to-S3 flow: process a resume by existing S3 key
+resumeUploadRouter.post(
+  "/process-resume-by-key",
+  authenticate,
+  async (req: any, res: any) => {
+    try {
+      const schema = z.object({
+        key: z.string().min(1),
+        filename: z.string().min(1),
+        contentType: z.string().min(1),
+        jobId: z.string().optional().nullable(),
+        organisation_id: z.string().optional().nullable(),
+        webhook_url: z.string().url().optional(),
+      });
+      const { key, filename, contentType, jobId, organisation_id, webhook_url } = schema.parse(req.body || {});
+
+      const processingId = uuidv4();
+      processingStatus.set(processingId, { status: "pending", progress: 0 });
+
+      const orgId = organisation_id ?? req.user.organisation;
+      const { firebase_id, email, displayName } = req.user;
+
+      // Kick off background processing
+      (async () => {
+        try {
+          processingStatus.set(processingId, { status: "processing", progress: 0 });
+          // Fetch object bytes
+          const buffer = await getResumeObjectBuffer(key);
+          const fauxFile: Express.Multer.File = {
+            fieldname: "file",
+            originalname: filename,
+            encoding: "7bit",
+            mimetype: contentType,
+            size: buffer.byteLength,
+            buffer,
+            stream: undefined as any,
+            destination: "",
+            filename: filename,
+            path: "",
+          };
+          const result = await processFile(
+            fauxFile,
+            firebase_id,
+            email,
+            orgId,
+            displayName,
+            jobId ?? null,
+            key
+          );
+          processingStatus.set(processingId, {
+            status: "completed",
+            progress: 100,
+            results: [{ filename, ...result }],
+          });
+          if (webhook_url) {
+            await sendWebhookNotification(webhook_url, {
+              processingId,
+              status: "completed",
+              progress: 100,
+              results: [{ filename, ...result }],
+            });
+          }
+        } catch (err: any) {
+          processingStatus.set(processingId, {
+            status: "failed",
+            error: err?.message || "Processing failed",
+          });
+          if (webhook_url) {
+            await sendWebhookNotification(webhook_url, {
+              processingId,
+              status: "failed",
+              error: err?.message || "Processing failed",
+            });
+          }
+          logger.error("[PROCESS-BY-KEY] Failed:", err);
+        }
+      })();
+
+      return res.status(202).json({ processingId, status: "pending" });
+    } catch (error: any) {
+      logger.error("[PROCESS-BY-KEY] Error:", error);
+      return res.status(400).json({ error: error?.message || "Invalid request" });
+    }
+  }
+);
+
+// Direct-to-S3 flow: process multiple resumes by existing S3 keys with one processingId
+resumeUploadRouter.post(
+  "/process-resumes-by-keys",
+  authenticate,
+  async (req: any, res: any) => {
+    try {
+      const itemSchema = z.object({
+        key: z.string().min(1),
+        filename: z.string().min(1),
+        contentType: z.string().min(1),
+      });
+      const schema = z.object({
+        items: z.array(itemSchema).min(1),
+        jobId: z.string().optional().nullable(),
+        organisation_id: z.string().optional().nullable(),
+        webhook_url: z.string().url().optional(),
+      });
+      const { items, jobId, organisation_id, webhook_url } = schema.parse(req.body || {});
+
+      const processingId = uuidv4();
+      processingStatus.set(processingId, { status: "pending", progress: 0 });
+
+      const orgId = organisation_id ?? req.user.organisation;
+      const { firebase_id, email, displayName } = req.user;
+
+      ;(async () => {
+        try {
+          processingStatus.set(processingId, { status: "processing", progress: 0 });
+          const results: any[] = [];
+          let completed = 0;
+          const total = items.length;
+
+          const runOne = async (item: { key: string; filename: string; contentType: string }) => {
+            const { key, filename, contentType } = item;
+            try {
+              const buffer = await getResumeObjectBuffer(key);
+              const fauxFile: Express.Multer.File = {
+                fieldname: "file",
+                originalname: filename,
+                encoding: "7bit",
+                mimetype: contentType,
+                size: buffer.byteLength,
+                buffer,
+                stream: undefined as any,
+                destination: "",
+                filename: filename,
+                path: "",
+              };
+          const result = await processFile(
+                fauxFile,
+                firebase_id,
+                email,
+                orgId,
+                displayName,
+            jobId ?? null,
+            key
+              );
+              results.push({ filename, ...result });
+            } catch (err: any) {
+              results.push({ filename, success: false, error: err?.message || "Failed" });
+            } finally {
+              completed += 1;
+              const progress = Math.round((completed / total) * 100);
+              const status = completed === total ? "completed" : "processing";
+              processingStatus.set(processingId, { status, progress, results: [...results] });
+              if (webhook_url) {
+                await sendWebhookNotification(webhook_url, { processingId, status, progress, results: [...results] });
+              }
+            }
+          };
+
+          await Promise.all(items.map((it) => runOne(it)));
+        } catch (err: any) {
+          processingStatus.set(processingId, { status: "failed", error: err?.message || "Processing failed" });
+          if (webhook_url) {
+            await sendWebhookNotification(webhook_url, { processingId, status: "failed", error: err?.message || "Processing failed" });
+          }
+          logger.error("[PROCESS-BY-KEYS] Failed:", err);
+        }
+      })();
+
+      return res.status(202).json({ processingId, status: "pending" });
+    } catch (error: any) {
+      logger.error("[PROCESS-BY-KEYS] Error:", error);
+      return res.status(400).json({ error: error?.message || "Invalid request" });
+    }
+  }
+);

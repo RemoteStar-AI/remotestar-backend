@@ -18,7 +18,21 @@ userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
   }
 
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId)
+      .select({
+        _id: 1,
+        name: 1,
+        email: 1,
+        years_of_experience: 1,
+        designation: 1,
+        firebase_email: 1,
+        current_location: 1,
+        total_bookmarks: 1,
+        resume_url: 1,
+        organisation_id: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      });
     if (!user) {
       logger.warn(`[GET_USER] User not found for ID: ${userId}`);
       return res.status(404).json({ error: "User not found" });
@@ -45,9 +59,9 @@ userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
     }
 
     const [userSkills, userCulturalFit, userBookmarks] = await Promise.all([
-      Skills.find({ userId: userId }),
-      CulturalFit.find({ userId: userId }),
-      Bookmark.find({ userId: userId })
+      Skills.find({ userId: userId }).select({ skills: 1, userId: 1 }).lean(),
+      CulturalFit.find({ userId: userId }).select({ userId: 1, product_score: 1, service_score: 1, startup_score: 1, mnc_score: 1, loyalty_score: 1, coding_score: 1, leadership_score: 1, architecture_score: 1 }).lean(),
+      Bookmark.find({ userId: userId }).select({ _id: 1, userId: 1, memberId: 1 }).lean()
     ]);
 
     if (user.resume_url) {

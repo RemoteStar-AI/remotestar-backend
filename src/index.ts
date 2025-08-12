@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
+import compression from 'compression';
 // Import routers (Ensure these are properly typed)
 import {extractRouter} from './routes/v1/extract';
 import {embedRouter} from './routes/v1/embed';
@@ -37,6 +38,9 @@ const PORT: number = Number(process.env.PORT) || 3000;
 
 // WebSocket setup
 const server = http.createServer(app);
+// Tune HTTP server for better throughput and lower latency
+server.keepAliveTimeout = 61_000; // keep connections alive a bit beyond typical LB timeouts
+server.headersTimeout = 65_000;   // must be larger than keepAliveTimeout
 const wss = new WebSocketServer({ server });
 
 // Store connected clients
@@ -96,7 +100,7 @@ wss.on("connection", (ws: WebSocket) => {
     }
   });
 
-  ws.on("error", (error) => {
+  ws.on("error", (error: any) => {
     console.error("WebSocket error:", error);
     if (candidateId) {
       clients.delete(candidateId);
@@ -129,8 +133,10 @@ export const broadcastToAll = (message: CallEventMessage) => {
   return sentCount;
 };
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Lightweight compression for API JSON; level 6 balances CPU and size well
+app.use(compression({ level: 6 }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cors());
 
 // Test route
@@ -182,7 +188,13 @@ app.use("/api/v6/interview", interviewRouter);
 
 async function main(){
     try {
-        await mongoose.connect(process.env.MONGODB_URI!);
+        await mongoose.connect(process.env.MONGODB_URI!, {
+            maxPoolSize: 50,
+            minPoolSize: 5,
+            serverSelectionTimeoutMS: 5_000,
+            socketTimeoutMS: 45_000,
+            retryWrites: true,
+        } as any);
         console.log("Connected to MongoDB with database name: " + process.env.MONGODB_URI!.split('/').pop());
         
         server.listen(PORT,'0.0.0.0', () => {
