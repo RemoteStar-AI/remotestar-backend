@@ -1,10 +1,11 @@
-import { Router } from "express";
+import { Router, text } from "express";
 import { Bookmark, JobAnalysisOfCandidate, User, CulturalFit, Skills } from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
 import { analyseJdWithCv } from "../../utils/helper-functions";
 import { deleteFileFromS3, getSignedUrlForResume } from "../../utils/s3";
 import mongoose from "mongoose";
 import logger from "../../utils/loggers";
+import { z } from "zod";
 
 export const userRouter = Router();
 
@@ -136,4 +137,56 @@ userRouter.delete("/:id", authenticate, async (req: any, res: any) => {
   } finally {
     await session.endSession();
   }
+});
+
+userRouter.post("/fuzzy-search", authenticate, async (req: any, res: any) => {
+  const body = req.body;
+  const parsed = z.object({ text: z.string().min(1) }).safeParse(body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "text field required" });
+  }
+
+  const escapeRegex = (input: string) => input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const textRaw = parsed.data.text.trim();
+  if (!textRaw) {
+    return res.status(400).json({ error: "text field required" });
+  }
+
+  // Scope by organisation for performance (middleware sets req.user.organisation)
+  const organisationId = req.user?.organisation ?? req.user?.organisation_id ?? "";
+
+  const safe = escapeRegex(textRaw);
+  const ciRegex = new RegExp(safe, "i");
+
+  const orConditions: any[] = [
+    { name: { $regex: ciRegex } },
+    { email: { $regex: ciRegex } },
+    { designation: { $regex: ciRegex } },
+    { current_location: { $regex: ciRegex } },
+  ];
+
+  const asNumber = Number(textRaw);
+  if (!Number.isNaN(asNumber)) {
+    // Avoid regex on numeric field; exact match is fast
+    orConditions.push({ years_of_experience: asNumber });
+  }
+
+  const query: any = { $or: orConditions, organisation_id: organisationId };
+
+  const users = await User.find(query)
+    .select({
+      _id: 1,
+      name: 1,
+      email: 1,
+      designation: 1,
+      current_location: 1,
+      years_of_experience: 1,
+      organisation_id: 1,
+      total_bookmarks: 1,
+      createdAt: 1,
+    })
+    .limit(20)
+    .lean();
+
+  return res.status(200).json(users);
 });

@@ -3,7 +3,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import http from 'http';
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';;
 import compression from 'compression';
 // Import routers (Ensure these are properly typed)
 import {extractRouter} from './routes/v1/extract';
