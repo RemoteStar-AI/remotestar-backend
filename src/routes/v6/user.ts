@@ -141,15 +141,15 @@ userRouter.delete("/:id", authenticate, async (req: any, res: any) => {
 
 userRouter.post("/fuzzy-search", authenticate, async (req: any, res: any) => {
   const body = req.body;
-  const parsed = z.object({ text: z.string().min(1) }).safeParse(body);
+  const parsed = z.object({ text: z.string().min(2), limit: z.number().int().min(1).max(50).optional() }).safeParse(body);
   if (!parsed.success) {
-    return res.status(400).json({ error: "text field required" });
+    return res.status(400).json({ error: "'text' is required (min 2 chars)" });
   }
 
   const escapeRegex = (input: string) => input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const textRaw = parsed.data.text.trim();
   if (!textRaw) {
-    return res.status(400).json({ error: "text field required" });
+    return res.status(400).json({ error: "'text' is required (min 2 chars)" });
   }
 
   // Scope by organisation for performance (middleware sets req.user.organisation)
@@ -185,7 +185,7 @@ userRouter.post("/fuzzy-search", authenticate, async (req: any, res: any) => {
       total_bookmarks: 1,
       createdAt: 1,
     })
-    .limit(20)
+    .limit(parsed.data.limit ?? 20)
     .lean();
 
   return res.status(200).json(users);
