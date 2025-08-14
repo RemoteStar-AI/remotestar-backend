@@ -6,7 +6,6 @@ import {
   JobAnalysisOfCandidate
 } from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
-import admin from '../../utils/firebase';
 import { getPineconeVectorCount, pinecone } from "../../utils/pinecone";
 import mongoose from 'mongoose';
 import logger from "../../utils/loggers";

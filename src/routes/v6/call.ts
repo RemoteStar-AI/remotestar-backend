@@ -7,6 +7,7 @@ import {
   scheduleOutboundCall,
   updateScriptforAssistant,
   vapi,
+  makeOutboundNudgeCall,
 } from "../../utils/vapi";
 import { authenticate } from "../../middleware/firebase-auth";
 import {
@@ -19,7 +20,7 @@ import {
   Interview,
 } from "../../utils/db";
 import { openai } from "../../utils/openai";
-import { VapiAnalysisPrompt } from "../../utils/prompts";
+import { NudgeCallPrompt, VapiAnalysisPrompt } from "../../utils/prompts";
 import { insertErrorSection } from "../../utils/helper-functions";
 import { vapiWebhookVerification } from "../../utils/vapi-webhook-verification";
 import type { Request, Response } from "express";
@@ -614,12 +615,19 @@ callRouter.post(
 );
 
 callRouter.post("/nudge", authenticate, async (req: any, res: any) => {
-  const phoneNumber = req.body.phoneNumber;
-  const candidateId = req.body.candidateId;
+  const nudgeSchema = z.object({
+    phoneNumber: z.string().min(1),
+    candidateId: z.string().min(1),
+    jobId: z.string().min(1),
+    roleName: z.string().min(1),
+  });
+
+  const { phoneNumber, candidateId, jobId, roleName } = nudgeSchema.parse(req.body);
   const finalPhoneNumber = processPhoneNumber(phoneNumber);
-  const call = await makeOutboundCall(nudgeAssistantId, finalPhoneNumber, process.env.VAPI_PHONE_NUMBER_ID || "", candidateId);
+  const nudgePrompt = NudgeCallPrompt(roleName);
+  const call = await makeOutboundNudgeCall(nudgeAssistantId, finalPhoneNumber, process.env.VAPI_PHONE_NUMBER_ID || "", candidateId, nudgePrompt);
   await CallDetails.create({
-    jobId: "nudge",
+    jobId: jobId,
     candidateId: candidateId,
     organisation_id: req.user.organisation,
     assistantId: nudgeAssistantId,

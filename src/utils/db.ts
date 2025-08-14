@@ -238,6 +238,7 @@ const defaultAssistantSchema = new Schema({
   firstMessage: { type: String, required: true },
   systemPrompt: { type: String, required: true },
   assistantId: { type: String, required: true },
+  type: { type: String, enum: ["call", "nudge", "interview"], default: "call" },
 }, { timestamps: true })
 
 const callDetailsSchema = new Schema({

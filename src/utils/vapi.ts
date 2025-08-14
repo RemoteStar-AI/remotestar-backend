@@ -121,6 +121,39 @@ export async function makeOutboundCall(assistantId: string, phoneNumber: string,
   }
 }
 
+
+export async function makeOutboundNudgeCall(assistantId: string, phoneNumber: string, phoneNumberId: string, candidateIdAsName: string, nudgePrompt: string) {
+  try {
+    const call = await vapi.calls.create({
+      assistantId: assistantId,
+      name: candidateIdAsName,
+      phoneNumberId: phoneNumberId, // Your Vapi phone number ID
+      assistantOverrides:{
+        model: {
+        provider: 'openai',
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+        ],
+      },
+      },
+      customer: {
+        number: phoneNumber, // Target phone number
+      }
+    });
+    // @ts-ignore
+    console.log('Outbound call initiated:', call.id);
+    return call;
+  } catch (error) {
+    console.error('Error making outbound call:', error);
+    throw error;
+  }
+}
+
+
 export async function scheduleOutboundCall(
   assistantId: string,
   phoneNumber: string,
