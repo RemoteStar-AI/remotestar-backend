@@ -4,17 +4,16 @@ import { Job, JobSearchResponse } from "../../utils/db";
 import { jobSchema } from "../../utils/schema";
 import {
   jobEmbeddingPrompt,
-  VapiSystemPrompt,
 } from "../../utils/prompts";
 import { openai } from "../../utils/openai";
-import { createAndStoreEmbedding, extractJsonFromMarkdown, insertErrorSection } from "../../utils/helper-functions";
+import { createAndStoreEmbedding, extractJsonFromMarkdown, insertErrorSection, getVapiSystemPrompt } from "../../utils/helper-functions";
 import { authenticate } from "../../middleware/firebase-auth";
 import { z } from "zod";
 import { systemPrompt, updateScriptforAssistant} from "../../utils/vapi";
+import { firstMessage } from "../../utils/consts";
 
 const namespace = "job-pool-v2";
 
-const firstMessage = 'Hi this is Riley from RemoteStar. Do you have a couple of minutes to talk?';
 
 const VapiPromptSchema = z.object({
   firstMessage: z.string(),
@@ -117,42 +116,14 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
       // Generate prompt
       try {
         console.log("Generating prompt");
-        const openaiPrompt = VapiSystemPrompt(
-          JSON.stringify(data.description),
-          "", // userData - empty for job creation
-          organisationName
+        const vapiSystemPrompt = getVapiSystemPrompt(
+          JSON.stringify(data.description)
         );
-        const openaiResponse = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",
-          messages: [{ role: "user", content: openaiPrompt }],
-          response_format: { type: "json_object" }
-        });
-        const prompt = openaiResponse.choices[0].message.content;
-        if (prompt && prompt !== "null") {
-          console.log("Raw OpenAI response:", prompt);
-          const jsonPrompt = extractJsonFromMarkdown(prompt);
-          console.log("Extracted JSON prompt:", jsonPrompt);
-          const parsedPrompt = JSON.parse(jsonPrompt);
-          console.log("Parsed prompt object:", parsedPrompt);
-          const parsedPromptSchema = VapiPromptSchema.safeParse(parsedPrompt);
-          if (!parsedPromptSchema.success) {
-            console.error("Schema validation failed:", parsedPromptSchema.error.format());
-            throw new Error("Invalid prompt format");
-          }
-          // Ensure jobResponse.prompt is an object
-          if (typeof jobResponse.prompt === "string") {
-            try {
-              jobResponse.prompt = JSON.parse(jobResponse.prompt);
-            } catch (e) {
-              jobResponse.prompt = {};
-            }
-          }
-          jobResponse.prompt.systemPrompt = insertErrorSection(parsedPromptSchema.data.systemPrompt+`\n \n [JOB_DESCRIPTION] : ${data.description}`);
-          jobResponse.prompt.firstMessage = firstMessage;
+        jobResponse.prompt.systemPrompt = vapiSystemPrompt;
+        jobResponse.prompt.firstMessage = firstMessage;
   
-          await jobResponse.save();
-          console.log("Prompt generated successfully");
-        }
+        await jobResponse.save();
+        console.log("Prompt generated successfully");
       } catch (error) {
         console.error("Prompt Generation Error:", error);
         throw new Error("Failed to generate prompt");
@@ -224,40 +195,18 @@ jobRouter.get("/:id/regenerate-prompt", authenticate, async (req: any, res: any)
   if (!job) {
     return res.status(404).json({ error: "Job not found" });
   }
-  const organisationName = req.user.organisationName;
-  const openaiPrompt = VapiSystemPrompt(job.description, "", organisationName);
-  const openaiResponse = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
-    messages: [{ role: "user", content: openaiPrompt }],
-    response_format: { type: "json_object" }
-  });
-  const prompt = openaiResponse.choices[0].message.content;
-  if (prompt && prompt !== "null") {
-    console.log("Raw OpenAI response (regenerate):", prompt);
-    const parsedPrompt = JSON.parse(prompt);
-    console.log("Parsed prompt object (regenerate):", parsedPrompt);
-    const parsedPromptSchema = VapiPromptSchema.safeParse(parsedPrompt);
-    if (!parsedPromptSchema.success) {
-      console.error("Schema validation failed (regenerate):", parsedPromptSchema.error.format());
-      throw new Error("Invalid prompt format");
-    }
-    // Ensure job.prompt is an object
-    if (typeof job.prompt === "string") {
-      try {
-        job.prompt = JSON.parse(job.prompt);
-      } catch (e) {
-        job.prompt = {};
-      }
-    }
-    const systemPromptWithDesc = insertErrorSection(parsedPromptSchema.data.systemPrompt + `\n \n [JOB_DESCRIPTION] : ${job.description}`);
-    job.prompt.systemPrompt = systemPromptWithDesc;
+  
+  try {
+    const vapiSystemPrompt = await getVapiSystemPrompt(job.description);
+    job.prompt.systemPrompt = vapiSystemPrompt;
     job.prompt.firstMessage = firstMessage;
     // Persist the new prompt fields to the database
-    console.log(job.prompt)
+    console.log(job.prompt);
     await Job.findByIdAndUpdate(job._id, { $set: { prompt: job.prompt } });
     await job.save();
     res.status(200).json({ message: "Prompt regenerated successfully", prompt: JSON.stringify(job.prompt) });
-  } else {
+  } catch (error) {
+    console.error("Prompt regeneration failed:", error);
     res.status(200).json({ message: "Prompt regeneration failed", data: job });
   }
 });
@@ -367,39 +316,19 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
       // Generate new prompt
       try {
         console.log("[PUT /job] Generating new prompt");
-        const openaiPrompt = VapiSystemPrompt(
-          data.description,
-          "", // userData - empty for job update
-          req.user.organisationName
-        );
-        const openaiResponse = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",
-          messages: [{ role: "user", content: openaiPrompt }],
-          response_format: { type: "json_object" }
-        });
-        const prompt = openaiResponse.choices[0].message.content;
-        if (prompt && prompt !== "null") {
-          console.log("Raw OpenAI response (update):", prompt);
-          const parsedPrompt = JSON.parse(prompt);
-          console.log("Parsed prompt object (update):", parsedPrompt);
-          const parsedPromptSchema = VapiPromptSchema.safeParse(parsedPrompt);
-          if (!parsedPromptSchema.success) {
-            console.error("Schema validation failed (update):", parsedPromptSchema.error.format());
-            throw new Error("Invalid prompt format");
+        const vapiSystemPrompt = await getVapiSystemPrompt(data.description);
+        // Ensure updatedJob.prompt is an object
+        if (typeof updatedJob.prompt === "string") {
+          try {
+            updatedJob.prompt = JSON.parse(updatedJob.prompt);
+          } catch (e) {
+            console.error("[PUT /job] Failed to parse existing prompt:", e);
+            updatedJob.prompt = {};
           }
-          // Ensure updatedJob.prompt is an object
-          if (typeof updatedJob.prompt === "string") {
-            try {
-              updatedJob.prompt = JSON.parse(updatedJob.prompt);
-            } catch (e) {
-              console.error("[PUT /job] Failed to parse existing prompt:", e);
-              updatedJob.prompt = {};
-            }
-          }
-          updatedJob.prompt.systemPrompt = insertErrorSection(parsedPromptSchema.data.systemPrompt +`\n \n [JOB_DESCRIPTION] : ${data.description}`);
-          updatedJob.prompt.firstMessage = firstMessage;
-          await updatedJob.save();
         }
+        updatedJob.prompt.systemPrompt = vapiSystemPrompt;
+        updatedJob.prompt.firstMessage = firstMessage;
+        await updatedJob.save();
       } catch (error) {
         console.error("[PUT /job] Prompt Generation Error:", error);
         return res.status(500).json({ error: "Failed to generate prompt" });

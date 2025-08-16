@@ -10,8 +10,7 @@ import { getPineconeVectorCount, pinecone } from "../../utils/pinecone";
 import mongoose from 'mongoose';
 import logger from "../../utils/loggers";
 import { markAnalysisAsNotNew } from "../../utils/helper-functions";
-const PINECONE_INDEX_NAME = 'remotestar';
-const MAX_TOP_K = 50;
+import { PINECONE_INDEX_NAME, MAX_TOP_K } from "../../utils/consts";
 
 
 export const searchRouter = Router();

@@ -6,9 +6,9 @@ import { createSupportAssistant, getCallDetails, updateScriptforAssistant } from
 import { VapiSystemPrompt3 as VapiSystemPrompt, VapiAnalysisPrompt } from "../../utils/prompts";
 import { z } from "zod";
 import crypto from "crypto";
+import { firstMessage } from "../../utils/consts";
 
 export const interviewRouter = Router();
-const firstMessage = "Hi this is Riley from RemoteStar. Do you have a couple of minutes to talk?";
 
 interviewRouter.post("/email", async (req: Request, res: Response) => {
   const { name, JobName, interviewLink, toEmail } = req.body;    

@@ -1220,28 +1220,64 @@ const culturalFitSchema = new Schema({
 `;
 }
 
-export function VapiSystemPrompt(jobDescription: string, userData: string, organisationName: string): string {
+export function VapiSystemPrompt(jobDescription: string): string {
   return `
-You are an expert AI prompt engineer specializing in creating voice assistant configurations for recruitment calls.
+You are an expert at creating technical interview questions for candidate screening.
 
-Given:
-- Job Description: ${jobDescription}
-- Candidate Data: ${userData} (includes skills, experience, and other relevant details)
-- Organization Name: ${organisationName}
+Given a job description, your task is to identify the key skills and their relative importance. For each skill, generate a set of questions to assess a candidate's proficiency.
 
-Your task is to generate a JSON object with exactly two keys: 'firstMessage' (a string) and 'systemPrompt' (a string).
+Your response must be a single, parsable JSON object. No extra text, no markdown, just the JSON.
 
-Customize the content to fit the specific job description and candidate's skills/experience. Make the assistant's identity, tasks, and highlights relevant to recruiting this candidate for the job at ${organisationName}. For example, mention how the candidate's specific skills (from userData) match the job needs (from jobDescription).
+*JSON Schema:*
 
-Here is an example of the exact JSON structure to output, customized for a sample job and candidate:
-make sure the system prompt fits the job description and the candidate data.
-{
-  "firstMessage": "Hi this is Riley from RemoteStar. Do you have a couple of minutes to talk about our Senior Software Engineer position?",
-  "systemPrompt": "[Identity]  \nYou are Riley, a voice assistant for RemoteStar, a unique CTO-led tech hiring service. Your primary task is to connect with prospects like this candidate, whose Java and cloud architecture skills align perfectly with our need for building scalable backend systems, inform them about RemoteStar's offerings, and assist with scheduling an interview.\n\n[Style]  \n- Use a professional and engaging tone that builds trust and excitement.  \n- Speak clearly and with energy, incorporating friendly remarks to sound approachable.  \n- Integrate a touch of enthusiasm when discussing how the candidate's experience matches the role.\n\n[Response Guidelines]  \n- Keep responses concise and focus on providing essential information about the job and RemoteStar.  \n- Confirm details clearly and use natural conversational elements like \"Let me check on that for you.\"  \n- Use phonetic spelling when needed for clarity, especially with names and key terms.\n\n[Task & Goals]  \n1. Greet the prospect: \"Hello, this is Riley from RemoteStar. How are you today?\"  \n2. Introduce the opportunity: \"I'm calling because your expertise in Java and AWS seems like a great fit for our Senior Software Engineer role, where you'll build scalable backend systems.\"  \n3. Provide job details: \"This position involves leading development of cloud-based applications with a focus on performance and security.\"  \n4. Schedule an interview:  \n   - Ask: \"Would you be interested in scheduling an interview to discuss this opportunity further?\"  \n   - If yes, proceed to offer options: \"Great, what date and time works best for you?\"\n   - Confirm: \"I've noted the interview for [date] at [time]. We look forward to chatting!\"  \n5. Conclude politely: \"Thank you for your time. We're excited about the potential fit.\"\n\n[Error Handling / Fallback]  \n- If unsure or has questions: \"I can provide more details on the role. What would you like to know?\"  \n- For unclear responses: \"Could you please repeat that?\"  \n- If scheduling issues: \"If these times don't work, I can email options.\"\n\n[Context]\nOverview: RemoteStar is an innovative, CTO-led tech hiring service... [rest of context as in the original example]"
-}
+The response must be a JSON array of objects. Each object should represent a skill and contain the following keys:
 
-IMPORTANT: Output ONLY the JSON object. NOTHING ELSE. No additional text, no explanations, no markdown, no code blocks. If you add anything else, the response will be invalid and rejected.
-  `;
+  * ⁠ skill ⁠ (string): The name of the skill.
+  * ⁠ weightage ⁠ (number): An integer from 1-100 representing the relative importance of the skill based on the job description.
+  * ⁠ questions ⁠ (array of strings): A list of questions for that skill.
+
+*Instructions:*
+
+1.  The array of skills must be sorted in *decreasing order of weightage*.
+2.  The sum of all ⁠ weightage ⁠ values must be *exactly 100*.
+3.  Each skill should have between 3 and 5 questions, with the number of questions reflecting its weightage.
+4.  All questions must be phrased in the second person, as if you are directly asking the candidate (e.g., "How would you...", "Can you describe...").
+
+*Example of the desired JSON format:*
+
+
+[
+  {
+    "skill": "Skill A",
+    "weightage": 50,
+    "questions": [
+      "Question 1...",
+      "Question 2...",
+      "Question 3...",
+      "Question 4...",
+      "Question 5..."
+    ]
+  },
+  {
+    "skill": "Skill B",
+    "weightage": 30,
+    "questions": [
+      "Question 1...",
+      "Question 2...",
+      "Question 3..."
+    ]
+  },
+  {
+    "skill": "Skill C",
+    "weightage": 20,
+    "questions": [
+      "Question 1...",
+      "Question 2..."
+    ]
+  }
+]
+
+JOB_DESCRIPTION: ${jobDescription}}`;
 }
 
 export function VapiSystemPrompt2(jobDescription: string, userData: string, organisationName: string): string {

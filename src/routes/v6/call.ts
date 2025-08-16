@@ -26,10 +26,8 @@ import { vapiWebhookVerification } from "../../utils/vapi-webhook-verification";
 import type { Request, Response } from "express";
 import { sendWebSocketMessage } from "../../index";
 import mongoose from "mongoose";
+import { assumedCallDuration, nudgeAssistantId } from "../../utils/consts";
 
-const chatgptModel = "gpt-3.5-turbo";
-const assumedCallDuration = 10;
-const nudgeAssistantId = "e916d042-af61-41d8-8692-08d11b919a5c";
 
 function processPhoneNumber(phoneNumber: string) {
   // Trim spaces from sides and remove any - or em dashes in between

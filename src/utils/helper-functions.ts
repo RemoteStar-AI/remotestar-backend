@@ -3,7 +3,8 @@ import { pinecone } from "./pinecone";
 import { openai } from "./openai";
 import {pineconeLogger as logger} from "./pinecone-logger";
 import { getSignedUrlForResume } from "./s3";
-import { jdCvMatchingPrompt } from "./prompts";
+import { jdCvMatchingPrompt, VapiSystemPrompt } from "./prompts";
+import { vapi_system_prompt } from "./consts";
 import "isomorphic-fetch";
 
 const PINECONE_INDEX_NAME = 'remotestar';
@@ -296,4 +297,59 @@ export function insertErrorSection(prompt: string): string {
     // If the marker is not found, append the test section at the end
     return `${prompt.trim()}\n\n${testSection.trim()}`;
   }
+}
+
+export async function getVapiSystemPrompt(jobDescription: string) {
+  const vapi_sp_generatation_prompt = VapiSystemPrompt(jobDescription);
+
+  const openaiResponse = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: vapi_sp_generatation_prompt }],
+  });
+
+  const vapi_sp_generatation_prompt_response = openaiResponse.choices[0].message.content;
+  
+  // Clean up the response by removing escaped characters and formatting JSON properly
+  const cleanedResponse = vapi_sp_generatation_prompt_response
+    ?.replace(/\\\[/g, '[')
+    ?.replace(/\\\]/g, ']')
+    ?.replace(/\\"/g, '"')
+    ?.trim();
+
+  // Parse the cleaned JSON response
+  let skillsData;
+  try {
+    skillsData = JSON.parse(cleanedResponse || '[]');
+  } catch (error) {
+    console.error('Error parsing skills JSON:', error);
+    skillsData = [];
+  }
+
+  // Generate skill-related questions section
+  let skillRelatedQuestions = '';
+  
+  if (Array.isArray(skillsData) && skillsData.length > 0) {
+    skillRelatedQuestions = '3. Skill Assessment:\n';
+    
+    skillsData.forEach((skill, index) => {
+      skillRelatedQuestions += `\n${skill.skill} (Weightage: ${skill.weightage}%):\n`;
+      
+      // Add the specific questions for this skill
+      if (Array.isArray(skill.questions)) {
+        skill.questions.forEach((question: string) => {
+          skillRelatedQuestions += `- "${question}"\n`;
+          skillRelatedQuestions += `  <wait for candidate response>\n`;
+        });
+      }
+      
+      skillRelatedQuestions += '\n';
+    });
+  }
+
+  // Populate the vapi_system_prompt template
+  const populatedSystemPrompt = vapi_system_prompt
+    .replace('{{skill_related_questions}}', skillRelatedQuestions)
+    .replace('{{job_description}}', jobDescription);
+
+  return populatedSystemPrompt;
 }

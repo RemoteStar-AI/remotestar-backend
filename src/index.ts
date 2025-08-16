@@ -30,6 +30,7 @@ import { searchRouter as searchRouter6 } from './routes/v6/search';
 import { userRouter as userRouter6 } from './routes/v6/user';
 import { callRouter } from './routes/v6/call';
 import { interviewRouter } from './routes/v6/interview';
+import { getVapiSystemPrompt } from './utils/helper-functions';
 
 dotenv.config();
 
@@ -186,6 +187,53 @@ app.use("/api/v6/user", userRouter6);
 app.use("/api/v6/call", callRouter);
 app.use("/api/v6/interview", interviewRouter);
 
+const exapmple_job_description = `
+We are looking for a highly skilled and passionate Senior Android Developer with a strong command over Kotlin and a solid grasp of agile methodologies, and modern engineering practices such as Test-Driven Development (TDD) and Extreme Programming (XP). If you thrive in a team-oriented environment, love pair programming, and are eager to build high-quality Android applications, we'd love to meet you.
+
+
+
+Key Responsibilities:
+
+Design, develop, and maintain robust Android applications using Kotlin.
+Work closely with cross-functional teams in an agile and XP environment.
+Engage in pair programming and help foster a collaborative engineering culture.
+Set up and maintain CI/CD pipelines to streamline the deployment process.
+Adhere to TDD principles and write clean, maintainable, and well-tested code.
+Participate in code reviews, daily stand-ups, retrospectives, and planning meetings.
+Stay up to date with Android development best practices, tools, and trends.
+
+
+Required Skills & Qualifications:
+
+4+ years of hands-on experience in Android development.
+Proficiency in Kotlin and Android SDK.
+Experience with CI/CD tools like Jenkins, GitHub Actions, Bitrise, or similar.
+Strong understanding and application of Test-Driven Development (TDD).
+Experience working in Extreme Programming (XP) environments.
+Comfortable with pair programming and agile ceremonies.
+Good communication, critical thinking, and team collaboration skills.
+Ability to work in a fast-paced, delivery-driven environment
+
+
+Perks:
+
+• Matched giving for your fundraising activity
+
+• Flexible working hours and work-from-home opportunities
+
+• Performance-related bonuses
+
+• Insurance and medical plans
+
+• Career-focused technical and leadership training's in-class and online, including unlimited access to LinkedIn Learning platform.
+
+• Contribution to gym memberships and more
+
+• A day off on your birthday
+
+• Two days’ volunteering leave per year
+`;
+
 async function main(){
     try {
         await mongoose.connect(process.env.MONGODB_URI!, {
@@ -201,6 +249,8 @@ async function main(){
             console.log(`Server is running on port ${PORT}`);
             console.log(`WebSocket server is ready for connections : hehe testing`);
         });
+        // const vapi_system_prompt = await getVapiSystemPrompt(exapmple_job_description);
+        // console.log(vapi_system_prompt);
 
     } catch (error) {
         console.error("Error connecting to MongoDB", error);
