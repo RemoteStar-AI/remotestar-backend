@@ -116,9 +116,16 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
       // Generate prompt
       try {
         console.log("Generating prompt");
-        const vapiSystemPrompt = getVapiSystemPrompt(
-          JSON.stringify(data.description)
-        );
+        // Ensure prompt is an object
+        if (typeof jobResponse.prompt === "string") {
+          try {
+            jobResponse.prompt = JSON.parse(jobResponse.prompt);
+          } catch (e) {
+            jobResponse.prompt = {};
+          }
+        }
+        
+        const vapiSystemPrompt = await getVapiSystemPrompt(data.description);
         jobResponse.prompt.systemPrompt = vapiSystemPrompt;
         jobResponse.prompt.firstMessage = firstMessage;
   
@@ -197,6 +204,15 @@ jobRouter.get("/:id/regenerate-prompt", authenticate, async (req: any, res: any)
   }
   
   try {
+    // Ensure prompt is an object
+    if (typeof job.prompt === "string") {
+      try {
+        job.prompt = JSON.parse(job.prompt);
+      } catch (e) {
+        job.prompt = {};
+      }
+    }
+    
     const vapiSystemPrompt = await getVapiSystemPrompt(job.description);
     job.prompt.systemPrompt = vapiSystemPrompt;
     job.prompt.firstMessage = firstMessage;
