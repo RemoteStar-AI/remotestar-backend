@@ -19,26 +19,11 @@ userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
   }
 
   try {
-    const user = await User.findById(userId)
-      .select({
-        _id: 1,
-        name: 1,
-        email: 1,
-        years_of_experience: 1,
-        designation: 1,
-        firebase_email: 1,
-        current_location: 1,
-        total_bookmarks: 1,
-        resume_url: 1,
-        organisation_id: 1,
-        createdAt: 1,
-        updatedAt: 1,
-      });
+    const user = await User.findById(userId);
     if (!user) {
       logger.warn(`[GET_USER] User not found for ID: ${userId}`);
       return res.status(404).json({ error: "User not found" });
     }
-    //testing
     let userAnalysis = await JobAnalysisOfCandidate.findOne({
       jobId: jobId,
       userId: userId,

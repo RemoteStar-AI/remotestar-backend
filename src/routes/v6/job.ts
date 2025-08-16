@@ -72,24 +72,36 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
       console.log("Request data validated successfully");
       const data = parsedBody.data;
       // data.organisation_id = organisation_id;
-      // Generate job embedding
-      let jobEmbeddingText;
-      try {
-        const jobEmbeddingPromptText = jobEmbeddingPrompt(data.description);
-        console.log("Job embedding prompt text", jobEmbeddingPromptText);
-        const jobEmbedding = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: jobEmbeddingPromptText }],
-        });
-        jobEmbeddingText = jobEmbedding.choices[0].message.content;
-        console.log("Job embedding text", jobEmbeddingText);
-        console.log("Job embedding generated successfully");
-      } catch (error) {
-        console.error("OpenAI API Error:", error);
-        throw new Error("Failed to generate job embedding");
-      }
 
-      // Create job record
+      // Kick off external calls in parallel where possible
+      const jobEmbeddingPromise = (async () => {
+        try {
+          const jobEmbeddingPromptText = jobEmbeddingPrompt(data.description);
+          console.log("Job embedding prompt text", jobEmbeddingPromptText);
+          const jobEmbedding = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: jobEmbeddingPromptText }],
+          });
+          const text = jobEmbedding.choices[0].message.content as string;
+          console.log("Job embedding text", text);
+          console.log("Job embedding generated successfully");
+          return text;
+        } catch (error) {
+          console.error("OpenAI API Error:", error);
+          throw new Error("Failed to generate job embedding");
+        }
+      })();
+
+      const vapiSystemPromptPromise = (async () => {
+        try {
+          return await getVapiSystemPrompt(data.description);
+        } catch (error) {
+          console.error("Prompt Generation Error:", error);
+          throw new Error("Failed to generate prompt");
+        }
+      })();
+
+      // Create job record (independent of external calls)
       let jobResponse;
       try {
         jobResponse = await Job.create(data);
@@ -99,24 +111,14 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
         throw new Error("Failed to create job record");
       }
 
-      // Store embedding
-      try {
-        await createAndStoreEmbedding(
-          jobResponse._id.toString(),
-          jobEmbeddingText || "",
-          namespace,
-          organisation_id
-        );
-        console.log("Job embedding stored successfully");
-      } catch (error) {
-        console.error("Embedding Storage Error:", error);
-        throw new Error("Failed to store job embedding");
-      }
+      // Wait for external results and then persist both in parallel
+      const [jobEmbeddingText, vapiSystemPrompt] = await Promise.all([
+        jobEmbeddingPromise,
+        vapiSystemPromptPromise,
+      ]);
 
-      // Generate prompt
       try {
-        console.log("Generating prompt");
-        // Ensure prompt is an object
+        // Ensure prompt is an object before setting
         if (typeof jobResponse.prompt === "string") {
           try {
             jobResponse.prompt = JSON.parse(jobResponse.prompt);
@@ -124,15 +126,29 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
             jobResponse.prompt = {};
           }
         }
-        
-        const vapiSystemPrompt = await getVapiSystemPrompt(data.description);
+
         jobResponse.prompt.systemPrompt = vapiSystemPrompt;
         jobResponse.prompt.firstMessage = firstMessage;
-  
-        await jobResponse.save();
+
+        await Promise.all([
+          createAndStoreEmbedding(
+            jobResponse._id.toString(),
+            jobEmbeddingText || "",
+            namespace,
+            organisation_id
+          ).catch((error: any) => {
+            console.error("Embedding Storage Error:", error);
+            throw new Error("Failed to store job embedding");
+          }),
+          jobResponse.save(),
+        ]);
+        console.log("Job embedding stored successfully");
         console.log("Prompt generated successfully");
-      } catch (error) {
-        console.error("Prompt Generation Error:", error);
+      } catch (error: any) {
+        if (error instanceof Error && error.message === "Failed to store job embedding") {
+          throw error;
+        }
+        console.error("Prompt/Embedding persistence error:", error);
         throw new Error("Failed to generate prompt");
       }
 
@@ -269,70 +285,82 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
     if (descriptionChanged) {
       console.log("[PUT /job] Processing description change");
       
-      // Delete old embedding
-      try {
-        console.log("[PUT /job] Deleting old embedding");
-        const { deleteEmbedding } = require("../../utils/helper-functions");
-        await deleteEmbedding(
-          existingJob._id.toString(),
-          namespace,
-          req.user.organisation
-        );
-      } catch (error) {
-        console.error("[PUT /job] Failed to delete old embedding:", error);
-        // Not a hard failure, continue
-      }
+      // Prepare concurrent operations: delete old embedding, generate new embedding text, and compute new prompt
+      const { deleteEmbedding } = require("../../utils/helper-functions");
+      const deleteOldEmbeddingPromise = (async () => {
+        try {
+          console.log("[PUT /job] Deleting old embedding");
+          await deleteEmbedding(
+            existingJob._id.toString(),
+            namespace,
+            req.user.organisation
+          );
+        } catch (error) {
+          console.error("[PUT /job] Failed to delete old embedding:", error);
+          // Not a hard failure, continue
+        }
+      })();
 
-      // Generate new embedding
-      let jobEmbeddingText;
+      const jobEmbeddingTextPromise = (async () => {
+        try {
+          console.log("[PUT /job] Generating new job embedding");
+          const jobEmbeddingPromptText = jobEmbeddingPrompt(data.description);
+          const jobEmbedding = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: jobEmbeddingPromptText }],
+          });
+          return jobEmbedding.choices[0].message.content as string;
+        } catch (error) {
+          console.error("[PUT /job] OpenAI API Error:", error);
+          throw new Error("Failed to generate job embedding");
+        }
+      })();
+
+      const vapiSystemPromptPromise = getVapiSystemPrompt(data.description);
+
+      // Ensure deletion and new embedding text are ready
+      let jobEmbeddingText: string;
       try {
-        console.log("[PUT /job] Generating new job embedding");
-        const jobEmbeddingPromptText = jobEmbeddingPrompt(data.description);
-        const jobEmbedding = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: jobEmbeddingPromptText }],
-        });
-        jobEmbeddingText = jobEmbedding.choices[0].message.content;
+        const [, embeddingText] = await Promise.all([
+          deleteOldEmbeddingPromise,
+          jobEmbeddingTextPromise,
+        ]);
+        jobEmbeddingText = embeddingText || "";
       } catch (error) {
-        console.error("[PUT /job] OpenAI API Error:", error);
         return res.status(500).json({ error: "Failed to generate job embedding" });
       }
 
-      // Update job record
+      // Update job record and store new embedding concurrently
       try {
-        console.log("[PUT /job] Updating job record");
-        updatedJob = await Job.findByIdAndUpdate(
-          data._id,
-          { $set: data },
-          { new: true }
-        );
+        console.log("[PUT /job] Updating job record and storing new embedding concurrently");
+        const [updated, _] = await Promise.all([
+          Job.findByIdAndUpdate(
+            data._id,
+            { $set: data },
+            { new: true }
+          ),
+          createAndStoreEmbedding(
+            data._id.toString(),
+            jobEmbeddingText,
+            namespace,
+            req.user.organisation
+          ),
+        ]);
+
+        updatedJob = updated;
         if (!updatedJob) {
           console.log("[PUT /job] Job not found after update");
           return res.status(404).json({ error: "Job not found after update" });
         }
       } catch (error) {
-        console.error("[PUT /job] Failed to update job record:", error);
-        return res.status(500).json({ error: "Failed to update job record" });
+        console.error("[PUT /job] Failed to update job record or store embedding:", error);
+        return res.status(500).json({ error: "Failed to update job or store embedding" });
       }
 
-      // Store new embedding
-      try {
-        console.log("[PUT /job] Storing new embedding");
-        await createAndStoreEmbedding(
-          updatedJob._id.toString(),
-          jobEmbeddingText || "",
-          namespace,
-          req.user.organisation
-        );
-      } catch (error) {
-        console.error("[PUT /job] Embedding Storage Error:", error);
-        return res.status(500).json({ error: "Failed to store job embedding" });
-      }
-
-      // Generate new prompt
+      // Generate new prompt and persist
       try {
         console.log("[PUT /job] Generating new prompt");
-        const vapiSystemPrompt = await getVapiSystemPrompt(data.description);
+        const vapiSystemPrompt = await vapiSystemPromptPromise;
         // Ensure updatedJob.prompt is an object
         if (typeof updatedJob.prompt === "string") {
           try {
