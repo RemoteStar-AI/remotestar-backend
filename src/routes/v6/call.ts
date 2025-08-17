@@ -70,6 +70,7 @@ const callSchema = z.object({
   companyName: z.string().min(1),
   candidateId: z.string().min(1),
   type: z.enum(["outbound", "scheduled"]),
+  videoUrl: z.string().optional(),
   date: z.string().min(1).optional(),
   time: z.string().min(1).optional(),
 });
@@ -108,8 +109,8 @@ callRouter.get( "/:jobId/:candidateId",
           if(call.type === "email") {
             return call;
           }
-          const callDetails = await getCallDetails(call.callId);
-          return callDetails;
+          const details = await getCallDetails(call.callId);
+          return call.videoUrl ? { ...(details as any), videoUrl: call.videoUrl } : details;
         })
       );
     } catch (error) {
@@ -637,8 +638,8 @@ callRouter.post( "/webhook",
         console.log(`[Webhook] Uploading call recording to S3 for callId=${callId}`);
         const uploadedUrl = await copyVideofromVapiToRemotestarVideoS3Bucket(videoUrl, callDetails.callId);
         console.log(`[Webhook] Uploaded recording to S3 at: ${uploadedUrl}`);
-
-        const videolink = `${process.env.URL}/video/${callDetails.callId}`;
+        const apiUrl = process.env.URL?.trim() || "http://localhost:3000";
+        const videolink = `${apiUrl}/video/${callDetails.callId}`;
         await CallDetails.updateOne(
           { callId: callDetails.callId },
           { $set: { videoUrl: videolink } }
