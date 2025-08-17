@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadBucketCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
@@ -150,24 +150,34 @@ async function getVideoObjectBuffer(url: string): Promise<{ buffer: Buffer; cont
 
 
 export async function copyVideofromVapiToRemotestarVideoS3Bucket(vapiVideoUrl: string, key: string): Promise<string> {
-  const VIDEO_BUCKET_NAME = process.env.AWS_VIDEO_BUCKET_NAME || "remotestar-video-bucket";
+  const rawBucket = process.env.AWS_VIDEO_BUCKET_NAME || "remotestar-video-bucket";
+  const VIDEO_BUCKET_NAME = rawBucket.trim();
   if (!vapiVideoUrl || !key) {
     const message = `Both vapiVideoUrl and key are required`;
     logger.error(`[S3] ${message}. Given: url=${!!vapiVideoUrl}, key=${!!key}`);
     throw new Error(message);
   }
   try {
-    logger.info(`[S3] Uploading video to bucket=${VIDEO_BUCKET_NAME}, key=${key}`);
+    const objectKey = key.startsWith("videos/") ? key : `videos/${key}`;
+    logger.info(`[S3] Uploading video to bucket=${VIDEO_BUCKET_NAME}, key=${objectKey}`);
+
+    // Validate bucket exists and is accessible in this region
+    try {
+      await videoS3.send(new HeadBucketCommand({ Bucket: VIDEO_BUCKET_NAME }));
+    } catch (e: any) {
+      logger.error(`[S3] HeadBucket failed for bucket='${VIDEO_BUCKET_NAME}' in region='${process.env.AWS_REGION}'. Error: ${e?.name || e?.Code || 'Unknown'}: ${e?.message || e}`);
+      throw new Error("Configured video bucket is invalid or not accessible");
+    }
     const { buffer, contentType } = await getVideoObjectBuffer(vapiVideoUrl);
     await videoS3.send(
       new PutObjectCommand({
         Bucket: VIDEO_BUCKET_NAME,
-        Key: key,
+        Key: objectKey,
         Body: buffer,
         ContentType: contentType || "application/octet-stream",
       })
     );
-    const url = `https://${VIDEO_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    const url = `https://${VIDEO_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${objectKey}`;
     logger.info(`[S3] Uploaded video to ${url}`);
     return url;
   } catch (error: any) {
