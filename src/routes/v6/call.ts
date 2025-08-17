@@ -607,7 +607,7 @@ callRouter.post( "/webhook",
         // Always return success to VAPI even on error to prevent retries
         res.json({ success: true });
       }
-    } else if (req.body.message?.type === "end-of-call-report") {
+    } else if (req.body.message?.type === "end-of-call-report" && req.body.message.call.type === "webCall") {
       try {
         console.log("[Webhook] end-of-call-report received");
         const callId = req.body?.message?.call?.id;
