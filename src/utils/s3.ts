@@ -3,6 +3,8 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
 import type { Readable } from "stream";
+import fetch from "node-fetch";
+import logger from "./loggers";
 
 dotenv.config();
 
@@ -115,132 +117,101 @@ export const getResumeObjectBuffer = async (keyOrUrl: string): Promise<Buffer> =
   return Buffer.concat(chunks);
 };
 
-// New functions for video upload presigned URLs
-export const generateVideoUploadPresignedUrl = async (
-  userId: string,
-  sessionId: string,
-  chunkNumber: number,
-  expiresIn = 300 // 5 minutes for security
-) => {
-  const timestamp = Date.now();
-  const chunkId = uuidv4();
-
-  // Create unique filename with metadata
-  const filename = `${timestamp}-chunk-${chunkNumber}-${chunkId}.webm`;
-  const key = `videos/${userId}/${sessionId}/${filename}`;
-
-  const command = new PutObjectCommand({
-    Bucket: process.env.AWS_VIDEO_BUCKET_NAME!,
-    Key: key,
-    ContentType: 'video/webm',
-    ServerSideEncryption: 'AES256', // Required by bucket policy
-    Metadata: {
-      'user-id': userId,
-      'session-id': sessionId,
-      'chunk-number': chunkNumber.toString(),
-      'timestamp': timestamp.toString(),
-      'chunk-id': chunkId,
-      'upload-type': 'video-chunk'
+// Fetch arbitrary video content from a remote URL into a Buffer
+async function getVideoObjectBuffer(url: string): Promise<{ buffer: Buffer; contentType?: string }> {
+  const DEFAULT_FETCH_TIMEOUT_MS = 60_000;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), DEFAULT_FETCH_TIMEOUT_MS);
+  try {
+    logger.info(`[S3] Fetching video from URL: ${url}`);
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      const message = `Failed to fetch video (${response.status} ${response.statusText})`;
+      logger.error(`[S3] ${message} for URL: ${url}`);
+      throw new Error(message);
     }
-  });
-
-  const presignedUrl = await getSignedUrl(videoS3, command, { expiresIn });
-
-  return {
-    presignedUrl,
-    key,
-    filename,
-    metadata: {
-      userId,
-      sessionId,
-      chunkNumber,
-      timestamp,
-      chunkId
+    const contentType = response.headers.get("content-type") || undefined;
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    logger.info(`[S3] Fetched video buffer: ${buffer.length} bytes, contentType=${contentType ?? "unknown"}`);
+    return { buffer, contentType };
+  } catch (error: any) {
+    if (error?.name === "AbortError") {
+      const message = `Timed out fetching video after ${DEFAULT_FETCH_TIMEOUT_MS}ms`;
+      logger.error(`[S3] ${message} for URL: ${url}`);
+      throw new Error(message);
     }
-  };
-};
-
-export const deleteVideoChunkFromS3 = async (key: string) => {
-  await videoS3.send(
-    new DeleteObjectCommand({
-      Bucket: process.env.AWS_VIDEO_BUCKET_NAME!,
-      Key: key,
-    })
-  );
-};
-
-export const getVideoChunkSignedUrl = async (key: string, expiresIn = 3600) => {
-  const command = new GetObjectCommand({
-    Bucket: process.env.AWS_VIDEO_BUCKET_NAME!,
-    Key: key,
-  });
-  return await getSignedUrl(videoS3, command, { expiresIn });
-};
-
-// One-time (single object) video upload presigned URL
-export const generateOneTimeVideoUploadPresignedUrl = async (
-  candidateId: string,
-  contentType: string = "video/webm",
-  expiresIn: number = 900 // 15 minutes
-) => {
-  const timestamp = Date.now();
-  const uploadId = uuidv4();
-
-  const extension = (() => {
-    if (contentType.includes("mp4")) return "mp4";
-    if (contentType.includes("webm")) return "webm";
-    if (contentType.includes("quicktime")) return "mov";
-    if (contentType.includes("x-matroska") || contentType.includes("mkv")) return "mkv";
-    return "webm";
-  })();
-
-  const filename = `${timestamp}-full-${uploadId}.${extension}`;
-  const key = `videos/${candidateId}/${filename}`;
-
-  const command = new PutObjectCommand({
-    Bucket: process.env.AWS_VIDEO_BUCKET_NAME!,
-    Key: key,
-    ContentType: contentType,
-    ServerSideEncryption: "AES256",
-    Metadata: {
-      "candidate-id": candidateId,
-      "timestamp": timestamp.toString(),
-      "upload-id": uploadId,
-      "upload-type": "video-single",
-    },
-  });
-
-  const presignedUrl = await getSignedUrl(videoS3, command, { expiresIn });
-
-  return {
-    presignedUrl,
-    key,
-    filename,
-    metadata: {
-      candidateId,
-      timestamp,
-      uploadId,
-    },
-  };
-};
-
-// Create a 15-minute GET presigned URL from a video link (or key)
-export const getVideoSignedUrlFromLink = async (
-  fileUrlOrKey: string,
-  expiresIn: number = 900
-) => {
-  let key = fileUrlOrKey;
-
-  if (fileUrlOrKey.startsWith("https://")) {
-    const url = new URL(fileUrlOrKey);
-    key = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
-    key = decodeURIComponent(key);
+    logger.error(`[S3] Error fetching video from URL: ${url} - ${error?.message ?? error}`);
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
+}
 
+
+export async function copyVideofromVapiToRemotestarVideoS3Bucket(vapiVideoUrl: string, key: string): Promise<string> {
+  const VIDEO_BUCKET_NAME = process.env.AWS_VIDEO_BUCKET_NAME || "remotestar-video-bucket";
+  if (!vapiVideoUrl || !key) {
+    const message = `Both vapiVideoUrl and key are required`;
+    logger.error(`[S3] ${message}. Given: url=${!!vapiVideoUrl}, key=${!!key}`);
+    throw new Error(message);
+  }
+  try {
+    logger.info(`[S3] Uploading video to bucket=${VIDEO_BUCKET_NAME}, key=${key}`);
+    const { buffer, contentType } = await getVideoObjectBuffer(vapiVideoUrl);
+    await videoS3.send(
+      new PutObjectCommand({
+        Bucket: VIDEO_BUCKET_NAME,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType || "application/octet-stream",
+      })
+    );
+    const url = `https://${VIDEO_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    logger.info(`[S3] Uploaded video to ${url}`);
+    return url;
+  } catch (error: any) {
+    const awsCode = error?.name || error?.Code || "UnknownError";
+    logger.error(`[S3] Failed to upload video to key=${key} in bucket=${VIDEO_BUCKET_NAME} - ${awsCode}: ${error?.message ?? error}`);
+    throw error;
+  }
+}
+
+
+export async function getSignedUrlForVideo(callId: string) {
+  const VIDEO_BUCKET_NAME = process.env.AWS_VIDEO_BUCKET_NAME || "remotestar-video-bucket";
+  const key = `videos/${callId}`;
   const command = new GetObjectCommand({
-    Bucket: process.env.AWS_VIDEO_BUCKET_NAME!,
+    Bucket: VIDEO_BUCKET_NAME,
     Key: key,
   });
+  return await getSignedUrl(videoS3, command, { expiresIn: 3600 });
+}
 
-  return await getSignedUrl(videoS3, command, { expiresIn });
-};
+export interface VideoStreamResult {
+  body: Readable;
+  contentLength?: number;
+  contentType?: string;
+  contentRange?: string;
+}
+
+export async function getVideoObjectStream(callId: string, rangeHeader?: string): Promise<VideoStreamResult> {
+  const VIDEO_BUCKET_NAME = process.env.AWS_VIDEO_BUCKET_NAME || "remotestar-video-bucket";
+  const key = `videos/${callId}`;
+  const command = new GetObjectCommand({
+    Bucket: VIDEO_BUCKET_NAME,
+    Key: key,
+    Range: rangeHeader,
+  });
+  const resp = await videoS3.send(command);
+  const body = resp.Body as Readable | undefined;
+  if (!body) {
+    throw new Error("Empty S3 body stream");
+  }
+  return {
+    body,
+    contentLength: resp.ContentLength,
+    contentType: resp.ContentType,
+    contentRange: resp.ContentRange,
+  };
+}

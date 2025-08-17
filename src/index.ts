@@ -31,6 +31,7 @@ import { userRouter as userRouter6 } from './routes/v6/user';
 import { callRouter } from './routes/v6/call';
 import { interviewRouter } from './routes/v6/interview';
 import { getVapiSystemPrompt } from './utils/helper-functions';
+import { getVideoObjectStream } from './utils/s3';
 
 dotenv.config();
 
@@ -233,6 +234,40 @@ Perks:
 
 • Two days’ volunteering leave per year
 `;
+
+app.get("/video/:callId", async (req: Request, res: Response) => {
+  try {
+    const callId = req.params.callId;
+    const range = req.headers.range; // e.g., bytes=0- or bytes=1000-2000
+    const { body, contentLength, contentType, contentRange } = await getVideoObjectStream(callId, range);
+
+    if (range && contentRange) {
+      res.status(206); // Partial Content
+      res.setHeader("Content-Range", contentRange);
+    }
+    if (typeof contentLength === "number") {
+      res.setHeader("Content-Length", String(contentLength));
+    }
+    if (contentType) {
+      res.setHeader("Content-Type", contentType);
+    }
+    res.setHeader("Accept-Ranges", "bytes");
+
+    body.on("error", (err) => {
+      console.error("Stream error while piping video:", err);
+      res.destroy(err as any);
+    });
+    body.pipe(res);
+  } catch (error: any) {
+    const status = error?.$metadata?.httpStatusCode || 500;
+    console.error("Failed to stream video:", error?.message || error);
+    if (!res.headersSent) {
+      res.status(status).json({ message: "Failed to stream video" });
+    } else {
+      res.end();
+    }
+  }
+});
 
 async function main(){
     try {

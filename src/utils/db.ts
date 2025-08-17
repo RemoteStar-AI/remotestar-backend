@@ -252,6 +252,7 @@ const callDetailsSchema = new Schema({
   lastUpdated: { type: Date, default: Date.now },
   vapiData: { type: Object, default: {} },
   type: { type: String, enum: ["call", "email", "interview", "nudge"], default: "call" },
+  videoUrl: { type: String, optional: true },
   interviewId: { type: String, optional: true },
   message: { type: String, default: "" },
 }, { timestamps: true })
@@ -297,7 +298,8 @@ const interviewSchema = new Schema({
   expiresAt: { type: Date, required: true, default: Date.now() + 1000 * 60 * 60 * 24 * 15 },
   status: { type: String, default: "initiated" },
   callId: { type: String, default: "" },
-}, { timestamps: true })
+}, { timestamps: true });
+
 
 export const Job = mongoose.model("Job", jobSchema);
 export const Company = mongoose.model("Company", companySchema);

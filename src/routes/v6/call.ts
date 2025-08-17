@@ -27,6 +27,7 @@ import type { Request, Response } from "express";
 import { sendWebSocketMessage } from "../../index";
 import mongoose from "mongoose";
 import { assumedCallDuration, nudgeAssistantId } from "../../utils/consts";
+import { copyVideofromVapiToRemotestarVideoS3Bucket } from "../../utils/s3";
 
 
 function processPhoneNumber(phoneNumber: string) {
@@ -601,7 +602,24 @@ callRouter.post( "/webhook",
         // Always return success to VAPI even on error to prevent retries
         res.json({ success: true });
       }
-    } else {
+    } else if (req.body.message?.type === "end-of-call-report") {
+      console.log("VAPI Webhook received: end-of-call-report");
+      console.log(req.body);
+      const callDetails = await CallDetails.findOne({ callId: req.body.message.call.id });
+      if (!callDetails) {
+        console.error("Call details not found for callId:", req.body.message.call.id);
+        res.status(200).json({ success: false, error: "Call details not found" });
+        return;
+      }
+      const videoUrl = req.body.message.artifact.videoUrl;
+      const uploadVideoToS3 = await copyVideofromVapiToRemotestarVideoS3Bucket(videoUrl, callDetails.callId);
+      const videolink = process.env.URL + "/video/" + callDetails.callId;
+      await CallDetails.updateOne({ callId: callDetails.callId }, { $set: { videoUrl: videolink } });
+      console.log("Video uploaded to S3");
+      console.log("Video link:", videolink);
+      res.status(200).json({ success: true });
+    }
+     else {
       console.log("VAPI Webhook received:", req.body);
       res.status(200).json({ success: true });
     }

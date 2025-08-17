@@ -201,7 +201,6 @@ interviewRouter.post("/", authenticate, async (req: any, res: any) => {
   }
 });
 
-
 interviewRouter.post("/get-call-details", async (req: any, res: any) => {
   const body = req.body;
   console.log("Call details fetched successfully", body);
