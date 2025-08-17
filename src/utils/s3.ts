@@ -148,7 +148,6 @@ async function getVideoObjectBuffer(url: string): Promise<{ buffer: Buffer; cont
   }
 }
 
-
 export async function copyVideofromVapiToRemotestarVideoS3Bucket(vapiVideoUrl: string, key: string): Promise<string> {
   const rawBucket = process.env.AWS_VIDEO_BUCKET_NAME || "remotestar-video-bucket";
   const VIDEO_BUCKET_NAME = rawBucket.trim();
@@ -161,13 +160,14 @@ export async function copyVideofromVapiToRemotestarVideoS3Bucket(vapiVideoUrl: s
     const objectKey = key.startsWith("videos/") ? key : `videos/${key}`;
     logger.info(`[S3] Uploading video to bucket=${VIDEO_BUCKET_NAME}, key=${objectKey}`);
 
-    // Validate bucket exists and is accessible in this region
+    // Validate bucket exists and is accessible
     try {
       await videoS3.send(new HeadBucketCommand({ Bucket: VIDEO_BUCKET_NAME }));
     } catch (e: any) {
       logger.error(`[S3] HeadBucket failed for bucket='${VIDEO_BUCKET_NAME}' in region='${process.env.AWS_REGION}'. Error: ${e?.name || e?.Code || 'Unknown'}: ${e?.message || e}`);
       throw new Error("Configured video bucket is invalid or not accessible");
     }
+
     const { buffer, contentType } = await getVideoObjectBuffer(vapiVideoUrl);
     await videoS3.send(
       new PutObjectCommand({
@@ -187,10 +187,16 @@ export async function copyVideofromVapiToRemotestarVideoS3Bucket(vapiVideoUrl: s
   }
 }
 
-
 export async function getSignedUrlForVideo(callId: string) {
-  const VIDEO_BUCKET_NAME = process.env.AWS_VIDEO_BUCKET_NAME || "remotestar-video-bucket";
+  const rawBucket = process.env.AWS_VIDEO_BUCKET_NAME || "remotestar-video-bucket";
+  const VIDEO_BUCKET_NAME = rawBucket.trim();
   const key = `videos/${callId}`;
+  try {
+    await videoS3.send(new HeadBucketCommand({ Bucket: VIDEO_BUCKET_NAME }));
+  } catch (e: any) {
+    logger.error(`[S3] HeadBucket failed (signed URL) for bucket='${VIDEO_BUCKET_NAME}' in region='${process.env.AWS_REGION}'. Error: ${e?.name || e?.Code || 'Unknown'}: ${e?.message || e}`);
+    throw new Error("Configured video bucket is invalid or not accessible");
+  }
   const command = new GetObjectCommand({
     Bucket: VIDEO_BUCKET_NAME,
     Key: key,
@@ -206,8 +212,15 @@ export interface VideoStreamResult {
 }
 
 export async function getVideoObjectStream(callId: string, rangeHeader?: string): Promise<VideoStreamResult> {
-  const VIDEO_BUCKET_NAME = process.env.AWS_VIDEO_BUCKET_NAME || "remotestar-video-bucket";
+  const rawBucket = process.env.AWS_VIDEO_BUCKET_NAME || "remotestar-video-bucket";
+  const VIDEO_BUCKET_NAME = rawBucket.trim();
   const key = `videos/${callId}`;
+  try {
+    await videoS3.send(new HeadBucketCommand({ Bucket: VIDEO_BUCKET_NAME }));
+  } catch (e: any) {
+    logger.error(`[S3] HeadBucket failed (stream) for bucket='${VIDEO_BUCKET_NAME}' in region='${process.env.AWS_REGION}'. Error: ${e?.name || e?.Code || 'Unknown'}: ${e?.message || e}`);
+    throw new Error("Configured video bucket is invalid or not accessible");
+  }
   const command = new GetObjectCommand({
     Bucket: VIDEO_BUCKET_NAME,
     Key: key,
