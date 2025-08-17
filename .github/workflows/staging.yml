@@ -9,14 +9,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
       - name: Docker login
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_SECRET }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -27,15 +29,24 @@ jobs:
           file: Dockerfile
           push: true
           tags: govindup63/remotestar-backend-staging:${{ github.sha }}
-      - name: clone remotestar-staging-ops repo , update image tag and push tag
+
+      - name: Clone remotestar-staging-ops repo, update image tag, and push changes
         env:
           PAT: ${{ secrets.PAT }}
         run: |
           git clone https://${PAT}@github.com/govindup63/remotestar-staging-ops.git
           cd remotestar-staging-ops
-          sed -i 's|image: govindup63/remotestar-backend-staging:.*|image: govindup63/remotestar-backend-staging:${{ github.sha }}|' deployment-staging.yml
+
+          # update image line (handles indentation + spaces)
+          sed -i "s|^\s*image:\s*govindup63/remotestar-backend-staging:.*|image: govindup63/remotestar-backend-staging:${{ github.sha }}|" deployment-staging.yml
+
+          echo "=== After sed ==="
+          grep "image:" deployment-staging.yml || true
+          git diff || true
+
           git config user.name "Github Actions Bot"
           git config user.email "actions@github.com"
+
           git add .
-          git commit -m "updated image tag to ${{ github.sha }}"
-          git push https://${{ secrets.PAT }}@github.com/govindup63/remotestar-staging-ops.git main
+          git commit -m "updated image tag to ${{ github.sha }}" || echo "No changes to commit"
+          git push https://${PAT}@github.com/govindup63/remotestar-staging-ops.git main || echo "Nothing to push"
