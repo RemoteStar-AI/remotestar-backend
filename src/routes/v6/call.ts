@@ -612,7 +612,7 @@ callRouter.post( "/webhook",
         console.log("[Webhook] end-of-call-report received \n", req.body);
         const callId = req.body?.message?.call?.id;
         const candidateId = req.body?.message?.call?.name;
-        const videoUrl = req.body?.message?.artifact?.videoUrl;
+        const videoUrl = req.body?.message?.artifact?.videoRecordingUrl;
         console.log(`[Webhook] callId=${callId}, candidateId=${candidateId}, videoUrl=${videoUrl ? "present" : "missing"}`);
 
         if (!callId) {
