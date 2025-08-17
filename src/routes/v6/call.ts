@@ -81,8 +81,7 @@ const webhookSubscriptionSchema = z.object({
 });
 export const callRouter = Router();
 
-callRouter.get(
-  "/:jobId/:candidateId",
+callRouter.get( "/:jobId/:candidateId",
   authenticate,
   async (req: any, res: any) => {
     const { jobId, candidateId } = req.params;
@@ -294,8 +293,7 @@ callRouter.post("/", authenticate, async (req: any, res: any) => {
   }
 });
 
-callRouter.get(
-  "/schedule/:jobId/:candidateId",
+callRouter.get( "/schedule/:jobId/:candidateId",
   authenticate,
   async (req: Request, res: Response) => {
     try {
@@ -380,8 +378,7 @@ callRouter.get(
   }
 );
 
-callRouter.delete(
-  "/scheduled/:id",
+callRouter.delete( "/scheduled/:id",
   authenticate,
   async (req: any, res: any) => {
     const { id } = req.params;
@@ -418,8 +415,7 @@ callRouter.options("/webhook", (req: any, res: any) => {
 });
 
 // VAPI webhook endpoint - no authentication required as VAPI will call this
-callRouter.post(
-  "/webhook",
+callRouter.post( "/webhook",
 //  vapiWebhookVerification(process.env.VAPI_WEBHOOK_SECRET || "default-secret"),
   async (req: any, res: any) => {
     if (req.body.message?.type === "status-update") {
