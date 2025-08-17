@@ -85,6 +85,7 @@ export const callRouter = Router();
 callRouter.get( "/:jobId/:candidateId",
   authenticate,
   async (req: any, res: any) => {
+    console.log("GET /call/:jobId/:candidateId route hit");
     const { jobId, candidateId } = req.params;
     const userId = req.user.firebase_id;
     const organisationId = req.user.organisation;
@@ -97,18 +98,13 @@ callRouter.get( "/:jobId/:candidateId",
       candidateId,
       organisation_id: organisationId,
     });
-    if (!assistant) {
-      res.json({
-        success: false,
-        message: "No default assistant found",
-      });
-      return;
-    }
+
 
     let callDetails: any[] = [];
     try {
       callDetails = await Promise.all(
         previousCalls.map(async (call: any) => {
+          console.log("call", call);
           if(call.type === "email") {
             return call;
           }
@@ -125,6 +121,15 @@ callRouter.get( "/:jobId/:candidateId",
       res.json({
         success: true,
         assistant: assistant,
+        callDetails: callDetails,
+      });
+      return;
+    }
+    if (!assistant) {
+      console.log("No default assistant found");
+      res.json({
+        success: false,
+        message: "No default assistant found",
         callDetails: callDetails,
       });
       return;
