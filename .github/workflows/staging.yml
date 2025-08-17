@@ -38,7 +38,8 @@ jobs:
           cd remotestar-staging-ops
 
           # update image line (handles indentation + spaces)
-          sed -i "s|^\s*image:\s*govindup63/remotestar-backend-staging:.*|image: govindup63/remotestar-backend-staging:${{ github.sha }}|" deployment-staging.yml
+          sed -i "s|^\([[:space:]]*\)image:\s*govindup63/remotestar-backend-staging:.*|\1image: govindup63/remotestar-backend-staging:${{ github.sha }}|" deployment-staging.yml
+
 
           echo "=== After sed ==="
           grep "image:" deployment-staging.yml || true
