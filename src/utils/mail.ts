@@ -83,8 +83,7 @@ export const defaultReachoutEmail = (
   JobName: string,
   interviewLink: string,
 ): string => {
-  interviewLink = "https://interview.remotestar.io/interview?interviewId=" +
-    interviewLink;
+  interviewLink = `${process.env.INTERVIEW_SITE_URL}/interview?interviewId=${interviewLink}`;
   return `
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
