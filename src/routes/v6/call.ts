@@ -603,21 +603,49 @@ callRouter.post( "/webhook",
         res.json({ success: true });
       }
     } else if (req.body.message?.type === "end-of-call-report") {
-      console.log("VAPI Webhook received: end-of-call-report");
-      console.log(req.body);
-      const callDetails = await CallDetails.findOne({ callId: req.body.message.call.id });
-      if (!callDetails) {
-        console.error("Call details not found for callId:", req.body.message.call.id);
-        res.status(200).json({ success: false, error: "Call details not found" });
-        return;
+      try {
+        console.log("[Webhook] end-of-call-report received");
+        const callId = req.body?.message?.call?.id;
+        const candidateId = req.body?.message?.call?.name;
+        const videoUrl = req.body?.message?.artifact?.videoUrl;
+        console.log(`[Webhook] callId=${callId}, candidateId=${candidateId}, videoUrl=${videoUrl ? "present" : "missing"}`);
+
+        if (!callId) {
+          console.error("[Webhook] Missing callId in end-of-call-report payload");
+          res.status(200).json({ success: false, error: "Missing callId" });
+          return;
+        }
+
+        const callDetails = await CallDetails.findOne({ callId });
+        if (!callDetails) {
+          console.error("[Webhook] Call details not found for callId:", callId);
+          res.status(200).json({ success: false, error: "Call details not found" });
+          return;
+        }
+
+        if (!videoUrl) {
+          console.error("[Webhook] Missing videoUrl in end-of-call-report payload for callId:", callId);
+          res.status(200).json({ success: false, error: "Missing videoUrl" });
+          return;
+        }
+
+        console.log(`[Webhook] Uploading call recording to S3 for callId=${callId}`);
+        const uploadedUrl = await copyVideofromVapiToRemotestarVideoS3Bucket(videoUrl, callDetails.callId);
+        console.log(`[Webhook] Uploaded recording to S3 at: ${uploadedUrl}`);
+
+        const videolink = `${process.env.URL}/video/${callDetails.callId}`;
+        await CallDetails.updateOne(
+          { callId: callDetails.callId },
+          { $set: { videoUrl: videolink } }
+        );
+        console.log(`[Webhook] Saved video link on CallDetails: ${videolink}`);
+
+        res.status(200).json({ success: true });
+      } catch (err: any) {
+        console.error("[Webhook] Error handling end-of-call-report:", err?.message || err);
+        // Always respond 200 to avoid VAPI retries
+        res.status(200).json({ success: true });
       }
-      const videoUrl = req.body.message.artifact.videoUrl;
-      const uploadVideoToS3 = await copyVideofromVapiToRemotestarVideoS3Bucket(videoUrl, callDetails.callId);
-      const videolink = process.env.URL + "/video/" + callDetails.callId;
-      await CallDetails.updateOne({ callId: callDetails.callId }, { $set: { videoUrl: videolink } });
-      console.log("Video uploaded to S3");
-      console.log("Video link:", videolink);
-      res.status(200).json({ success: true });
     }
      else {
       console.log("VAPI Webhook received:", req.body);
