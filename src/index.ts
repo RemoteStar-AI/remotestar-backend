@@ -237,7 +237,43 @@ Perks:
 
 app.get("/video/:callId", async (req: Request, res: Response) => {
   try {
-    const callId = req.params.callId;
+    const callId = (req.params.callId || "").replace(/[\r\n\t]/g, "").trim();
+    const range = req.headers.range; // e.g., bytes=0- or bytes=1000-2000
+    const { body, contentLength, contentType, contentRange } = await getVideoObjectStream(callId, range);
+
+    if (range && contentRange) {
+      res.status(206); // Partial Content
+      res.setHeader("Content-Range", contentRange);
+    }
+    if (typeof contentLength === "number") {
+      res.setHeader("Content-Length", String(contentLength));
+    }
+    if (contentType) {
+      res.setHeader("Content-Type", contentType);
+    }
+    res.setHeader("Accept-Ranges", "bytes");
+
+    body.on("error", (err) => {
+      console.error("Stream error while piping video:", err);
+      res.destroy(err as any);
+    });
+    body.pipe(res);
+  } catch (error: any) {
+    const status = error?.$metadata?.httpStatusCode || 500;
+    console.error("Failed to stream video:", error?.message || error);
+    if (!res.headersSent) {
+      res.status(status).json({ message: "Failed to stream video" });
+    } else {
+      res.end();
+    }
+  }
+});
+
+
+// Meri galtiyon ke karan ye karna padega
+app.get("/n/video/:callId", async (req: Request, res: Response) => {
+  try {
+    const callId = (req.params.callId || "").replace(/[\r\n\t]/g, "").trim();
     const range = req.headers.range; // e.g., bytes=0- or bytes=1000-2000
     const { body, contentLength, contentType, contentRange } = await getVideoObjectStream(callId, range);
 
