@@ -609,7 +609,7 @@ callRouter.post( "/webhook",
       }
     } else if (req.body.message?.type === "end-of-call-report" && req.body.message.call.type === "webCall") {
       try {
-        console.log("[Webhook] end-of-call-report received");
+        console.log("[Webhook] end-of-call-report received \n", req.body);
         const callId = req.body?.message?.call?.id;
         const candidateId = req.body?.message?.call?.name;
         const videoUrl = req.body?.message?.artifact?.videoUrl;
