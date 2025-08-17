@@ -202,6 +202,8 @@ function calculateMatchScore(
 matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
   try {
     const { jobId } = req.params;
+    const {isBookmarked} = req.query;
+    const onlyBookmarked = String(isBookmarked) === "true";
     console.log(`Matching candidates for Job ID: ${jobId}`);
     if (!jobId)
       return res
@@ -235,6 +237,8 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         // Fetch bookmarks for the current user
         const memberId = req.user.firebase_id;
         const bookmarks = await Bookmark.find({ memberId });
+        const jobBookmarks = await Bookmark.find({ memberId, jobId });
+        const jobBookmarkedUserIds = new Set(jobBookmarks.map((b: any) => String(b.userId)));
         // Update candidates with latest total_bookmarks, isBookmarked, bookmarkId, and bookmarkedBy
         cached.data.candidates = await Promise.all(cached.data.candidates.map(async (c: any) => {
           const userIdStr = c.userId.toString();
@@ -266,6 +270,11 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
             bookmarkedBy: filteredBookmarkedBy,
           };
         }));
+        if (onlyBookmarked) {
+          const filtered = cached.data.candidates.filter((c: any) => jobBookmarkedUserIds.has(String(c.userId)));
+          cached.data.candidates = filtered;
+          cached.data.totalCandidates = filtered.length;
+        }
       }
       res.status(200).json(cached);
       return;
@@ -274,6 +283,8 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
 
     const memberId = req.user.firebase_id;
     const bookmarks = await Bookmark.find({ memberId });
+    const jobBookmarks = await Bookmark.find({ memberId, jobId });
+    const jobBookmarkedUserIds = new Set(jobBookmarks.map((b: any) => String(b.userId)));
     
 
     if (!job) {
@@ -288,9 +299,9 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     };
     console.log("Job expected cultural fit:", expectedCulturalFit);
 
-    const users = await User.find({
-      organisation_id: job.organisation_id || "USER_UPLOADED",
-    });
+    const users = onlyBookmarked
+      ? await User.find({ _id: { $in: Array.from(jobBookmarkedUserIds) } })
+      : await User.find({ organisation_id: job.organisation_id || "USER_UPLOADED" });
     //const users = await User.find();
     console.log(`Found ${users.length} users to evaluate.`);
 
@@ -422,7 +433,9 @@ matchingRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         );
         const bookmarkId = userBookmarks?._id.toString();
 
-        if (userBookmarks) {
+        if (onlyBookmarked) {
+          isBookmarked = jobBookmarkedUserIds.has(user._id.toString());
+        } else if (userBookmarks) {
           isBookmarked = true;
         }
         // Get all unique memberIds from bookmarks

@@ -38,6 +38,8 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       return res.status(400).json({ error: "Invalid job ID format" });
     }
     const memberId = req.user.firebase_id;
+    const onlyBookmarked = String(req.query.isBookmarked ?? 'false') === 'true';
+    console.log("onlyBookmarked", onlyBookmarked);
 
     // Pagination params
     const start = parseInt(req.query.start) || 0;
@@ -81,6 +83,9 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     const totalCandidatesResponse = await getPineconeVectorCount(PINECONE_INDEX_NAME, "talent-pool-v2", job.organisation_id)
     const totalCandidates = Math.min(50,totalCandidatesResponse);
 
+    // Note: When isBookmarked=true, we filter by users with total_bookmarks > 0 (bookmarked by anyone),
+    // not just those bookmarked by the current user. isBookmarked flag still reflects your own bookmark.
+
     // 2. If enough analyses, return top 'limit' sorted by percentageMatchScore
     if (jobAnalyses.length >= start + limit) {
       console.log("enough analyses");
@@ -112,8 +117,8 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       // Fetch bookmarks
       let userBookmarks = [] as any[];
       try {
-        userBookmarks = await Bookmark.find({ userId: { $in: userIds } })
-          .select({ _id: 1, userId: 1, memberId: 1 })
+        userBookmarks = await Bookmark.find({ userId: { $in: userIds }, jobId: Id })
+          .select({ _id: 1, userId: 1, memberId: 1, jobId: 1 })
           .lean();
       } catch (error) {
         logger.error(`[DB] Error finding bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -121,8 +126,8 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       }
 
       // Prepare userProfiles
-      const userProfiles = await Promise.all(users.map(async (user) => {
-        const bookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId);
+      let userProfiles = await Promise.all(users.map(async (user) => {
+        const bookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId && bookmark.jobId === Id);
         const analysis = paginatedAnalyses.find((a: any) => a.userId === user._id.toString());
         let isNewlyAnalysed = false;
         if (analysis?.newlyAnalysed) {
@@ -145,6 +150,10 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
           isNewlyAnalysed,
         };
       }));
+
+      if (onlyBookmarked) {
+        userProfiles = userProfiles.filter((p: any) => (p.total_bookmarks ?? 0) > 0);
+      }
 
       const finalResponse = {
         jobTitle: job.title,
@@ -260,8 +269,8 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     // Fetch bookmarks
     let userBookmarks = [] as any[];
     try {
-      userBookmarks = await Bookmark.find({ userId: { $in: userIds }})
-        .select({ _id: 1, userId: 1, memberId: 1 })
+      userBookmarks = await Bookmark.find({ userId: { $in: userIds }, jobId: Id })
+        .select({ _id: 1, userId: 1, memberId: 1, jobId: 1 })
         .lean();
     } catch (error) {
       logger.error(`[DB] Error finding bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -269,8 +278,8 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     }
 
     // Prepare userProfiles
-    const userProfiles = await Promise.all(users.map(async (user) => {
-      const bookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId);
+    let userProfiles = await Promise.all(users.map(async (user) => {
+      const bookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId && bookmark.jobId === Id);
       const analysis = paginatedAnalyses.find((a: any) => a.userId === user._id.toString());
       let isNewlyAnalysed = false;
       if (analysis?.newlyAnalysed) {
@@ -293,6 +302,10 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         isNewlyAnalysed,
       };
     }));
+
+    if (onlyBookmarked) {
+      userProfiles = userProfiles.filter((p: any) => (p.total_bookmarks ?? 0) > 0);
+    }
 
     const finalResponse = {
       jobTitle: job.title,
