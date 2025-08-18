@@ -4,6 +4,7 @@ import { Job, JobSearchResponse } from "../../utils/db";
 import { jobSchema } from "../../utils/schema";
 import {
   jobEmbeddingPrompt,
+  NudgeCallPrompt,
 } from "../../utils/prompts";
 import { openai } from "../../utils/openai";
 import { createAndStoreEmbedding, extractJsonFromMarkdown, insertErrorSection, getVapiSystemPrompt } from "../../utils/helper-functions";
@@ -70,7 +71,7 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
         return res.status(400).json({ error: parsedBody.error.format() });
       }
       console.log("Request data validated successfully");
-      const data = parsedBody.data;
+      let data = parsedBody.data;
       // data.organisation_id = organisation_id;
 
       // Kick off external calls in parallel where possible
@@ -103,6 +104,11 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
 
       // Create job record (independent of external calls)
       let jobResponse;
+      // add nudge prompt
+      data = {
+        ...data,
+        nudgePrompt: NudgeCallPrompt(data.title),
+      }
       try {
         jobResponse = await Job.create(data);
         console.log("Job record created successfully");

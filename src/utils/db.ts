@@ -175,6 +175,7 @@ const jobSchema = new mongoose.Schema({
   },
   expectedCulturalFit: { type: culturalFitSchema2, default: {}, optional: true },
   prompt: { type: Object, default: {} },
+  nudgePrompt: { type: String, default: "" },
 }, { timestamps: true });
 // Add index after declaration
 jobSchema.index({ organisation_id: 1 });
