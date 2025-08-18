@@ -50,7 +50,7 @@ export const defaultMemberEmail = (
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
       <div style="background:#f4fbfd;padding:32px 0;text-align:center;color:#1b2a2f;border-bottom:1px solid #dbe7ec;">
-        <img src="cid:remotestar-logo" alt="RemoteStar" style="height:52px;width:auto;display:inline-block;vertical-align:middle;background:transparent;border:0;" />
+        <img src="https://cdn.prod.website-files.com/6109129e0eb56858fd233306/6109129e0eb56827f323332c_LOGO-p-500.png" alt="RemoteStar" style="height:52px;width:auto;display:inline-block;vertical-align:middle;background:transparent;border:0;" />
       </div>
       <div style="padding:32px 24px 24px 24px;">
         <p style="font-size:1.1rem;margin-bottom:18px;">Hello <b>${name}</b>,</p>
@@ -75,7 +75,7 @@ export const defaultAdminEmail = (
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
       <div style="background:#f4fbfd;padding:32px 0;text-align:center;color:#1b2a2f;border-bottom:1px solid #dbe7ec;">
-        <img src="cid:remotestar-logo" alt="RemoteStar" style="height:52px;width:auto;display:inline-block;vertical-align:middle;background:transparent;border:0;" />
+        <img src="https://cdn.prod.website-files.com/6109129e0eb56858fd233306/6109129e0eb56827f323332c_LOGO-p-500.png" alt="RemoteStar" style="height:52px;width:auto;display:inline-block;vertical-align:middle;background:transparent;border:0;" />
       </div>
       <div style="padding:32px 24px 24px 24px;">
         <p style="font-size:1.1rem;margin-bottom:18px;">Hello <b>${name}</b>,</p>
@@ -102,7 +102,7 @@ export const defaultReachoutEmail = (
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
       <div style="background:#f4fbfd;padding:32px 0;text-align:center;color:#1b2a2f;border-bottom:1px solid #dbe7ec;">
-        <img src="cid:remotestar-logo" alt="RemoteStar" style="height:52px;width:auto;display:inline-block;vertical-align:middle;background:transparent;border:0;" />
+        <img src="https://cdn.prod.website-files.com/6109129e0eb56858fd233306/6109129e0eb56827f323332c_LOGO-p-500.png" alt="RemoteStar" style="height:52px;width:auto;display:inline-block;vertical-align:middle;background:transparent;border:0;" />
       </div>
       <div style="padding:32px 24px 24px 24px;">
         <p style="font-size:1.1rem;margin-bottom:18px;">Hello <b>${name}</b>,</p>
