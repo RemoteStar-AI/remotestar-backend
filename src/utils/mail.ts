@@ -15,9 +15,15 @@ export const sendEmail = async (to: string, subject: string, text: string) => {
     },
   });
 
-  const logoPath = path.resolve(process.cwd(), "public/logo.webp");
-  const logoAttachment = fs.existsSync(logoPath)
-    ? [{ filename: "logo.webp", path: logoPath, cid: "remotestar-logo" }]
+  // Prefer a transparent PNG if present; fallback to WEBP
+  const logoPngPath = path.resolve(process.cwd(), "public/logo.png");
+  const logoWebpPath = path.resolve(process.cwd(), "public/logo.webp");
+  const chosenLogoPath = fs.existsSync(logoPngPath)
+    ? logoPngPath
+    : logoWebpPath;
+  const chosenLogoName = path.basename(chosenLogoPath);
+  const logoAttachment = fs.existsSync(chosenLogoPath)
+    ? [{ filename: chosenLogoName, path: chosenLogoPath, cid: "remotestar-logo" }]
     : [];
 
   const mailOptions = {
@@ -43,8 +49,8 @@ export const defaultMemberEmail = (
   return `
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
-      <div style="background:#5B96A5;padding:24px 0;text-align:center;color:#fff;">
-        <img src="cid:remotestar-logo" alt="RemoteStar" style="height:36px;width:auto;display:inline-block;vertical-align:middle;" />
+      <div style="background:#e0eef2;padding:28px 0;text-align:center;color:#1b2a2f;">
+        <img src="cid:remotestar-logo" alt="RemoteStar" style="height:44px;width:auto;display:inline-block;vertical-align:middle;" />
       </div>
       <div style="padding:32px 24px 24px 24px;">
         <p style="font-size:1.1rem;margin-bottom:18px;">Hello <b>${name}</b>,</p>
@@ -68,8 +74,8 @@ export const defaultAdminEmail = (
   return `
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
-      <div style="background:#5B96A5;padding:24px 0;text-align:center;color:#fff;">
-        <img src="cid:remotestar-logo" alt="RemoteStar" style="height:36px;width:auto;display:inline-block;vertical-align:middle;" />
+      <div style="background:#e0eef2;padding:28px 0;text-align:center;color:#1b2a2f;">
+        <img src="cid:remotestar-logo" alt="RemoteStar" style="height:44px;width:auto;display:inline-block;vertical-align:middle;" />
       </div>
       <div style="padding:32px 24px 24px 24px;">
         <p style="font-size:1.1rem;margin-bottom:18px;">Hello <b>${name}</b>,</p>
@@ -95,8 +101,8 @@ export const defaultReachoutEmail = (
   return `
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
-      <div style="background:#5B96A5;padding:24px 0;text-align:center;color:#fff;">
-        <img src="cid:remotestar-logo" alt="RemoteStar" style="height:36px;width:auto;display:inline-block;vertical-align:middle;" />
+      <div style="background:#e0eef2;padding:28px 0;text-align:center;color:#1b2a2f;">
+        <img src="cid:remotestar-logo" alt="RemoteStar" style="height:44px;width:auto;display:inline-block;vertical-align:middle;" />
       </div>
       <div style="padding:32px 24px 24px 24px;">
         <p style="font-size:1.1rem;margin-bottom:18px;">Hello <b>${name}</b>,</p>
