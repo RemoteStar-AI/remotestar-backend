@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import path from "path";
+import fs from "fs";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -14,18 +15,17 @@ export const sendEmail = async (to: string, subject: string, text: string) => {
     },
   });
 
+  const logoPath = path.resolve(process.cwd(), "public/logo.webp");
+  const logoAttachment = fs.existsSync(logoPath)
+    ? [{ filename: "logo.webp", path: logoPath, cid: "remotestar-logo" }]
+    : [];
+
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to,
     subject,
     html: text,
-    attachments: [
-      {
-        filename: "logo.webp",
-        path: path.resolve(process.cwd(), "public/logo.webp"),
-        cid: "remotestar-logo",
-      },
-    ],
+    attachments: logoAttachment,
   };
 
   try {
