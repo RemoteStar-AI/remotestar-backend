@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import path from "path";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -18,6 +19,13 @@ export const sendEmail = async (to: string, subject: string, text: string) => {
     to,
     subject,
     html: text,
+    attachments: [
+      {
+        filename: "logo.webp",
+        path: path.resolve(process.cwd(), "public/logo.webp"),
+        cid: "remotestar-logo",
+      },
+    ],
   };
 
   try {
@@ -36,7 +44,7 @@ export const defaultMemberEmail = (
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
       <div style="background:#5B96A5;padding:24px 0;text-align:center;color:#fff;">
-        <h2 style="margin:0;font-size:2rem;letter-spacing:1px;">RemoteStar</h2>
+        <img src="cid:remotestar-logo" alt="RemoteStar" style="height:36px;width:auto;display:inline-block;vertical-align:middle;" />
       </div>
       <div style="padding:32px 24px 24px 24px;">
         <p style="font-size:1.1rem;margin-bottom:18px;">Hello <b>${name}</b>,</p>
@@ -61,7 +69,7 @@ export const defaultAdminEmail = (
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
       <div style="background:#5B96A5;padding:24px 0;text-align:center;color:#fff;">
-        <h2 style="margin:0;font-size:2rem;letter-spacing:1px;">RemoteStar</h2>
+        <img src="cid:remotestar-logo" alt="RemoteStar" style="height:36px;width:auto;display:inline-block;vertical-align:middle;" />
       </div>
       <div style="padding:32px 24px 24px 24px;">
         <p style="font-size:1.1rem;margin-bottom:18px;">Hello <b>${name}</b>,</p>
@@ -88,7 +96,7 @@ export const defaultReachoutEmail = (
   <div style="background:#f4f4f7;padding:30px 0;min-height:100vh;font-family:Arial,sans-serif;">
     <div style="max-width:480px;margin:40px auto;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
       <div style="background:#5B96A5;padding:24px 0;text-align:center;color:#fff;">
-        <h2 style="margin:0;font-size:2rem;letter-spacing:1px;">RemoteStar</h2>
+        <img src="cid:remotestar-logo" alt="RemoteStar" style="height:36px;width:auto;display:inline-block;vertical-align:middle;" />
       </div>
       <div style="padding:32px 24px 24px 24px;">
         <p style="font-size:1.1rem;margin-bottom:18px;">Hello <b>${name}</b>,</p>
