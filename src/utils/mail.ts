@@ -1,10 +1,6 @@
 import nodemailer from "nodemailer";
-import path from "path";
-import fs from "fs";
 import dotenv from "dotenv";
 dotenv.config();
-
-const webiseUrl = process.env.WEBSITE_URL;
 
 export const sendEmail = async (to: string, subject: string, text: string) => {
   const transporter = nodemailer.createTransport({
@@ -15,23 +11,11 @@ export const sendEmail = async (to: string, subject: string, text: string) => {
     },
   });
 
-  // Prefer a transparent PNG if present; fallback to WEBP
-  const logoPngPath = path.resolve(process.cwd(), "public/logo.png");
-  const logoWebpPath = path.resolve(process.cwd(), "public/logo.webp");
-  const chosenLogoPath = fs.existsSync(logoPngPath)
-    ? logoPngPath
-    : logoWebpPath;
-  const chosenLogoName = path.basename(chosenLogoPath);
-  const logoAttachment = fs.existsSync(chosenLogoPath)
-    ? [{ filename: chosenLogoName, path: chosenLogoPath, cid: "remotestar-logo" }]
-    : [];
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to,
     subject,
     html: text,
-    attachments: logoAttachment,
   };
 
   try {
