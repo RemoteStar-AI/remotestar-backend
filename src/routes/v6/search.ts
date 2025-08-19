@@ -331,7 +331,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         current_location: user.current_location,
         isBookmarked: !!anyBookmarkForUser,
         bookmarkId: myBookmark ? myBookmark._id.toString() : "not by you bruh",
-        total_bookmarks: userBookmarks.filter((bookmark: any) => bookmark.userId === user._id.toString()).length,
+        total_bookmarks: user.total_bookmarks,
         bookmarkedBy: bookmarkedByUids.map((uid: string) => memberIdToEmail.get(uid) ?? uid),
         analysis: analysis?.data,
         isNewlyAnalysed,
