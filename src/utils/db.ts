@@ -156,6 +156,7 @@ const jobSchema = new mongoose.Schema({
   jobType: { type: String, enum: ['full-time', 'part-time', 'contract', 'internship'], required: true },
   salaryFrequency: { type: String, enum: ['yearly', 'monthly', 'hourly'], required: true },
   salary: { type: String, default: "" },
+  currency: { type: String, enum: ['USD', 'EUR', 'INR'], default: "USD" },
   useRanges: { type: Boolean, default: false },
   minSalary: { type: String, default: "" },
   maxSalary: { type: String, default: "" },
