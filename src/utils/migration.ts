@@ -23,6 +23,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { User, Company, Job, JobAnalysisOfCandidate } from "./db";
+import { pinecone } from "./pinecone";
+import { PINECONE_INDEX_NAME } from "./consts";
 
 const ORG_ID = "6835782f4ec996c8f13dca2d";
 
@@ -120,3 +122,63 @@ const ORG_ID = "6835782f4ec996c8f13dca2d";
 // deleteUsersExceptList(process.env.MONGO_URI!);
 
 
+export async function deleteNonExistingUsersFromPinecode() {
+  try {
+    // Collect current user IDs from MongoDB
+    const users = await User.find({}, { _id: 1 }).lean();
+    const existingUserIds = new Set<string>(users.map((u: any) => u._id.toString()));
+
+    const namespace = "talent-pool-v2";
+    const index = pinecone.index(PINECONE_INDEX_NAME);
+
+    console.log(`[PINECONE_MIGRATION] Loaded ${existingUserIds.size} user IDs from MongoDB`);
+
+    // List all vector IDs from Pinecone namespace with pagination (limit must be < 100 per SDK)
+    let paginationToken: string | undefined = undefined;
+    const pineconeIds: string[] = [];
+    do {
+      const listResp = await index
+        .namespace(namespace)
+        .listPaginated({ limit: 99, paginationToken });
+      const ids = (listResp.vectors || [])
+        .map((v: { id?: string }) => v.id)
+        .filter((id: string | undefined): id is string => typeof id === "string");
+      pineconeIds.push(...ids);
+      paginationToken = listResp.pagination?.next;
+      console.log(`[PINECONE_MIGRATION] Listed ${ids.length} vectors (total so far: ${pineconeIds.length})`);
+    } while (paginationToken);
+
+    console.log(`[PINECONE_MIGRATION] Total vectors in namespace '${namespace}': ${pineconeIds.length}`);
+
+    if (pineconeIds.length === 0) {
+      console.log("[PINECONE_MIGRATION] No vectors found; nothing to delete.");
+      return;
+    }
+
+    // Determine IDs present in Pinecone but not in MongoDB
+    const idsToDelete = pineconeIds.filter((id) => !existingUserIds.has(id));
+    console.log(`[PINECONE_MIGRATION] Vectors to delete (not present in MongoDB): ${idsToDelete.length}`);
+
+    if (idsToDelete.length === 0) {
+      console.log("[PINECONE_MIGRATION] No stale vectors to delete.");
+      return;
+    }
+
+    // Delete in chunks to avoid request size limits
+    const CHUNK_SIZE = 99;
+    for (let i = 0; i < idsToDelete.length; i += CHUNK_SIZE) {
+      const chunk = idsToDelete.slice(i, i + CHUNK_SIZE);
+      try {
+        await index.namespace(namespace).deleteMany({ ids: chunk });
+        console.log(`[PINECONE_MIGRATION] Deleted ${chunk.length} vectors (${i + chunk.length}/${idsToDelete.length})`);
+      } catch (err: any) {
+        console.error(`[PINECONE_MIGRATION] Error deleting vectors chunk [${i}-${i + chunk.length}]:`, err?.message || err);
+        // Continue with next chunk
+      }
+    }
+
+    console.log(`[PINECONE_MIGRATION] Cleanup complete. Deleted ${idsToDelete.length} vectors from '${namespace}'.`);
+  } catch (err: any) {
+    console.error("[PINECONE_MIGRATION] Unhandled error:", err?.message || err);
+  }
+}
