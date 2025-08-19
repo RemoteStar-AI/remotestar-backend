@@ -218,36 +218,102 @@ interviewRouter.post("/", authenticate, async (req: any, res: any) => {
 });
 
 interviewRouter.post("/get-call-details", async (req: any, res: any) => {
-  const body = req.body;
-  console.log("Call details fetched successfully", body);
-  const callId = body.vapiResponse.id;
-  const interviewId = body.interviewId;
-  const interview = await Interview.findOneAndUpdate({interviewLink: interviewId}, {status: "started",callId: callId});
-  if (!interview) {
-    console.log(`Error: Interview not found with ID: ${interviewId}`);
-    return res.status(404).json({ success: false, error: "Interview not found" });
-  }
-  const jobId = interview.jobId;
-  const candidateId = interview.candidateId;
-  const organisation_id = interview.organisation_id;
-  const recruiterEmail = interview.recruiterEmail;
-  const newCalldetail = {
-    jobId,
-    candidateId,
-    organisation_id,
-    recruiterEmail,
-    callId,
-    callDetails: body.vapiResponse,
-    status: body.vapiResponse.status,
-    lastUpdated: new Date(),
-    vapiData: body.vapiResponse,
-    interviewId,
-    type: "interview"
-  }
-  await CallDetails.create(newCalldetail);
-  await Interview.findOneAndUpdate({interviewLink: interviewId}, {status: "started"});
+  try {
+    const body = req.body;
+    console.log("Call details fetched successfully", body);
 
-  res.status(200).json({ success: true, message: "Call details fetched successfully" });
+    if (!body || !body.vapiResponse || !body.vapiResponse.id || !body.interviewId) {
+      console.log("Error: Invalid payload for /get-call-details", {
+        hasVapiResponse: !!body?.vapiResponse,
+        hasCallId: !!body?.vapiResponse?.id,
+        hasInterviewId: !!body?.interviewId,
+      });
+      return res.status(400).json({
+        success: false,
+        error: "Invalid payload",
+        details: {
+          message: "Expected { interviewId, vapiResponse: { id, ... } }",
+        },
+      });
+    }
+
+    const callId = body.vapiResponse.id;
+    const interviewId = body.interviewId;
+
+    const interview = await Interview.findOneAndUpdate(
+      { interviewLink: interviewId },
+      { status: "started", callId: callId }
+    );
+
+    if (!interview) {
+      console.log(`Error: Interview not found with ID: ${interviewId}`);
+      return res.status(404).json({ success: false, error: "Interview not found" });
+    }
+
+    const jobId = interview.jobId;
+    const candidateId = interview.candidateId;
+    const organisation_id = interview.organisation_id;
+    const recruiterEmail = interview.recruiterEmail;
+
+    if (!jobId || !candidateId) {
+      console.log("Error: Interview missing required fields", {
+        jobIdPresent: !!jobId,
+        candidateIdPresent: !!candidateId,
+      });
+      return res.status(422).json({
+        success: false,
+        error: "Interview is missing required fields (jobId/candidateId)",
+      });
+    }
+
+    if (!organisation_id || !recruiterEmail) {
+      console.log("Error: Interview missing organisation_id or recruiterEmail", {
+        hasOrganisationId: !!organisation_id,
+        hasRecruiterEmail: !!recruiterEmail,
+        interviewId,
+      });
+      return res.status(422).json({
+        success: false,
+        error: "Interview is missing organisation_id or recruiterEmail. Please backfill or recreate the interview.",
+      });
+    }
+
+    const newCalldetail = {
+      jobId,
+      candidateId,
+      organisation_id,
+      recruiterEmail,
+      callId,
+      callDetails: body.vapiResponse,
+      status: body.vapiResponse.status,
+      lastUpdated: new Date(),
+      vapiData: body.vapiResponse,
+      interviewId,
+      type: "interview",
+    };
+
+    try {
+      await CallDetails.create(newCalldetail);
+    } catch (err: any) {
+      console.error("Validation error creating CallDetails:", err?.message || err);
+      // Mongoose validation error
+      if (err?.name === "ValidationError") {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid CallDetails payload",
+          details: err?.errors || err?.message,
+        });
+      }
+      throw err;
+    }
+
+    await Interview.findOneAndUpdate({ interviewLink: interviewId }, { status: "started" });
+
+    return res.status(200).json({ success: true, message: "Call details fetched successfully" });
+  } catch (error: any) {
+    console.error("Error in /v6/interview/get-call-details:", error?.message || error);
+    return res.status(500).json({ success: false, error: "Internal server error" });
+  }
 });
 
 interviewRouter.get("/end-call/:id", async (req: any, res: any) => {
