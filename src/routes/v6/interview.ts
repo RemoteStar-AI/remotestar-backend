@@ -7,6 +7,7 @@ import { VapiSystemPrompt3 as VapiSystemPrompt, VapiAnalysisPrompt } from "../..
 import { z } from "zod";
 import crypto from "crypto";
 import { firstMessage } from "../../utils/consts";
+import logger from "../../utils/loggers";
 
 export const interviewRouter = Router();
 
@@ -250,21 +251,48 @@ interviewRouter.post("/get-call-details", async (req: any, res: any) => {
 });
 
 interviewRouter.get("/end-call/:id", async (req: any, res: any) => {
-  const { id } = req.params;
-  const interview = await Interview.findOneAndUpdate({interviewLink: id}, {status: "ended"});
-  const callId = interview?.callId;
-  if(!callId){
-    console.log(`Error: Call ID not found with ID: ${id}`);
-    return res.status(404).json({ success: false, error: "Call ID not found" });
+  try {
+    const { id } = req.params;
+    if (!id) {
+      logger.warn("[INTERVIEW] Missing interview ID in end-call request");
+      return res.status(400).json({ success: false, error: "Interview ID is required" });
+    }
+
+    logger.info(`[INTERVIEW] Ending call for interviewLink: ${id}`);
+    const interview = await Interview.findOneAndUpdate(
+      { interviewLink: id },
+      { status: "ended" },
+      { new: true }
+    );
+
+    if (!interview) {
+      logger.warn(`[INTERVIEW] Interview not found for id: ${id}`);
+      return res.status(404).json({ success: false, error: "Interview not found" });
+    }
+
+    const callId = interview.callId;
+    if (!callId) {
+      logger.warn(`[INTERVIEW] Call ID missing for interview id: ${id}`);
+      return res.status(404).json({ success: false, error: "Call ID not found" });
+    }
+
+    let callDetails: any;
+    try {
+      callDetails = await getCallDetails(callId);
+    } catch (err) {
+      logger.error(`[VAPI] Failed to fetch call details for callId ${callId}: ${err instanceof Error ? err.message : "Unknown error"}`);
+      return res.status(502).json({ success: false, error: "Failed to fetch call details" });
+    }
+
+    if (callDetails && typeof callDetails === "object" && "error" in callDetails) {
+      logger.error(`[VAPI] Call details not found for callId ${callId}`);
+      return res.status(404).json({ success: false, error: "Call details not found" });
+    }
+
+    logger.info(`[INTERVIEW] Call ended successfully for interviewLink: ${id}, callId: ${callId}`);
+    return res.status(200).json({ success: true, message: "Call ended successfully", callDetails });
+  } catch (error) {
+    logger.error(`[INTERVIEW] Unexpected error ending call: ${error instanceof Error ? error.message : "Unknown error"}`);
+    return res.status(500).json({ success: false, error: "Internal server error while ending call" });
   }
-  const callDetails = await getCallDetails(callId);
-  if ('error' in callDetails) {
-    console.log(`Error: Call details not found with ID: ${callId}`);
-    return res.status(404).json({ success: false, error: "Call details not found" });
-  }
-  if (!interview) {
-    console.log(`Error: Interview not found with ID: ${id}`);
-    return res.status(404).json({ success: false, error: "Interview not found" });
-  }
-  res.status(200).json({ success: true, message: "Call ended successfully",callDetails: callDetails });
 });
