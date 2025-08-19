@@ -143,7 +143,7 @@ export const jobSchema = z.object({
   jobType: z.enum(["full-time", "part-time", "contract", "internship"]),
   salaryFrequency: z.enum(["yearly", "monthly", "hourly"]),
   salary: z.string().optional(),
-  currency: z.enum(["USD", "EUR", "INR"]),
+  currency: z.enum(["USD", "EUR", "INR", "GBP"]),
   useRanges: z.boolean(),
   minSalary: z.string().optional(),
   maxSalary: z.string().optional(),
