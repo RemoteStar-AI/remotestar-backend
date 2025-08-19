@@ -41,6 +41,21 @@ interviewRouter.get("/:id", async (req: any, res: any) => {
       console.log(`Warning: Job not found for jobId: ${interview.jobId}`);
     }
 
+    if(interview.status === "ended"){
+      console.log(`Interview already ended, fetching call details for ID: ${id}`);
+      const callDetails = await getCallDetails(interview.callId);
+      if ('error' in callDetails) {
+        console.log(`Error: Call details not found with ID: ${interview.callId}`);
+        return res.status(404).json({ success: false, error: "Call details not found" });
+      }
+    }
+
+    if(interview.expiresAt < new Date()){
+      console.log(`Interview expired, deleting interview for ID: ${id}`);
+      await Interview.deleteOne({interviewLink: id});
+      return res.status(404).json({ success: false, error: "Interview expired" });
+    }
+
     console.log(`Successfully retrieved interview data for ID: ${id}`);
     res.status(200).json({ 
       success: true, 

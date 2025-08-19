@@ -296,7 +296,7 @@ const interviewSchema = new Schema({
   systemPrompt: { type: String, required: true },
   analysisPrompt: { type: String, required: true },
   firstMessage: { type: String, required: true },
-  expiresAt: { type: Date, required: true, default: Date.now() + 1000 * 60 * 60 * 24 * 15 },
+  expiresAt: { type: Date, required: true, default: () => new Date(Date.now() + 1000 * 60 * 60 * 24 * 15) }, // 15 days from creation
   status: { type: String, default: "initiated" },
   callId: { type: String, default: "" },
 }, { timestamps: true });
