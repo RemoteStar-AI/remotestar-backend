@@ -25,9 +25,10 @@ import mongoose from "mongoose";
 import pdfParse from "pdf-parse";
 import { v4 as uuidv4 } from "uuid";
 import logger from "../../utils/loggers";
+import { pinecodeTalentPoolNamespace } from "../../utils/consts";
 
 const resumeUploadRouter = Router();
-const namespace = "talent-pool-v2";
+const namespace = pinecodeTalentPoolNamespace;
 
 const extractSchema = z.object({
   jobId: z.string().optional().nullable(),

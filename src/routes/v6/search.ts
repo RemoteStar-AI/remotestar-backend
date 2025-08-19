@@ -10,7 +10,7 @@ import { getPineconeVectorCount, pinecone } from "../../utils/pinecone";
 import mongoose from 'mongoose';
 import logger from "../../utils/loggers";
 import { markAnalysisAsNotNew } from "../../utils/helper-functions";
-import { PINECONE_INDEX_NAME, MAX_TOP_K } from "../../utils/consts";
+import { PINECONE_INDEX_NAME, MAX_TOP_K, pinecodeTalentPoolNamespace, pinecodeJobPoolNamespace } from "../../utils/consts";
 import { getFirebaseEmailFromUID } from "../../utils/firebase";
 
 
@@ -81,7 +81,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       return res.status(500).json({ error: "Error retrieving job analyses" });
     }
     
-    const totalCandidatesResponse = await getPineconeVectorCount(PINECONE_INDEX_NAME, "talent-pool-v2", job.organisation_id)
+    const totalCandidatesResponse = await getPineconeVectorCount(PINECONE_INDEX_NAME, pinecodeTalentPoolNamespace, job.organisation_id)
     const totalCandidates = Math.min(50,totalCandidatesResponse);
 
     // Note: When isBookmarked=true, we now filter by candidates that have been bookmarked by ANY member for this job.
@@ -196,7 +196,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         } else {
           const jobEmbeddingResponse = await pinecone
             .index(PINECONE_INDEX_NAME)
-            .namespace("job-pool-v2")
+            .namespace(pinecodeJobPoolNamespace)
             .fetch([Id]);
           logger.info(`[PINECONE] Successfully fetched job embedding for job ${Id}`);
           jobEmbedding = jobEmbeddingResponse.records[Id]?.values as number[] | undefined;
@@ -214,7 +214,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     // Query for matching candidates
     let topMatches;
     try {
-      topMatches = await pinecone.index(PINECONE_INDEX_NAME).namespace("talent-pool-v2").query({
+      topMatches = await pinecone.index(PINECONE_INDEX_NAME).namespace(pinecodeTalentPoolNamespace).query({
         filter: {
           organisation_id: job.organisation_id,
         },

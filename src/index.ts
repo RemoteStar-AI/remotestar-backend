@@ -321,7 +321,7 @@ async function main(){
             console.log(`Server is running on port ${PORT}`);
             console.log(`WebSocket server is ready for connections : hehe testing`);
         });
-        deleteNonExistingUsersFromPinecode();
+        //deleteNonExistingUsersFromPinecode();
         // const vapi_system_prompt = await getVapiSystemPrompt(exapmple_job_description);
         // console.log(vapi_system_prompt);
 

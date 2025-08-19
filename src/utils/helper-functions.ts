@@ -4,7 +4,7 @@ import { openai } from "./openai";
 import {pineconeLogger as logger} from "./pinecone-logger";
 import { getSignedUrlForResume } from "./s3";
 import { jdCvMatchingPrompt, VapiSystemPrompt } from "./prompts";
-import { vapi_system_prompt } from "./consts";
+import { vapi_system_prompt, pinecodeTalentPoolNamespace } from "./consts";
 import "isomorphic-fetch";
 
 const PINECONE_INDEX_NAME = 'remotestar';

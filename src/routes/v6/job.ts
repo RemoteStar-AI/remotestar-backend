@@ -11,9 +11,9 @@ import { createAndStoreEmbedding, extractJsonFromMarkdown, insertErrorSection, g
 import { authenticate } from "../../middleware/firebase-auth";
 import { z } from "zod";
 import { systemPrompt, updateScriptforAssistant} from "../../utils/vapi";
-import { firstMessage } from "../../utils/consts";
+import { firstMessage, pinecodeJobPoolNamespace, pinecodeTalentPoolNamespace } from "../../utils/consts";
 
-const namespace = "job-pool-v2";
+const namespace = pinecodeJobPoolNamespace;
 
 
 const VapiPromptSchema = z.object({
@@ -165,7 +165,7 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
           // 1. Fetch job embedding
           const jobEmbeddingResponse = await require("../../utils/pinecone")
             .pinecone.index(PINECONE_INDEX_NAME)
-            .namespace("job-pool-v2")
+            .namespace(pinecodeJobPoolNamespace)
             .fetch([jobResponse._id.toString()]);
           const jobEmbedding =
             jobEmbeddingResponse.records[jobResponse._id.toString()]?.values;
@@ -174,7 +174,7 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
           // 2. Query Pinecone for top 10 candidates
           const topMatches = await require("../../utils/pinecone")
             .pinecone.index(PINECONE_INDEX_NAME)
-            .namespace("talent-pool-v2")
+            .namespace(pinecodeTalentPoolNamespace)
             .query({
               vector: jobEmbedding,
               topK: 10,
@@ -393,7 +393,7 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
           console.log("[PUT /job] Fetching job embedding");
           const jobEmbeddingResponse = await require("../../utils/pinecone")
             .pinecone.index(PINECONE_INDEX_NAME)
-            .namespace("job-pool-v2")
+            .namespace(pinecodeJobPoolNamespace)
             .fetch([updatedJob._id.toString()]);
           
           const jobEmbedding =
@@ -406,7 +406,7 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
           console.log("[PUT /job] Querying Pinecone for top matches");
           const topMatches = await require("../../utils/pinecone")
             .pinecone.index(PINECONE_INDEX_NAME)
-            .namespace("talent-pool-v2")
+            .namespace(pinecodeTalentPoolNamespace)
             .query({
               vector: jobEmbedding,
               topK: 10,

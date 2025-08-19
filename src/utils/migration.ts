@@ -24,7 +24,7 @@ dotenv.config();
 
 import { User, Company, Job, JobAnalysisOfCandidate } from "./db";
 import { pinecone } from "./pinecone";
-import { PINECONE_INDEX_NAME } from "./consts";
+import { PINECONE_INDEX_NAME, pinecodeTalentPoolNamespace } from "./consts";
 
 const ORG_ID = "6835782f4ec996c8f13dca2d";
 
@@ -127,8 +127,7 @@ export async function deleteNonExistingUsersFromPinecode() {
     // Collect current user IDs from MongoDB
     const users = await User.find({}, { _id: 1 }).lean();
     const existingUserIds = new Set<string>(users.map((u: any) => u._id.toString()));
-
-    const namespace = "talent-pool-v2";
+    const namespace = pinecodeTalentPoolNamespace;
     const index = pinecone.index(PINECONE_INDEX_NAME);
 
     console.log(`[PINECONE_MIGRATION] Loaded ${existingUserIds.size} user IDs from MongoDB`);
