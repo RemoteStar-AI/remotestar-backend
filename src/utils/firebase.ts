@@ -8,4 +8,10 @@ admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
 
+
+export async function getFirebaseEmailFromUID(uid: string) {
+  const user = await admin.auth().getUser(uid);
+  return user.email;
+}
+
 export default admin;

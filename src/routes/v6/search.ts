@@ -11,6 +11,7 @@ import mongoose from 'mongoose';
 import logger from "../../utils/loggers";
 import { markAnalysisAsNotNew } from "../../utils/helper-functions";
 import { PINECONE_INDEX_NAME, MAX_TOP_K } from "../../utils/consts";
+import { getFirebaseEmailFromUID } from "../../utils/firebase";
 
 
 export const searchRouter = Router();
@@ -83,8 +84,8 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     const totalCandidatesResponse = await getPineconeVectorCount(PINECONE_INDEX_NAME, "talent-pool-v2", job.organisation_id)
     const totalCandidates = Math.min(50,totalCandidatesResponse);
 
-    // Note: When isBookmarked=true, we filter by users with total_bookmarks > 0 (bookmarked by anyone),
-    // not just those bookmarked by the current user. isBookmarked flag still reflects your own bookmark.
+    // Note: When isBookmarked=true, we now filter by candidates that have been bookmarked by ANY member for this job.
+    // The isBookmarked flag in each profile also reflects whether ANY member bookmarked that candidate for this job.
 
     // 2. If enough analyses, return top 'limit' sorted by percentageMatchScore
     if (jobAnalyses.length >= start + limit) {
@@ -125,15 +126,32 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         return res.status(500).json({ error: "Error retrieving bookmark details" });
       }
 
+      // Build a cache of memberId (UID) -> email for all bookmarkers in this result set
+      const uniqueMemberIds = Array.from(new Set(userBookmarks.map((b: any) => b.memberId)));
+      const memberIdToEmail = new Map<string, string>();
+      await Promise.all(uniqueMemberIds.map(async (uid: string) => {
+        try {
+          const email = await getFirebaseEmailFromUID(uid);
+          memberIdToEmail.set(uid, email ?? uid);
+        } catch (error) {
+          logger.warn(`[FIREBASE] Failed to resolve email for uid ${uid}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          memberIdToEmail.set(uid, uid);
+        }
+      }));
+
       // Prepare userProfiles
       let userProfiles = await Promise.all(users.map(async (user) => {
-        const bookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId && bookmark.jobId === Id);
+        const anyBookmarkForUser = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.jobId === Id);
+        const myBookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId && bookmark.jobId === Id);
         const analysis = paginatedAnalyses.find((a: any) => a.userId === user._id.toString());
         let isNewlyAnalysed = false;
         if (analysis?.newlyAnalysed) {
           isNewlyAnalysed = true;
           await markAnalysisAsNotNew(job._id.toString(), user._id.toString());
         }
+        const bookmarkedByUids = userBookmarks
+          .filter((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.jobId === Id)
+          .map((bookmark: any) => bookmark.memberId);
         return {
           userId: user._id,
           name: user.name,
@@ -142,17 +160,17 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
           designation: user.designation,
           uploader_email: user.firebase_email,
           current_location: user.current_location,
-          isBookmarked: !!bookmark,
-          bookmarkId: bookmark ? bookmark._id.toString() : null,
-          total_bookmarks: userBookmarks.filter((bookmark: any) => bookmark.userId === user._id.toString()).length,
-          bookmarkedBy: userBookmarks.filter((bookmark: any) => bookmark.memberId === memberId).map((bookmark: any) => bookmark.userId),
+          isBookmarked: !!anyBookmarkForUser,
+          bookmarkId: myBookmark ? myBookmark._id.toString() : "not by you bruh",
+          total_bookmarks: user.total_bookmarks,
+          bookmarkedBy: bookmarkedByUids.map((uid: string) => memberIdToEmail.get(uid) ?? uid),
           analysis: analysis?.data,
           isNewlyAnalysed,
         };
       }));
 
       if (onlyBookmarked) {
-        userProfiles = userProfiles.filter((p: any) => (p.total_bookmarks ?? 0) > 0);
+        userProfiles = userProfiles.filter((p: any) => p.isBookmarked === true);
       }
 
       const finalResponse = {
@@ -277,15 +295,32 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       return res.status(500).json({ error: "Error retrieving bookmark details" });
     }
 
+    // Build a cache of memberId (UID) -> email for all bookmarkers in this result set
+    const uniqueMemberIds = Array.from(new Set(userBookmarks.map((b: any) => b.memberId)));
+    const memberIdToEmail = new Map<string, string>();
+    await Promise.all(uniqueMemberIds.map(async (uid: string) => {
+      try {
+        const email = await getFirebaseEmailFromUID(uid);
+        memberIdToEmail.set(uid, email ?? uid);
+      } catch (error) {
+        logger.warn(`[FIREBASE] Failed to resolve email for uid ${uid}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        memberIdToEmail.set(uid, uid);
+      }
+    }));
+
     // Prepare userProfiles
     let userProfiles = await Promise.all(users.map(async (user) => {
-      const bookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId && bookmark.jobId === Id);
+      const anyBookmarkForUser = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.jobId === Id);
+      const myBookmark = userBookmarks.find((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.memberId === memberId && bookmark.jobId === Id);
       const analysis = paginatedAnalyses.find((a: any) => a.userId === user._id.toString());
       let isNewlyAnalysed = false;
       if (analysis?.newlyAnalysed) {
         isNewlyAnalysed = true;
         await markAnalysisAsNotNew(job._id.toString(), user._id.toString());
       }
+      const bookmarkedByUids = userBookmarks
+        .filter((bookmark: any) => bookmark.userId === user._id.toString() && bookmark.jobId === Id)
+        .map((bookmark: any) => bookmark.memberId);
       return {
         userId: user._id,
         name: user.name,
@@ -294,17 +329,17 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
         designation: user.designation,
         uploader_email: user.firebase_email,
         current_location: user.current_location,
-        isBookmarked: !!bookmark,
-        bookmarkId: bookmark ? bookmark._id.toString() : null,
+        isBookmarked: !!anyBookmarkForUser,
+        bookmarkId: myBookmark ? myBookmark._id.toString() : "not by you bruh",
         total_bookmarks: userBookmarks.filter((bookmark: any) => bookmark.userId === user._id.toString()).length,
-        bookmarkedBy: userBookmarks.filter((bookmark: any) => bookmark.memberId === memberId).map((bookmark: any) => bookmark.userId),
+        bookmarkedBy: bookmarkedByUids.map((uid: string) => memberIdToEmail.get(uid) ?? uid),
         analysis: analysis?.data,
         isNewlyAnalysed,
       };
     }));
 
     if (onlyBookmarked) {
-      userProfiles = userProfiles.filter((p: any) => (p.total_bookmarks ?? 0) > 0);
+      userProfiles = userProfiles.filter((p: any) => p.isBookmarked === true);
     }
 
     const finalResponse = {
