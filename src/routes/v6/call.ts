@@ -4,7 +4,6 @@ import {
   createSupportAssistant,
   getCallDetails,
   makeOutboundCall,
-  scheduleOutboundCall,
   updateScriptforAssistant,
   vapi,
   makeOutboundNudgeCall,
@@ -13,19 +12,11 @@ import { authenticate } from "../../middleware/firebase-auth";
 import {
   DefaultAssistant,
   CallDetails,
-  User,
-  Job,
   ScheduledCalls,
-  WebhookSubscription,
-  Interview,
 } from "../../utils/db";
-import { openai } from "../../utils/openai";
 import { NudgeCallPrompt, VapiAnalysisPrompt } from "../../utils/prompts";
-import { insertErrorSection } from "../../utils/helper-functions";
-import { vapiWebhookVerification } from "../../utils/vapi-webhook-verification";
 import type { Request, Response } from "express";
 import { sendWebSocketMessage } from "../../index";
-import mongoose from "mongoose";
 import { assumedCallDuration, nudgeAssistantId } from "../../utils/consts";
 import { copyVideofromVapiToRemotestarVideoS3Bucket } from "../../utils/s3";
 
