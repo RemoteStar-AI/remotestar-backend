@@ -32,7 +32,7 @@ import { callRouter } from './routes/v6/call';
 import { interviewRouter } from './routes/v6/interview';
 import {searchRouter as searchRouter7} from './routes/v7/search';
 import { getVapiSystemPrompt } from './utils/helper-functions';
-import { getVideoObjectStream } from './utils/s3';
+import { getSignedUrlForVideo } from './utils/s3';
 import { deleteNonExistingUsersFromPinecode } from './utils/migration';
 
 dotenv.config();
@@ -240,73 +240,27 @@ Perks:
 • Two days’ volunteering leave per year
 `;
 
-app.get("/video/:callId", async (req: Request, res: Response) => {
+app.get("/video/:callId", async (req: any, res: any) => {
   try {
     const callId = (req.params.callId || "").replace(/[\r\n\t]/g, "").trim();
-    const range = req.headers.range; // e.g., bytes=0- or bytes=1000-2000
-    const { body, contentLength, contentType, contentRange } = await getVideoObjectStream(callId, range);
-
-    if (range && contentRange) {
-      res.status(206); // Partial Content
-      res.setHeader("Content-Range", contentRange);
-    }
-    if (typeof contentLength === "number") {
-      res.setHeader("Content-Length", String(contentLength));
-    }
-    if (contentType) {
-      res.setHeader("Content-Type", contentType);
-    }
-    res.setHeader("Accept-Ranges", "bytes");
-
-    body.on("error", (err) => {
-      console.error("Stream error while piping video:", err);
-      res.destroy(err as any);
-    });
-    body.pipe(res);
+    const url = await getSignedUrlForVideo(callId);
+    res.redirect(url);
   } catch (error: any) {
-    const status = error?.$metadata?.httpStatusCode || 500;
-    console.error("Failed to stream video:", error?.message || error);
-    if (!res.headersSent) {
-      res.status(status).json({ message: "Failed to stream video" });
-    } else {
-      res.end();
-    }
+    console.error("Failed to load video:", error?.message || error);
+    res.status(404).send("Video not available");
   }
 });
 
 
 // Meri galtiyon ke karan ye karna padega
-app.get("/n/video/:callId", async (req: Request, res: Response) => {
+app.get("/n/video/:callId", async (req: any, res: any) => {
   try {
     const callId = (req.params.callId || "").replace(/[\r\n\t]/g, "").trim();
-    const range = req.headers.range; // e.g., bytes=0- or bytes=1000-2000
-    const { body, contentLength, contentType, contentRange } = await getVideoObjectStream(callId, range);
-
-    if (range && contentRange) {
-      res.status(206); // Partial Content
-      res.setHeader("Content-Range", contentRange);
-    }
-    if (typeof contentLength === "number") {
-      res.setHeader("Content-Length", String(contentLength));
-    }
-    if (contentType) {
-      res.setHeader("Content-Type", contentType);
-    }
-    res.setHeader("Accept-Ranges", "bytes");
-
-    body.on("error", (err) => {
-      console.error("Stream error while piping video:", err);
-      res.destroy(err as any);
-    });
-    body.pipe(res);
+    const url = await getSignedUrlForVideo(callId);
+    res.redirect(url);
   } catch (error: any) {
-    const status = error?.$metadata?.httpStatusCode || 500;
-    console.error("Failed to stream video:", error?.message || error);
-    if (!res.headersSent) {
-      res.status(status).json({ message: "Failed to stream video" });
-    } else {
-      res.end();
-    }
+    console.error("Failed to load video:", error?.message || error);
+    res.status(404).send("Video not available");
   }
 });
 
