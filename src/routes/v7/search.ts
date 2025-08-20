@@ -250,7 +250,6 @@ searchRouter.get("/:jobId/getTopKCandidates", async (req: any, res: any) => {
         userId: match.id,
         name: user?.name || "Unknown",
         email: user?.email || "Unknown",
-        embedding: match.values,
         similarityScore: match.score,
       };
     });
