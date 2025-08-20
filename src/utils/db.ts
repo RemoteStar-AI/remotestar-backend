@@ -228,6 +228,7 @@ const jobAnalysisOfCandidateSchema = new Schema({
   rank: { type: Number, optional: true },
   data: { type: Object, default: {} },
   userData: { type: Object, default: {} },
+  uniqueId: { type: String, required: true ,unique: true},
   newlyAnalysed: { type: Boolean, default: true },
 }, { timestamps: true })
 // Accelerate lookups by job and user

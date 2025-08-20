@@ -178,6 +178,7 @@ async function analyseJDwithCV(job: any, candidateId: any) {
       userData: user,
       data: analysisJson,
       newlyAnalysed: true,
+      uniqueId: `${jobId}-${candidateId}`,
     });
     stepTimes.step9_saveToDB = Date.now() - step9Start;
     console.log(`[ANALYSIS] Step 9 - Save to DB: ${stepTimes.step9_saveToDB}ms | Analysis saved with ID: ${res._id}`);
