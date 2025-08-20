@@ -8,6 +8,7 @@ import { jdCvMatchingPrompt } from "../../utils/prompts";
 import { extractJsonFromMarkdown, markAnalysisAsNotNew } from "../../utils/helper-functions";
 import { pinecone } from "../../utils/pinecone";
 import { PINECONE_INDEX_NAME, pinecodeJobPoolNamespace } from "../../utils/consts";
+import { getFirebaseEmailFromUID } from "../../utils/firebase";
 
 const MAX_TOP_K = maximum_limit_of_search_results;
 
@@ -384,7 +385,10 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
 
     // Get bookmarked by emails (simplified - just return the UIDs for now)
     // In a full implementation, you'd need to resolve UIDs to emails via Firebase
-    const bookmarkedByEmails = bookmarkedByUids;
+    const bookmarkedByEmails = await Promise.all(bookmarkedByUids.map(async (uid: string) => {
+      const email = await getFirebaseEmailFromUID(uid);
+      return email ?? uid;
+    }));
 
     return {
       userId: user._id,
