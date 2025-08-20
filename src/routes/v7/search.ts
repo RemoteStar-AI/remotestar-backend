@@ -5,7 +5,7 @@ import { maximum_limit_of_search_results, pinecodeTalentPoolNamespace } from "..
 import { getSignedUrlForResume } from "../../utils/s3";
 import { openai } from "../../utils/openai";
 import { jdCvMatchingPrompt } from "../../utils/prompts";
-import { extractJsonFromMarkdown } from "../../utils/helper-functions";
+import { extractJsonFromMarkdown, markAnalysisAsNotNew } from "../../utils/helper-functions";
 import { pinecone } from "../../utils/pinecone";
 import { PINECONE_INDEX_NAME, pinecodeJobPoolNamespace } from "../../utils/consts";
 
@@ -212,7 +212,7 @@ async function analyseJDwithCV(job: any, candidateId: any) {
   }
 }
 
-searchRouter.get("/:jobId", async (req: any, res: any) => {
+searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
   const routeStartTime = Date.now();
   console.log(`[SEARCH] Starting route for jobId=${req.params.jobId}`);
   
@@ -411,7 +411,13 @@ searchRouter.get("/:jobId", async (req: any, res: any) => {
   const totalRouteTime = Date.now() - routeStartTime;
   console.log(`[SEARCH] ROUTE COMPLETE: Total time: ${totalRouteTime}ms`);
 
-  return res.status(200).json({
+  // Store newly analyzed candidates to mark them as not new after response
+  const newlyAnalyzedCandidates = filteredResponse
+    .filter((item: any) => item.isNewlyAnalysed)
+    .map((item: any) => ({ jobId: Id, userId: item.userId }));
+
+  // Send response first
+  res.status(200).json({
     success: true,
     jobId: Id,
     jobTitle: job.title,
@@ -425,6 +431,21 @@ searchRouter.get("/:jobId", async (req: any, res: any) => {
       totalCandidates: candidateIds.length
     }
   });
+
+  // Mark newly analyzed candidates as not new after response is sent
+  if (newlyAnalyzedCandidates.length > 0) {
+    console.log(`[SEARCH] Marking ${newlyAnalyzedCandidates.length} candidates as not newly analyzed`);
+    try {
+      await Promise.all(
+        newlyAnalyzedCandidates.map(({ jobId, userId }) => 
+          markAnalysisAsNotNew(jobId, userId)
+        )
+      );
+      console.log(`[SEARCH] Successfully marked ${newlyAnalyzedCandidates.length} candidates as not newly analyzed`);
+    } catch (error) {
+      console.error(`[SEARCH] Error marking candidates as not newly analyzed:`, error);
+    }
+  }
 });
 
 
