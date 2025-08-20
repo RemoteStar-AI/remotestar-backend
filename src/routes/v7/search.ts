@@ -271,11 +271,7 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
     return res.status(500).json({ error: "Failed to fetch top matches" });
   }
 
-  // Limit to exactly the requested number of candidates
-  const limitedMatches = topMatches.matches.slice(0, limit);
-  console.log(`[SEARCH] Step 2 - Limited to ${limitedMatches.length} matches (requested: ${limit})`);
-
-  if(topMatches.matches.length > limit && limit !== MAX_TOP_K){
+  if(topMatches.matches.length > fetchK && fetchK !== MAX_TOP_K){
     loadMoreExists = true;
   }else{
     loadMoreExists = false;
@@ -283,9 +279,7 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
 
   // Step 3: Check existing analyses in batch
   const step3Start = Date.now();
-  const candidateIds = limitedMatches.map((match: any) => match.id);
-  console.log(`[SEARCH] Step 3 - Debug: Using ${limitedMatches.length} limited matches, candidateIds count: ${candidateIds.length}`);
-  
+  const candidateIds = topMatches.matches.map((match: any) => match.id);
   const existingAnalyses = await JobAnalysisOfCandidate.find({ 
     jobId: Id, 
     userId: { $in: candidateIds } 
@@ -295,7 +289,6 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
   const notAnalysedCandidates = candidateIds.filter(id => !existingAnalysisUserIds.has(id));
   
   console.log(`[SEARCH] Step 3 - Check existing analyses: ${Date.now() - step3Start}ms | Existing: ${existingAnalyses.length}, New: ${notAnalysedCandidates.length}`);
-  console.log(`[SEARCH] Step 3 - Debug: candidateIds: ${candidateIds.slice(0, 5).join(', ')}${candidateIds.length > 5 ? '...' : ''}`);
 
   // Step 4: Analyze new candidates in parallel with timeout
   if (notAnalysedCandidates.length > 0) {
@@ -335,13 +328,8 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
 
   // Step 5: Fetch final results with pagination
   const step5Start = Date.now();
-  console.log(`[SEARCH] Step 5 - Debug: Fetching analyses for ${candidateIds.length} candidate IDs`);
-  
-  const finalAnalysedCandidates = await JobAnalysisOfCandidate.find({ 
-    jobId: Id,
-    userId: { $in: candidateIds } // Only fetch analyses for candidates found in Pinecone query
-  })
-    .sort({ 'data.percentageMatchScore': -1, createdAt: -1 }) // Sort by score first, then by creation date to get latest
+  const finalAnalysedCandidates = await JobAnalysisOfCandidate.find({ jobId: Id })
+    .sort({ 'data.percentageMatchScore': -1 })
     .select({
       _id: 1,
       userId: 1,
@@ -350,19 +338,7 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
       createdAt: 1,
       userData: 1
     });
-    
-  // Ensure only one analysis per candidate (take the latest/highest scoring one)
-  const uniqueAnalyses = new Map();
-  finalAnalysedCandidates.forEach((analysis: any) => {
-    const userId = analysis.userId.toString();
-    if (!uniqueAnalyses.has(userId)) {
-      uniqueAnalyses.set(userId, analysis);
-    }
-  });
-  
-  const finalRankedCandidates = Array.from(uniqueAnalyses.values()).sort((a: any, b: any) => b.data.percentageMatchScore - a.data.percentageMatchScore);
-    
-  console.log(`[SEARCH] Step 5 - Debug: Found ${finalAnalysedCandidates.length} analyses in database for the ${candidateIds.length} candidates, unique analyses: ${uniqueAnalyses.size}`);
+  const finalRankedCandidates = finalAnalysedCandidates.sort((a: any, b: any) => b.data.percentageMatchScore - a.data.percentageMatchScore);
   
   // Transform data to match v6 structure
   const finalResponse = await Promise.all(finalRankedCandidates.slice(0, limit).map(async (analysis: any) => {
@@ -451,8 +427,8 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
     jobTitle: job.title,
     limit: limit,
     message: `Analysis completed in ${totalRouteTime}ms`,
-    loadMoreExists: loadMoreExists,
     data: filteredResponse,
+    loadMoreExists: loadMoreExists,
     metadata: {
       totalTime: totalRouteTime,
       candidatesAnalyzed: notAnalysedCandidates.length,
