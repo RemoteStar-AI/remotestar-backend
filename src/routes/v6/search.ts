@@ -33,6 +33,9 @@ const getCache = <T>(key: string): T | null => {
 };
 
 searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
+  const routeStartTime = Date.now();
+  console.log(`[SEARCH_V6] Starting route for jobId=${req.params.jobId}`);
+  
   try {
     const Id = req.params.jobId;
     if (!mongoose.Types.ObjectId.isValid(Id)) {
@@ -353,11 +356,14 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
       data: userProfiles.sort((a: any, b: any) => (b.analysis?.percentageMatchScore || 0) - (a.analysis?.percentageMatchScore || 0)),
     };
 
+    const totalRouteTime = Date.now() - routeStartTime;
+    console.log(`[SEARCH_V6] ROUTE COMPLETE: Total time: ${totalRouteTime}ms | JobId: ${Id} | Profiles: ${userProfiles.length}`);
     
     logger.info(`[RESPONSE] Successfully prepared response with ${userProfiles.length} profiles (after new analyses)`);
     return res.status(200).json(finalResponse);
   } catch (error) {
-    console.error("Unexpected error in search route:", error);
+    const totalRouteTime = Date.now() - routeStartTime;
+    console.error(`[SEARCH_V6] ROUTE ERROR: Total time: ${totalRouteTime}ms | JobId: ${req.params.jobId} | Error:`, error);
     return res.status(500).json({ error: "An unexpected error occurred" });
   }
 });
