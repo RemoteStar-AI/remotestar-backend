@@ -36,6 +36,20 @@ bookmarksRouter.post("/", authenticate, async (req, res) => {
     const memeberEmail = req.user?.email;
     const userId = req.body.userId;
 
+    // fetch existing bookmark
+    try{
+      const existingBookmark = await Bookmark.findOne({ userId, jobId });
+      if (existingBookmark) {
+        console.warn(`[POST /bookmarks] Bookmark already exists for user ${userId} and job ${jobId}`);
+        res.status(400).json({ error: "Someone else has already bookmarked this candidate" });
+        return;
+      }
+    } catch (error) {
+      console.error(`[POST /bookmarks] Error checking for existing bookmark:`, error);
+      res.status(500).json({ error: "Internal Server Error" });
+      return;
+    }
+
     console.log(`[POST /bookmarks] Processing bookmark - Job: ${jobId}, User: ${userId}, Member: ${memberId}`);
 
     const job = await Job.findById(jobId);
