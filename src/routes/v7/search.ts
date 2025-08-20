@@ -207,8 +207,8 @@ async function analyseJDwithCV(job: any, candidateId: any) {
     stepTimes.step9_saveToDB = Date.now() - step9Start;
     console.error(`[ANALYSIS] Step 9 - Save to DB: ${stepTimes.step9_saveToDB}ms | Error:`, error);
     return {
-      success: false,
-      message: "Failed to create job analysis of candidate",
+      success: "failed",
+      message: "Failed to create job analysis of candidate - analysis might already exist",
       error: error,
     };
   }
