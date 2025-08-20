@@ -175,6 +175,7 @@ searchRouter.get("/:jobId", async (req: any, res: any) => {
 });
 
 
+// testing route do not touch if you dont know what you are doing
 searchRouter.get("/:jobId/getTopKCandidates", async (req: any, res: any) => {
   try {
     const Id = req.params.jobId;
