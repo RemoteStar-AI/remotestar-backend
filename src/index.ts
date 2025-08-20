@@ -30,6 +30,7 @@ import { searchRouter as searchRouter6 } from './routes/v6/search';
 import { userRouter as userRouter6 } from './routes/v6/user';
 import { callRouter } from './routes/v6/call';
 import { interviewRouter } from './routes/v6/interview';
+import {searchRouter as searchRouter7} from './routes/v7/search';
 import { getVapiSystemPrompt } from './utils/helper-functions';
 import { getVideoObjectStream } from './utils/s3';
 import { deleteNonExistingUsersFromPinecode } from './utils/migration';
@@ -188,6 +189,9 @@ app.use("/api/v6/search", searchRouter6);
 app.use("/api/v6/user", userRouter6);
 app.use("/api/v6/call", callRouter);
 app.use("/api/v6/interview", interviewRouter);
+
+//v7 routes
+app.use("/api/v7/search", searchRouter7);
 
 const exapmple_job_description = `
 We are looking for a highly skilled and passionate Senior Android Developer with a strong command over Kotlin and a solid grasp of agile methodologies, and modern engineering practices such as Test-Driven Development (TDD) and Extreme Programming (XP). If you thrive in a team-oriented environment, love pair programming, and are eager to build high-quality Android applications, we'd love to meet you.

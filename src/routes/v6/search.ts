@@ -76,6 +76,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
     let jobAnalyses = [];
     try {
       jobAnalyses = await JobAnalysisOfCandidate.find({ jobId: Id });
+      console.log("total no. of jobAnalyses", jobAnalyses.length);
     } catch (error) {
       logger.error(`[DB] Error finding job analyses: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return res.status(500).json({ error: "Error retrieving job analyses" });
@@ -198,6 +199,7 @@ searchRouter.get("/:jobId", authenticate, async (req: any, res: any) => {
             .index(PINECONE_INDEX_NAME)
             .namespace(pinecodeJobPoolNamespace)
             .fetch([Id]);
+          console.log("jobEmbeddingResponse", jobEmbeddingResponse);
           logger.info(`[PINECONE] Successfully fetched job embedding for job ${Id}`);
           jobEmbedding = jobEmbeddingResponse.records[Id]?.values as number[] | undefined;
           if (!jobEmbedding) {
