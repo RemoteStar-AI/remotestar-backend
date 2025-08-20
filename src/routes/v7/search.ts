@@ -182,6 +182,7 @@ async function analyseJDwithCV(job: any, candidateId: any) {
     });
     stepTimes.step9_saveToDB = Date.now() - step9Start;
     console.log(`[ANALYSIS] Step 9 - Save to DB: ${stepTimes.step9_saveToDB}ms | Analysis saved with ID: ${res._id}`);
+    console.log('grep help' , res);
     
     // Calculate total time
     const totalTime = Date.now() - startTime;
