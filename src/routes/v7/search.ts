@@ -46,6 +46,27 @@ async function analyseJDwithCV(job: any, candidateId: any) {
   stepTimes.step1_checkExisting = Date.now() - step1Start;
   console.log(`[ANALYSIS] Step 1 - Check existing: ${stepTimes.step1_checkExisting}ms | No existing analysis found`);
 
+  // Step 1.5: Create the analysis document immediately
+  const step1_5Start = Date.now();
+  let analysisDoc;
+  try {
+    console.log(`[ANALYSIS] Step 1.5 - Creating analysis document`);
+    analysisDoc = await JobAnalysisOfCandidate.create({
+      jobId,
+      userId: candidateId,
+      userData: {},
+      data: {},
+      newlyAnalysed: true,
+      uniqueId: `${jobId}-${candidateId}`,
+    });
+    stepTimes.step1_5_createDoc = Date.now() - step1_5Start;
+    console.log(`[ANALYSIS] Step 1.5 - Create document: ${stepTimes.step1_5_createDoc}ms | Document created with ID: ${analysisDoc._id}`);
+  } catch (error) {
+    stepTimes.step1_5_createDoc = Date.now() - step1_5Start;
+    console.error(`[ANALYSIS] Step 1.5 - Create document: ${stepTimes.step1_5_createDoc}ms | Error:`, error);
+    throw new Error("Failed to create analysis document");
+  }
+
   // Step 2: Fetch user details
   const step2Start = Date.now();
   const user = await User.findById(candidateId);
@@ -168,21 +189,24 @@ async function analyseJDwithCV(job: any, candidateId: any) {
   stepTimes.step8_processResponse = Date.now() - step8Start;
   console.log(`[ANALYSIS] Step 8 - Process response: ${stepTimes.step8_processResponse}ms | JSON parsed successfully`);
 
-  // Step 9: Save to database
+  // Step 9: Update the analysis document with results
   const step9Start = Date.now();
   try {
-    console.log(`[ANALYSIS] Step 9 - Saving analysis to database`);
-    const res = await JobAnalysisOfCandidate.create({
-      jobId,
-      userId: candidateId,
-      userData: user,
-      data: analysisJson,
-      newlyAnalysed: true,
-      uniqueId: `${jobId}-${candidateId}`,
-    });
+    console.log(`[ANALYSIS] Step 9 - Updating analysis document with results`);
+    const updatedDoc = await JobAnalysisOfCandidate.findByIdAndUpdate(
+      analysisDoc._id,
+      {
+        userData: user,
+        data: analysisJson,
+      },
+      { new: true }
+    );
+    if (!updatedDoc) {
+      throw new Error("Failed to update analysis document");
+    }
     stepTimes.step9_saveToDB = Date.now() - step9Start;
-    console.log(`[ANALYSIS] Step 9 - Save to DB: ${stepTimes.step9_saveToDB}ms | Analysis saved with ID: ${res._id}`);
-    console.log('grep help' , res);
+    console.log(`[ANALYSIS] Step 9 - Update DB: ${stepTimes.step9_saveToDB}ms | Analysis updated with ID: ${updatedDoc._id}`);
+    console.log('grep help' , updatedDoc);
     
     // Calculate total time
     const totalTime = Date.now() - startTime;
@@ -202,7 +226,7 @@ async function analyseJDwithCV(job: any, candidateId: any) {
     return {
       success: true,
       message: "Job analysis of candidate created successfully",
-      data: res,
+      data: updatedDoc,
     };
   } catch (error) {
     stepTimes.step9_saveToDB = Date.now() - step9Start;
@@ -229,6 +253,8 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
     });
   }
   const isBookmarkedBool = isBookmarked === "true";
+
+  
 
   let loadMoreExists: boolean;
 
