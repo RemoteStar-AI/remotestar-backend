@@ -57,6 +57,7 @@ interviewRouter.get("/:id", async (req: any, res: any) => {
     res.status(200).json({ 
       success: true, 
       interviewId: interview._id,
+      status: interview.status,
       assistantId: interview.assistantId, 
       jobName: job?.title, 
       jobDescription: job?.description, 
