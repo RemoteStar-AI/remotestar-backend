@@ -228,13 +228,15 @@ const jobAnalysisOfCandidateSchema = new Schema({
   rank: { type: Number, optional: true },
   data: { type: Object, default: {} },
   userData: { type: Object, default: {} },
-  uniqueId: { type: String, required: true ,unique: true},
+  uniqueId: { type: String, required: true, unique: true, set: (v: string | null | undefined) => (v ?? "").trim().toLowerCase() },
   newlyAnalysed: { type: Boolean, default: true },
 }, { timestamps: true })
 // Accelerate lookups by job and user
 jobAnalysisOfCandidateSchema.index({ jobId: 1 });
 jobAnalysisOfCandidateSchema.index({ jobId: 1, userId: 1 });
 jobAnalysisOfCandidateSchema.index({ userId: 1 });
+// Enforce uniqueness at the database level
+jobAnalysisOfCandidateSchema.index({ uniqueId: 1 }, { unique: true });
 
 const defaultAssistantSchema = new Schema({
   jobId: { type: String, required: true },
