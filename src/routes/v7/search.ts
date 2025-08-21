@@ -463,7 +463,7 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
     limit: limit,
     message: `Analysis completed in ${totalRouteTime}ms`,
     data: filteredResponse,
-    loadMoreExists: loadMoreExists,
+    loadMoreExists:isBookmarkedBool ? false : loadMoreExists,
     metadata: {
       totalTime: totalRouteTime,
       candidatesAnalyzed: notAnalysedCandidates.length,
