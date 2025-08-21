@@ -261,29 +261,6 @@ app.get("/video/:callId", async (req: any, res: any) => {
   }
 });
 
-
-// Meri galtiyon ke karan ye karna padega
-app.get("/n/video/:callId", async (req: any, res: any) => {
-  try {
-    const start = Date.now();
-    const callId = (req.params.callId || "").replace(/[\r\n\t]/g, "").trim();
-    console.log(`[VideoRoute] GET /n/video/:callId start callId="${callId}" ip=${req.ip}`);
-    if (!callId) {
-      console.warn("[VideoRoute] Missing or empty callId param (n route)");
-      res.status(400).send("Invalid callId");
-      return;
-    }
-    console.log(`[VideoRoute] (n) Generating signed URL for videos/${callId}`);
-    const url = await getSignedUrlForVideo(callId);
-    console.log(`[VideoRoute] (n) Signed URL generated (length=${url?.length || 0}) in ${Date.now() - start}ms`);
-    res.redirect(url);
-    console.log(`[VideoRoute] (n) Redirected to signed URL for callId="${callId}" totalMs=${Date.now() - start}`);
-  } catch (error: any) {
-    console.error(`[VideoRoute] Error for /n/video/:callId - ${error?.message || error}`, error?.stack || "");
-    res.status(404).send("Video not available");
-  }
-});
-
 async function main(){
     try {
         await mongoose.connect(process.env.MONGODB_URI!, {
