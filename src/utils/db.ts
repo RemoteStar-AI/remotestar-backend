@@ -235,8 +235,6 @@ const jobAnalysisOfCandidateSchema = new Schema({
 jobAnalysisOfCandidateSchema.index({ jobId: 1 });
 jobAnalysisOfCandidateSchema.index({ jobId: 1, userId: 1 });
 jobAnalysisOfCandidateSchema.index({ userId: 1 });
-// Enforce uniqueness at the database level
-jobAnalysisOfCandidateSchema.index({ uniqueId: 1 }, { unique: true });
 
 const defaultAssistantSchema = new Schema({
   jobId: { type: String, required: true },
