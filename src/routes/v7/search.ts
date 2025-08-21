@@ -254,10 +254,6 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
   }
   const isBookmarkedBool = isBookmarked === "true";
 
-  console.log("isBookmarkedBool", isBookmarkedBool);
-
-  
-
   let loadMoreExists: boolean;
 
   const fetchK = Math.min(MAX_TOP_K, limit);
@@ -424,9 +420,6 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
       const email = await getFirebaseEmailFromUID(uid);
       return email ?? uid;
     }));
-
-    console.log("anyBookmarkForUser", anyBookmarkForUser);
-    console.log("anyBookmarkForUser bool", !!anyBookmarkForUser);
 
     if(isBookmarkedBool && !!!anyBookmarkForUser){
       return null;
