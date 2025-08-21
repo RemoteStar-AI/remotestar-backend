@@ -254,6 +254,8 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
   }
   const isBookmarkedBool = isBookmarked === "true";
 
+  console.log("isBookmarkedBool", isBookmarkedBool);
+
   
 
   let loadMoreExists: boolean;
@@ -369,7 +371,13 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
   const finalRankedCandidates = finalAnalysedCandidates.sort((a: any, b: any) => b.data.percentageMatchScore - a.data.percentageMatchScore);
   
   // Transform data to match v6 structure
-  const finalResponse = await Promise.all(finalRankedCandidates.slice(0, limit).map(async (analysis: any) => {
+  let preFinalResponse: any;
+  if(isBookmarkedBool){
+    preFinalResponse = finalRankedCandidates;
+  }else{
+    preFinalResponse = finalRankedCandidates.slice(0, limit);
+  }
+  const finalResponse = await Promise.all(preFinalResponse.map(async (analysis: any) => {
     const userId = analysis.userId;
     
     // Fetch user details
@@ -412,11 +420,17 @@ searchRouter.get("/:jobId", authenticate,async (req: any, res: any) => {
     }
 
     // Get bookmarked by emails (simplified - just return the UIDs for now)
-    // In a full implementation, you'd need to resolve UIDs to emails via Firebase
     const bookmarkedByEmails = await Promise.all(bookmarkedByUids.map(async (uid: string) => {
       const email = await getFirebaseEmailFromUID(uid);
       return email ?? uid;
     }));
+
+    console.log("anyBookmarkForUser", anyBookmarkForUser);
+    console.log("anyBookmarkForUser bool", !!anyBookmarkForUser);
+
+    if(isBookmarkedBool && !!!anyBookmarkForUser){
+      return null;
+    }
 
     return {
       userId: user._id,
