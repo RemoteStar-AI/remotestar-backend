@@ -42,13 +42,9 @@ interviewRouter.get("/:id", async (req: any, res: any) => {
       console.log(`Warning: Job not found for jobId: ${interview.jobId}`);
     }
 
-    if(interview.status === "ended"){
-      console.log(`Interview already ended, fetching call details for ID: ${id}`);
-      const callDetails = await getCallDetails(interview.callId);
-      if ('error' in callDetails) {
-        console.log(`Error: Call details not found with ID: ${interview.callId}`);
-        return res.status(404).json({ success: false, error: "Call details not found" });
-      }
+    if (interview.status === "ended") {
+      console.log(`Interview already ended for ID: ${id}`);
+      return res.status(410).json({ success: false, message: "Interview Already Ended Please Reachout to the recruiter for another interview" });
     }
 
     if(interview.expiresAt < new Date()){
@@ -318,6 +314,7 @@ interviewRouter.post("/get-call-details", async (req: any, res: any) => {
 
 interviewRouter.get("/end-call/:id", async (req: any, res: any) => {
   const { id } = req.params;
+  console.log("[Interview] Ending call for interview ID: ", id);
   const interview = await Interview.findOneAndUpdate({interviewLink: id}, {status: "ended"});
   const callId = interview?.callId;
   if(!callId){
