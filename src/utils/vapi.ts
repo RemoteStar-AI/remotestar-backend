@@ -63,6 +63,7 @@ export async function createSupportAssistant(systemPrompt: string, firstMessage:
     };
     const assistant = await vapi.assistants.create({
       name: name,
+      maxDurationSeconds: 1200, // 20 minutes
       model: {
         provider: 'openai',
         model: 'gpt-4o',
