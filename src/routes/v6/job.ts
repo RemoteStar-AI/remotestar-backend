@@ -104,10 +104,11 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
 
       // Create job record (independent of external calls)
       let jobResponse;
-      // add nudge prompt
+      // add nudge prompt and organisation_id
       data = {
         ...data,
         nudgePrompt: NudgeCallPrompt(data.title),
+        organisation_id
       }
       try {
         jobResponse = await Job.create(data);
