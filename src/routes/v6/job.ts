@@ -63,16 +63,47 @@ jobRouter.post("/", authenticate, async (req: any, res: any) => {
     const body = req.body;
     const organisation_id = req.user.organisation;
     const organisationName = req.user.organisationName;
-
+    
+    // Convert yearsOfExperience strings to numbers if they exist
+    if (body.yearsOfExperience) {
+      if (typeof body.yearsOfExperience.min === 'string') {
+        const minValue = parseInt(body.yearsOfExperience.min, 10);
+        if (isNaN(minValue)) {
+          return res.status(400).json({ error: "Minimum years of experience must be a valid number" });
+        }
+        body.yearsOfExperience.min = minValue;
+      }
+      if (typeof body.yearsOfExperience.max === 'string') {
+        const maxValue = parseInt(body.yearsOfExperience.max, 10);
+        if (isNaN(maxValue)) {
+          return res.status(400).json({ error: "Maximum years of experience must be a valid number" });
+        }
+        body.yearsOfExperience.max = maxValue;
+      }
+    }
+    
     try {
       const parsedBody = jobSchema.safeParse(body);
       if (!parsedBody.success) {
-        console.log("Request data validation failed", parsedBody.error.format());
+        console.log("Request data validation failed", JSON.stringify(parsedBody.error.format()));
         return res.status(400).json({ error: parsedBody.error.format() });
       }
       console.log("Request data validated successfully");
       let data = parsedBody.data;
       // data.organisation_id = organisation_id;
+
+      //processing yearsOfExperience
+      if(data.yearsOfExperience){
+        // Check if both min and max are defined (including 0)
+        if(data.yearsOfExperience.min !== undefined && data.yearsOfExperience.max !== undefined && data.yearsOfExperience.min > data.yearsOfExperience.max){
+          console.log("Minimum years of experience cannot be greater than maximum years of experience")
+          return res.status(400).json({ error: "Minimum years of experience cannot be greater than maximum years of experience" });
+        }
+        if(data.yearsOfExperience.min !== undefined && data.yearsOfExperience.min < 0){
+          console.log("Years of experience cannot be negative")
+          return res.status(400).json({ error: "Years of experience cannot be negative" });
+        }
+      }
 
       // Kick off external calls in parallel where possible
       const jobEmbeddingPromise = (async () => {
@@ -254,6 +285,25 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
   try {
     console.log("[PUT /job] Starting job update request");
     const body = req.body;
+    
+    // Convert yearsOfExperience strings to numbers if they exist
+    if (body.yearsOfExperience) {
+      if (typeof body.yearsOfExperience.min === 'string') {
+        const minValue = parseInt(body.yearsOfExperience.min, 10);
+        if (isNaN(minValue)) {
+          return res.status(400).json({ error: "Minimum years of experience must be a valid number" });
+        }
+        body.yearsOfExperience.min = minValue;
+      }
+      if (typeof body.yearsOfExperience.max === 'string') {
+        const maxValue = parseInt(body.yearsOfExperience.max, 10);
+        if (isNaN(maxValue)) {
+          return res.status(400).json({ error: "Maximum years of experience must be a valid number" });
+        }
+        body.yearsOfExperience.max = maxValue;
+      }
+    }
+    
     const parsedBody = jobSchema.safeParse(body);
     if (!parsedBody.success) {
       console.log("[PUT /job] Invalid request body:", parsedBody.error.format());
@@ -264,6 +314,19 @@ jobRouter.put("/", authenticate, async (req: any, res: any) => {
     if (!data._id) {
       console.log("[PUT /job] Missing job _id in request");
       return res.status(400).json({ error: "Missing job _id for update" });
+    }
+
+    // Processing yearsOfExperience validation
+    if(data.yearsOfExperience){
+      // Check if both min and max are defined (including 0)
+      if(data.yearsOfExperience.min !== undefined && data.yearsOfExperience.max !== undefined && data.yearsOfExperience.min > data.yearsOfExperience.max){
+        console.log("Minimum years of experience cannot be greater than maximum years of experience")
+        return res.status(400).json({ error: "Minimum years of experience cannot be greater than maximum years of experience" });
+      }
+      if(data.yearsOfExperience.min !== undefined && data.yearsOfExperience.min < 0){
+        console.log("Years of experience cannot be negative")
+        return res.status(400).json({ error: "Years of experience cannot be negative" });
+      }
     }
 
     let updatedJob: any;

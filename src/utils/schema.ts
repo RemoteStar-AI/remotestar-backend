@@ -151,8 +151,8 @@ export const jobSchema = z.object({
   nudgePrompt: z.string().optional(),
   applicationProcess: z.enum(["interview", "assessment", "direct"]),
   yearsOfExperience: z.object({
-    min: z.string(),
-    max: z.string(),
+    min: z.number().min(0).optional(),
+    max: z.number().min(0).optional(),
   }),
   additionalRequirements: z.string().optional(),
   expectedSkills: z.array(z.object({
