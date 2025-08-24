@@ -34,6 +34,7 @@ import {searchRouter as searchRouter7} from './routes/v7/search';
 import { getVapiSystemPrompt } from './utils/helper-functions';
 import { getSignedUrlForVideo } from './utils/s3';
 import { deleteNonExistingUsersFromPinecode } from './utils/migration';
+import { vettedRouter } from './routes/v6/vetted';
 
 dotenv.config();
 
@@ -189,6 +190,7 @@ app.use("/api/v6/search", searchRouter6);
 app.use("/api/v6/user", userRouter6);
 app.use("/api/v6/call", callRouter);
 app.use("/api/v6/interview", interviewRouter);
+app.use("/api/v6/vetted", vettedRouter);
 
 //v7 routes
 app.use("/api/v7/search", searchRouter7);
