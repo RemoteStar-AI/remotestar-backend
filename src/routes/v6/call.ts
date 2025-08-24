@@ -9,17 +9,12 @@ import {
   makeOutboundNudgeCall,
 } from "../../utils/vapi";
 import { authenticate } from "../../middleware/firebase-auth";
-import {
-  DefaultAssistant,
-  CallDetails,
-  ScheduledCalls,
-} from "../../utils/db";
+import { DefaultAssistant, CallDetails, ScheduledCalls } from "../../utils/db";
 import { NudgeCallPrompt, VapiAnalysisPrompt } from "../../utils/prompts";
 import type { Request, Response } from "express";
 import { sendWebSocketMessage } from "../../index";
 import { assumedCallDuration, nudgeAssistantId } from "../../utils/consts";
 import { copyVideofromVapiToRemotestarVideoS3Bucket } from "../../utils/s3";
-
 
 function processPhoneNumber(phoneNumber: string) {
   // Trim spaces from sides and remove any - or em dashes in between
@@ -74,7 +69,8 @@ const webhookSubscriptionSchema = z.object({
 });
 export const callRouter = Router();
 
-callRouter.get( "/:jobId/:candidateId",
+callRouter.get(
+  "/:jobId/:candidateId",
   authenticate,
   async (req: any, res: any) => {
     console.log("GET /call/:jobId/:candidateId route hit");
@@ -91,17 +87,31 @@ callRouter.get( "/:jobId/:candidateId",
       organisation_id: organisationId,
     });
 
-
     let callDetails: any[] = [];
     try {
       callDetails = await Promise.all(
         previousCalls.map(async (call: any) => {
-          console.log("call", call);
-          if(call.type === "email") {
+          if (call.type === "email") {
             return call;
           }
-          const details = await getCallDetails(call.callId);
-          return call.videoUrl ? { ...(details as any), videoUrl: call.videoUrl } : details;
+          if (Object.keys(call.cache).length === 0) {
+            console.log("callDetails is empty, fetching from Vapi");
+            const details: any = await getCallDetails(call.callId);
+            if (details.status === "ended" || details.status === "failed") {
+              await CallDetails.updateOne(
+                { _id: call._id },
+                { cache: details }
+              );
+            }
+            return call.videoUrl
+              ? { ...(details as any), videoUrl: call.videoUrl }
+              : details;
+          }
+          //remove this below line after testing
+          console.log("callDetails is not empty, returning");
+          return call.videoUrl
+            ? { ...(call.cache as any), videoUrl: call.videoUrl }
+            : call.cache;
         })
       );
     } catch (error) {
@@ -291,7 +301,8 @@ callRouter.post("/", authenticate, async (req: any, res: any) => {
   }
 });
 
-callRouter.get( "/schedule/:jobId/:candidateId",
+callRouter.get(
+  "/schedule/:jobId/:candidateId",
   authenticate,
   async (req: Request, res: Response) => {
     try {
@@ -376,7 +387,8 @@ callRouter.get( "/schedule/:jobId/:candidateId",
   }
 );
 
-callRouter.delete( "/scheduled/:id",
+callRouter.delete(
+  "/scheduled/:id",
   authenticate,
   async (req: any, res: any) => {
     const { id } = req.params;
@@ -413,8 +425,9 @@ callRouter.options("/webhook", (req: any, res: any) => {
 });
 
 // VAPI webhook endpoint - no authentication required as VAPI will call this
-callRouter.post( "/webhook",
-//  vapiWebhookVerification(process.env.VAPI_WEBHOOK_SECRET || "default-secret"),
+callRouter.post(
+  "/webhook",
+  //  vapiWebhookVerification(process.env.VAPI_WEBHOOK_SECRET || "default-secret"),
   async (req: any, res: any) => {
     if (req.body.message?.type === "status-update") {
       console.log("VAPI Webhook received:");
@@ -497,20 +510,19 @@ callRouter.post( "/webhook",
             );
           }
 
-                                // Send WebSocket notification to the recruiter
-           sendWebSocketMessage(candidateId, {
-             event: "call.status.changed",
-             callId: callId,
-             status: status,
-             data: {
-               type,
-               assistantId,
-               customerNumber,
-               endedReason,
-               ...otherData
-             }
-           });
-
+          // Send WebSocket notification to the recruiter
+          sendWebSocketMessage(candidateId, {
+            event: "call.status.changed",
+            callId: callId,
+            status: status,
+            data: {
+              type,
+              assistantId,
+              customerNumber,
+              endedReason,
+              ...otherData,
+            },
+          });
         } else {
           // If call not found in DB, still log the webhook
           console.log(
@@ -564,7 +576,9 @@ callRouter.post( "/webhook",
         const candidateId = call?.name;
 
         console.log(
-          `Processing conversation update - Call ID: ${callId}, Messages count: ${messages?.length || 0}`
+          `Processing conversation update - Call ID: ${callId}, Messages count: ${
+            messages?.length || 0
+          }`
         );
 
         if (!callId) {
@@ -586,8 +600,8 @@ callRouter.post( "/webhook",
             artifact,
             assistantId: assistant?.id,
             customerNumber: customer?.number,
-            ...otherData
-          }
+            ...otherData,
+          },
         });
 
         console.log(`Conversation update sent for call ${callId}`);
@@ -599,16 +613,25 @@ callRouter.post( "/webhook",
         // Always return success to VAPI even on error to prevent retries
         res.json({ success: true });
       }
-    } else if (req.body.message?.type === "end-of-call-report" && req.body.message.call.type === "webCall") {
+    } else if (
+      req.body.message?.type === "end-of-call-report" &&
+      req.body.message.call.type === "webCall"
+    ) {
       try {
         console.log("[Webhook] end-of-call-report received \n", req.body);
         const callId = req.body?.message?.call?.id;
         const candidateId = req.body?.message?.call?.name;
         const videoUrl = req.body?.message?.artifact?.videoRecordingUrl;
-        console.log(`[Webhook] callId=${callId}, candidateId=${candidateId}, videoUrl=${videoUrl ? "present" : "missing"}`);
+        console.log(
+          `[Webhook] callId=${callId}, candidateId=${candidateId}, videoUrl=${
+            videoUrl ? "present" : "missing"
+          }`
+        );
 
         if (!callId) {
-          console.error("[Webhook] Missing callId in end-of-call-report payload");
+          console.error(
+            "[Webhook] Missing callId in end-of-call-report payload"
+          );
           res.status(200).json({ success: false, error: "Missing callId" });
           return;
         }
@@ -616,18 +639,28 @@ callRouter.post( "/webhook",
         const callDetails = await CallDetails.findOne({ callId });
         if (!callDetails) {
           console.error("[Webhook] Call details not found for callId:", callId);
-          res.status(200).json({ success: false, error: "Call details not found" });
+          res
+            .status(200)
+            .json({ success: false, error: "Call details not found" });
           return;
         }
 
         if (!videoUrl) {
-          console.error("[Webhook] Missing videoUrl in end-of-call-report payload for callId:", callId);
+          console.error(
+            "[Webhook] Missing videoUrl in end-of-call-report payload for callId:",
+            callId
+          );
           res.status(200).json({ success: false, error: "Missing videoUrl" });
           return;
         }
 
-        console.log(`[Webhook] Uploading call recording to S3 for callId=${callId}`);
-        const uploadedUrl = await copyVideofromVapiToRemotestarVideoS3Bucket(videoUrl, callDetails.callId);
+        console.log(
+          `[Webhook] Uploading call recording to S3 for callId=${callId}`
+        );
+        const uploadedUrl = await copyVideofromVapiToRemotestarVideoS3Bucket(
+          videoUrl,
+          callDetails.callId
+        );
         console.log(`[Webhook] Uploaded recording to S3 at: ${uploadedUrl}`);
         const apiUrl = process.env.URL?.trim() || "http://localhost:3000";
         const videolink = `${apiUrl}/video/${callDetails.callId}`;
@@ -639,12 +672,14 @@ callRouter.post( "/webhook",
 
         res.status(200).json({ success: true });
       } catch (err: any) {
-        console.error("[Webhook] Error handling end-of-call-report:", err?.message || err);
+        console.error(
+          "[Webhook] Error handling end-of-call-report:",
+          err?.message || err
+        );
         // Always respond 200 to avoid VAPI retries
         res.status(200).json({ success: true });
       }
-    }
-     else {
+    } else {
       console.log("VAPI Webhook received:", req.body);
       res.status(200).json({ success: true });
     }
@@ -659,10 +694,18 @@ callRouter.post("/nudge", authenticate, async (req: any, res: any) => {
     roleName: z.string().min(1),
   });
 
-  const { phoneNumber, candidateId, jobId, roleName } = nudgeSchema.parse(req.body);
+  const { phoneNumber, candidateId, jobId, roleName } = nudgeSchema.parse(
+    req.body
+  );
   const finalPhoneNumber = processPhoneNumber(phoneNumber);
   const nudgePrompt = NudgeCallPrompt(roleName);
-  const call = await makeOutboundNudgeCall(nudgeAssistantId, finalPhoneNumber, process.env.VAPI_PHONE_NUMBER_ID || "", candidateId, nudgePrompt);
+  const call = await makeOutboundNudgeCall(
+    nudgeAssistantId,
+    finalPhoneNumber,
+    process.env.VAPI_PHONE_NUMBER_ID || "",
+    candidateId,
+    nudgePrompt
+  );
   await CallDetails.create({
     jobId: jobId,
     candidateId: candidateId,
@@ -744,9 +787,6 @@ setInterval(async () => {
           recruiterEmail: call.data.recruiterEmail,
         });
         await ScheduledCalls.updateOne({ _id: call._id }, { callId: callId });
-
-
-
       } catch (err) {
         console.error("Error executing scheduled call:", err);
       }

@@ -257,6 +257,7 @@ const callDetailsSchema = new Schema({
   vapiData: { type: Object, default: {} },
   type: { type: String, enum: ["call", "email", "interview", "nudge"], default: "call" },
   videoUrl: { type: String, optional: true },
+  cache: { type: Object, default: {} },
   interviewId: { type: String, optional: true },
   message: { type: String, default: "" },
 }, { timestamps: true })
