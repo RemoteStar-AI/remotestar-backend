@@ -179,6 +179,8 @@ export async function deleteEmbedding(id: string, namespace: string, organisatio
   }
 }
 
+// This function is deprecated and will be removed in the future.
+// Use analyseJDwithCV instead in v7/search.ts
 export async function analyseJdWithCv(jobId:string, userId:string){
   const job = await Job.findById(jobId);
   const user = await User.findById(userId);

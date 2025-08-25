@@ -1,7 +1,7 @@
 import { Router, text } from "express";
-import { Bookmark, JobAnalysisOfCandidate, User, CulturalFit, Skills } from "../../utils/db";
+import { Bookmark, JobAnalysisOfCandidate, User, CulturalFit, Skills, Job } from "../../utils/db";
 import { authenticate } from "../../middleware/firebase-auth";
-import { analyseJdWithCv } from "../../utils/helper-functions";
+import { analyseJDwithCV } from "../v7/search";
 import { deleteFileFromS3, getSignedUrlForResume } from "../../utils/s3";
 import mongoose from "mongoose";
 import logger from "../../utils/loggers";
@@ -33,7 +33,8 @@ userRouter.get("/:jobId/:userId", authenticate, async (req: any, res: any) => {
     if (!userAnalysis) {
       logger.info(`[GET_USER] No existing analysis found for user ${userId} and job ${jobId}. Generating new one.`);
       try {
-        await analyseJdWithCv(jobId, userId);
+        const job = await Job.findById(jobId);
+        await analyseJDwithCV(job, userId);
         userAnalysis = await JobAnalysisOfCandidate.findOne({
           jobId: jobId,
           userId: userId,

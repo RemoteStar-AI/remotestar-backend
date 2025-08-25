@@ -14,7 +14,7 @@ const MAX_TOP_K = maximum_limit_of_search_results;
 
 export const searchRouter = express.Router();
 
-async function analyseJDwithCV(job: any, candidateId: any) {
+export async function analyseJDwithCV(job: any, candidateId: any) {
   const startTime = Date.now();
   const stepTimes: { [key: string]: number } = {};
   
